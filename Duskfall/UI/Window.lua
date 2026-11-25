@@ -102,7 +102,16 @@ local function build()
   local badge = CreateFrame("Frame", nil, f)
   badge:SetSize(ICON_SIZE, ICON_SIZE)
   badge:SetPoint("TOPLEFT", f, "TOPLEFT", -ICON_OUT, ICON_OUT)
-  badge:SetFrameLevel(f:GetFrameLevel() + 30)
+  -- Above the template's border (NineSlice), title and close button, which sit on child frames of
+  -- their own: one level over the highest of them (at +30 on the window it was behind the border)
+  local function liftBadge()
+    local top = f:GetFrameLevel()
+    for _, child in ipairs({ f:GetChildren() }) do
+      if child ~= badge and child:GetFrameLevel() > top then top = child:GetFrameLevel() end
+    end
+    badge:SetFrameLevel(top + 5)
+  end
+  badge.Lift = liftBadge
   local icon = badge:CreateTexture(nil, "ARTWORK")
   icon:SetAllPoints()
   icon:SetTexture(UI.ART .. "icon")
@@ -192,6 +201,7 @@ local function build()
   -- The tab template sets its own look when it is first shown (every tab gold): select again
   -- after that, on the next frame
   f:SetScript("OnShow", function(self)
+    badge.Lift()
     W.UpdateStatus()
     if self.selected then
       W.Select(self.selected)
