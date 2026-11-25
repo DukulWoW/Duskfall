@@ -3,7 +3,8 @@
 --   fade     smooth ease over style.transition.fade.duration
 --   adapt    eye adaptation. Towards darker: dips past the target (darker still), then slowly
 --            rises to it. Towards brighter: overshoots brighter (glare), then settles quickly.
---            Only channels with `overshoot` go past the target; the rest fade. Strength is the
+--            Only channels with `overshoot` go past the target (overshoot = "light": only when
+--            the change is towards brighter, e.g. a bloom flare); the rest fade. Strength is the
 --            overshoot as a share of the change. Two overshoots never come closer than
 --            settings.adaptGap seconds (a ride along a zone border dips once).
 -- A change caused only by the clock always fades over settings.timeFade seconds.
@@ -20,7 +21,7 @@ local PEAK = { toDark = 0.25, toLight = 0.15 }   -- share of the time spent reac
 
 local driver = CreateFrame("Frame")
 driver:Hide()
-local run = nil         -- { from, to, keys, t0, dur, strength, peak, last }
+local run = nil         -- { from, to, keys, t0, dur, strength, peak, dir, last }
 local lastOvershoot = -1000
 
 local function smooth(p) return p * p * (3 - 2 * p) end
@@ -49,7 +50,8 @@ local function step()
   r.last = now
   for k in pairs(r.keys) do
     local s = 0
-    if C.byKey[k].overshoot then s = r.strength end
+    local o = C.byKey[k].overshoot
+    if o == true or (o == "light" and r.dir == "toLight") then s = r.strength end
     C.Write(k, r.from[k] + (r.to[k] - r.from[k]) * shape(p, s, r.peak))
   end
   if p >= 1 then
@@ -89,13 +91,13 @@ function T.Apply(target, held, why, timeOnly)
   local style = ns.Resolver.ActiveStyle()
   local tr = style.transition or {}
   local mode = tr.mode or "adapt"
-  local dur, strength, peak = 0, 0, 0.5
+  local dur, strength, peak, dir = 0, 0, 0.5, nil
   if timeOnly then
     dur = tonumber(ns.cfg.timeFade) or 45
   elseif mode == "fade" then
     dur = tonumber(tr.fade and tr.fade.duration) or 1.5
   elseif mode == "adapt" then
-    local dir = "toLight"
+    dir = "toLight"
     if score(target) < score(cur) then dir = "toDark" end
     local a = (tr.adapt and tr.adapt[dir]) or {}
     dur = tonumber(a.duration) or 1.5
@@ -114,7 +116,7 @@ function T.Apply(target, held, why, timeOnly)
     for k in pairs(keys) do C.Write(k, target[k]) end
     return
   end
-  run = { from = cur, to = {}, keys = keys, t0 = GetTime(), dur = dur, strength = strength, peak = peak, last = -1 }
+  run = { from = cur, to = {}, keys = keys, t0 = GetTime(), dur = dur, strength = strength, peak = peak, dir = dir, last = -1 }
   for k in pairs(keys) do run.to[k] = target[k] end
   ns.Debug("%s %.1fs strength %.2f (%s)", timeOnly and "time fade" or mode, dur, strength, tostring(why))
   driver:Show()

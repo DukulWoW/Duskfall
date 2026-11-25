@@ -1,6 +1,9 @@
 -- Duskfall Channels.lua: the values Duskfall can change, and every read and write of them.
 -- Ranges verified in game (Forever 1.60.x, 2026-11-25). A later channel (tint, sound, camera)
--- is a new row here. overshoot = Adapt may go past the target on this channel.
+-- is a new row here. overshoot = Adapt may go past the target on this channel (true = both
+-- directions, "light" = only towards brighter). decimals = how values are written and shown.
+-- bloomUserMult = Graphics "Bloom Intensity" (slider 0-1, step 0.2; A14c). ffxGlow and bloomEnable
+-- also exist on Forever but do nothing visible (A14b), so they are left alone.
 -- Public: C.list, C.byKey, C.Read(key), C.ReadAll(), C.Clamp(key, v), C.Same(key, a, b),
 --         C.SameAll(a, b), C.Write(key, v), C.WriteAll(values), C.IsOurs(cvar, value), C.Format(key, v)
 local ADDON, ns = ...
@@ -8,9 +11,10 @@ local C = {}
 ns.Channels = C
 
 C.list = {
-  { key = "gamma",      cvar = "Gamma",      label = "Gamma",      min = 0.3, max = 2.8, eps = 0.011, fade = true, overshoot = true },
-  { key = "brightness", cvar = "Brightness", label = "Brightness", min = 0,   max = 100, eps = 0.6,   fade = true, overshoot = true },
-  { key = "contrast",   cvar = "Contrast",   label = "Contrast",   min = 0,   max = 100, eps = 0.6,   fade = true },
+  { key = "gamma",      cvar = "Gamma",         label = "Gamma",      short = "G",  min = 0.3, max = 2.8, eps = 0.011, decimals = 2, fade = true, overshoot = true },
+  { key = "brightness", cvar = "Brightness",    label = "Brightness", short = "B",  min = 0,   max = 100, eps = 0.6,   decimals = 0, fade = true, overshoot = true },
+  { key = "contrast",   cvar = "Contrast",      label = "Contrast",   short = "C",  min = 0,   max = 100, eps = 0.6,   decimals = 0, fade = true },
+  { key = "bloom",      cvar = "bloomUserMult", label = "Bloom",      short = "Bl", min = 0,   max = 1,   eps = 0.011, decimals = 2, fade = true, overshoot = "light" },
 }
 C.byKey, C.byCVar = {}, {}
 for _, ch in ipairs(C.list) do
@@ -43,9 +47,10 @@ function C.Clamp(key, v)
   return v
 end
 
--- Gamma to two decimals, the percentages as whole numbers (the game's own steps).
+-- Gamma and bloom to two decimals, the percentages as whole numbers (the game's own steps).
 function C.Format(key, v)
-  if key == "gamma" then return string.format("%.2f", v) end
+  local ch = C.byKey[key]
+  if ch and ch.decimals and ch.decimals > 0 then return string.format("%." .. ch.decimals .. "f", v) end
   return tostring(math.floor(v + 0.5))
 end
 

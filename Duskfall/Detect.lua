@@ -136,10 +136,17 @@ ns.On("PLAYER_ENTERING_WORLD", function(isInitialLogin, isReloadingUi)
     return
   end
   local db = ns.db
+  -- A channel added in a later version (bloom): take its current value, so nothing looks changed.
+  if db.baseline then
+    for k, v in pairs(cur) do
+      if db.baseline[k] == nil then db.baseline[k] = v end
+      if db.lastApplied[k] == nil then db.lastApplied[k] = v end
+    end
+  end
   if not db.baseline then
     db.baseline = cur
-    ns.Print("your current settings (gamma %.2f, brightness %d, contrast %d) are now your baseline. Type |cffffd100/dusk|r for status.",
-      cur.gamma, cur.brightness, cur.contrast)
+    ns.Print("your current settings (gamma %.2f, brightness %d, contrast %d, bloom %.2f) are now your baseline. Type |cffffd100/dusk|r for status.",
+      cur.gamma, cur.brightness, cur.contrast, cur.bloom)
   elseif isInitialLogin and not C.SameAll(cur, db.baseline) then
     if C.SameAll(cur, db.lastApplied) then
       ns.Print("the last session did not log out cleanly; your baseline is kept.")

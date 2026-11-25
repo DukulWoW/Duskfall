@@ -31,7 +31,7 @@ local function lookLine(i, look)
   local vals = {}
   for _, ch in ipairs(C.list) do
     local v = look.values and look.values[ch.key]
-    if v ~= nil then vals[#vals + 1] = ch.label:sub(1, 1) .. " " .. fmtOffset(ch.key, v, look.absolute) end
+    if v ~= nil then vals[#vals + 1] = (ch.short or ch.label) .. " " .. fmtOffset(ch.key, v, look.absolute) end
   end
   local when = ""
   if look.when and #look.when > 0 then when = " [" .. table.concat(look.when, ", ") .. "]" end
@@ -381,7 +381,7 @@ local function handler(msg)
   elseif cmd == "off" then D.SetEnabled(false) ns.Print("automatic adjusting off; your baseline is back.")
   elseif cmd == "baseline" then
     local b = D.SaveBaseline()
-    if b then ns.Print("baseline saved: gamma %.2f, brightness %d, contrast %d.", b.gamma, b.brightness, b.contrast) end
+    if b then ns.Print("baseline saved: gamma %.2f, brightness %d, contrast %d, bloom %.2f.", b.gamma, b.brightness, b.contrast, b.bloom) end
   elseif cmd == "style" or cmd == "styles" then styleCmd(args)
   elseif cmd == "chars" or cmd == "characters" then charsCmd(args)
   elseif cmd == "mode" or cmd == "fade" or cmd == "adapt" or cmd == "timefade" then transitionCmd(args)

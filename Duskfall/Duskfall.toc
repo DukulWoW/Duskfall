@@ -1,8 +1,9 @@
 ## Interface: 16001
 ## Title: Duskfall
-## Notes: Sets gamma, brightness and contrast for where you are, with smooth transitions.
+## Notes: Sets gamma, brightness, contrast and bloom for where you are, with smooth transitions.
 ## Author: Dukul
 ## Version: 0.1.0-dev
+## IconTexture: Interface\AddOns\Duskfall\Assets\icon
 ## SavedVariables: DuskfallDB
 
 Core.lua
