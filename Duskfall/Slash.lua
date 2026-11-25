@@ -143,6 +143,8 @@ local function help()
   print("  " .. Y .. "/dusk debug|r debug output on or off")
 end
 
+ns.Help = help
+
 local function save(args)
   local kind = args[2] and args[2]:lower()
   if not KINDS[kind] then ns.Print("which place? %s/dusk save sub||zone||instance|r", Y) return end

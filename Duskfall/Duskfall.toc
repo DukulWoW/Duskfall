@@ -13,3 +13,4 @@ Resolver.lua
 Transition.lua
 Detect.lua
 Slash.lua
+OptionsPanel.lua

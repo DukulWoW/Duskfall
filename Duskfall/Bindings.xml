@@ -1,0 +1,5 @@
+<Bindings>
+  <Binding name="DUSKFALL_TOGGLE" category="Duskfall" runOnUp="false">
+    Duskfall_ToggleEnabled()
+  </Binding>
+</Bindings>
