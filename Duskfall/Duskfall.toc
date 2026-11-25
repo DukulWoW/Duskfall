@@ -13,4 +13,7 @@ Resolver.lua
 Transition.lua
 Detect.lua
 Slash.lua
+UI\Widgets.lua
+UI\Window.lua
+UI\Pages.lua
 OptionsPanel.lua

@@ -127,6 +127,7 @@ end
 local function help()
   ns.Print("commands (%s/dusk|r, %s/duskfall|r, %s/df|r):", Y, Y, Y)
   print("  " .. Y .. "/dusk|r status")
+  print("  " .. Y .. "/dusk config|r open the settings window")
   print("  " .. Y .. "/dusk save sub||zone||instance [when...]|r save the current values here")
   print("    " .. G .. "when: dawn day dusk night, 21:00-05:30, indoors outdoors resting combat mounted swimming underwater ghost; ! in front = not|r")
   print("  " .. Y .. "/dusk clear sub||zone||instance [when...]|r remove that Look")
@@ -278,20 +279,6 @@ local function styleCmd(args)
   print("  " .. G .. "/dusk style use <n>, /dusk style new <name>|r")
 end
 
--- Removes a character from a scope. An emptied Look scope becomes Global; an emptied Style scope
--- (isStyle) stays empty = unused. Returns true when it emptied.
-local function dropFromScope(scope, guid, isStyle)
-  if type(scope) ~= "table" or type(scope.chars) ~= "table" or not scope.chars[guid] then return false end
-  scope.chars[guid] = nil
-  if next(scope.chars) == nil then
-    if isStyle then return true end
-    scope.chars = nil
-    scope.global = true
-    return true
-  end
-  return false
-end
-
 local function charsCmd(args)
   local chars = ns.db.chars
   if args[2] and args[2]:lower() == "remove" then
@@ -305,16 +292,10 @@ local function charsCmd(args)
     end
     if not found then ns.Print("no known character \"%s\".", want) return end
     if found == ns.charKey then ns.Print("you can't remove the character you are playing.") return end
-    local emptied = 0
-    for _, st in ipairs(ns.db.styles) do
-      if dropFromScope(st.scope, found, true) then emptied = emptied + 1 end
-      for _, look in ipairs(st.looks) do
-        if dropFromScope(look.scope, found) then emptied = emptied + 1 end
-      end
-    end
-    ns.Print("removed %s.", chars[found].name or "?")
+    local name = chars[found].name or "?"
+    local emptied = ns.RemoveCharacter(found) or 0
+    ns.Print("removed %s.", name)
     if emptied > 0 then ns.Print("|cffff9f40%d scope(s) named only that character: those Looks are now Global, those Styles unused.|r", emptied) end
-    chars[found] = nil
     D.state.target = nil
     D.Evaluate("chars")
     return
@@ -388,6 +369,8 @@ local function handler(msg)
   elseif cmd == "chars" or cmd == "characters" then charsCmd(args)
   elseif cmd == "mode" or cmd == "fade" or cmd == "adapt" or cmd == "timefade" then transitionCmd(args)
   elseif cmd == "transition" then showTransition()
+  elseif cmd == "config" or cmd == "options" or cmd == "window" then
+    if ns.OpenWindow then ns.OpenWindow() end
   elseif cmd == "debug" then
     ns.cfg.debug = not ns.cfg.debug
     ns.Print("debug %s.", ns.cfg.debug and "on" or "off")

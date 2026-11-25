@@ -110,6 +110,47 @@ function ns.CharName(guid)
   return c and c.name or tostring(guid)
 end
 
+-- Removes a character from a scope. An emptied Look scope becomes Global; an emptied Style scope
+-- (isStyle) stays empty = unused. Returns true when it emptied.
+local function dropFromScope(scope, guid, isStyle)
+  if type(scope) ~= "table" or type(scope.chars) ~= "table" or not scope.chars[guid] then return false end
+  scope.chars[guid] = nil
+  if next(scope.chars) == nil then
+    if isStyle then return true end
+    scope.chars = nil
+    scope.global = true
+    return true
+  end
+  return false
+end
+
+-- How many Styles and Looks name this character.
+function ns.CharUse(guid)
+  local styles, looks = 0, 0
+  for _, st in ipairs(ns.db.styles) do
+    if type(st.scope) == "table" and type(st.scope.chars) == "table" and st.scope.chars[guid] then styles = styles + 1 end
+    for _, look in ipairs(st.looks) do
+      if type(look.scope) == "table" and type(look.scope.chars) == "table" and look.scope.chars[guid] then looks = looks + 1 end
+    end
+  end
+  return styles, looks
+end
+
+-- Forgets a character and strips it from every scope. Returns the number of scopes it emptied,
+-- or nil when it is the character being played or unknown.
+function ns.RemoveCharacter(guid)
+  if not guid or guid == ns.charKey or not ns.db.chars[guid] then return nil end
+  local emptied = 0
+  for _, st in ipairs(ns.db.styles) do
+    if dropFromScope(st.scope, guid, true) then emptied = emptied + 1 end
+    for _, look in ipairs(st.looks) do
+      if dropFromScope(look.scope, guid) then emptied = emptied + 1 end
+    end
+  end
+  ns.db.chars[guid] = nil
+  return emptied
+end
+
 function ns.IsGlobalStyle(st)
   return ns.ScopeOf(st.scope, nil, true) == "global"
 end
