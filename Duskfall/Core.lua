@@ -8,7 +8,7 @@ local ADDON, ns = ...
 ns.name = ADDON
 ns.VERSION = "0.1.0-dev"
 
-local DB_VERSION = 1
+local DB_VERSION = 2
 
 ns.DEFAULTS = {
   enabled = true,     -- automatic adjusting on
@@ -16,6 +16,8 @@ ns.DEFAULTS = {
   clock = "server",   -- "server" (GetGameTime, matches the sky) or "local" (the computer's clock)
   clock24 = true,     -- display only
   buckets = { dawn = 5, day = 8, dusk = 17, night = 20 },   -- the hour each part of the day starts
+  timeFade = 45,      -- seconds a change caused only by the clock takes, whatever the mode
+  adaptGap = 2,       -- seconds after an Adapt overshoot before the next one may overshoot
   debug = false,
 }
 
@@ -127,12 +129,24 @@ end
 -- MIGRATIONS[n] upgrades a version n-1 table to version n. Add one with every schema change.
 local MIGRATIONS = {}
 
+-- v2 (B-02/B-03, 2026-11-25): transitions exist now. Nobody could pick a mode before, so the old
+-- default "instant" becomes the new default "adapt", and the untouched 1.0 s fade becomes 1.5 s.
+MIGRATIONS[2] = function(db)
+  for _, st in ipairs(db.styles or {}) do
+    local tr = st.transition
+    if type(tr) == "table" then
+      if tr.mode == "instant" then tr.mode = "adapt" end
+      if type(tr.fade) == "table" and tr.fade.duration == 1.0 then tr.fade.duration = 1.5 end
+    end
+  end
+end
+
 local function newStyle(name)
   return {
     id = ns.NewID("s"), name = name, scope = { global = true },
     transition = {
-      mode = "instant",
-      fade = { duration = 1.0 },
+      mode = "adapt",
+      fade = { duration = 1.5 },
       adapt = { toDark = { duration = 4.0, strength = 0.3 }, toLight = { duration = 1.0, strength = 0.3 } },
     },
     looks = {},

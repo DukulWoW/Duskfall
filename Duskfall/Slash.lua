@@ -96,7 +96,8 @@ local function status()
   local style = ns.Resolver.ActiveStyle()
   local onoff = "|cff40ff40on|r"
   if not ns.cfg.enabled then onoff = "|cffff4040off|r" end
-  ns.Print("%s %s  Style: %s", onoff, G .. ns.VERSION .. "|r", style.name or "?")
+  local tr = style.transition or {}
+  ns.Print("%s %s  Style: %s  %s(%s)|r", onoff, G .. ns.VERSION .. "|r", style.name or "?", G, tr.mode or "adapt")
   local place = {}
   if env.instance then place[#place + 1] = string.format("%s (instance %s, %s)", env.instanceName or "?", env.instance, env.itype or "?") end
   if env.zone then place[#place + 1] = string.format("%s (zone %s)", env.zoneName or "?", env.zone) end
@@ -132,6 +133,11 @@ local function help()
   print("  " .. Y .. "/dusk looks|r list the Looks of your Style")
   print("  " .. Y .. "/dusk on||off|r automatic adjusting on or off")
   print("  " .. Y .. "/dusk baseline|r make the current values your baseline")
+  print("  " .. Y .. "/dusk mode instant||fade||adapt|r how changes happen (this Style)")
+  print("  " .. Y .. "/dusk fade <seconds>|r fade time")
+  print("  " .. Y .. "/dusk adapt dark||light <seconds> [strength 0-1]|r eye adaptation per direction")
+  print("  " .. Y .. "/dusk timefade <seconds>|r time of day changes (all modes)")
+  print("  " .. Y .. "/dusk transition|r show the current transition settings")
   print("  " .. Y .. "/dusk style [use <n> || new <name>]|r list, switch or create Styles")
   print("  " .. Y .. "/dusk chars [remove <name>]|r list or remove known characters")
   print("  " .. Y .. "/dusk debug|r debug output on or off")
@@ -323,6 +329,45 @@ local function charsCmd(args)
   print("  " .. G .. "/dusk chars remove <name>|r")
 end
 
+local MODES = { instant = true, fade = true, adapt = true }
+
+local function showTransition()
+  local tr = ns.Resolver.ActiveStyle().transition
+  local a = tr.adapt
+  ns.Print("mode %s; fade %.1fs; adapt to dark %.1fs / %.2f, to light %.1fs / %.2f; time of day %ds; overshoot gap %ds",
+    tr.mode, tr.fade.duration, a.toDark.duration, a.toDark.strength, a.toLight.duration, a.toLight.strength,
+    ns.cfg.timeFade, ns.cfg.adaptGap)
+end
+
+local function transitionCmd(args)
+  local cmd = args[1]:lower()
+  local tr = ns.Resolver.ActiveStyle().transition
+  if cmd == "mode" then
+    local m = args[2] and args[2]:lower()
+    if not MODES[m] then ns.Print("%s/dusk mode instant||fade||adapt|r", Y) return end
+    tr.mode = m
+  elseif cmd == "fade" then
+    local s = tonumber(args[2])
+    if not s or s < 0 or s > 30 then ns.Print("%s/dusk fade <0-30 seconds>|r", Y) return end
+    tr.fade.duration = s
+  elseif cmd == "adapt" then
+    local dir = args[2] and args[2]:lower()
+    local key = (dir == "dark" and "toDark") or (dir == "light" and "toLight") or nil
+    local s, k = tonumber(args[3]), tonumber(args[4])
+    if not key or not s or s < 0 or s > 30 or (args[4] and (not k or k < 0 or k > 1)) then
+      ns.Print("%s/dusk adapt dark||light <0-30 seconds> [strength 0-1]|r", Y)
+      return
+    end
+    tr.adapt[key].duration = s
+    if k then tr.adapt[key].strength = k end
+  elseif cmd == "timefade" then
+    local s = tonumber(args[2])
+    if not s or s < 0 or s > 600 then ns.Print("%s/dusk timefade <0-600 seconds>|r", Y) return end
+    ns.cfg.timeFade = s
+  end
+  showTransition()
+end
+
 local function handler(msg)
   local args = words(msg)
   local cmd = args[1] and args[1]:lower() or ""
@@ -339,6 +384,8 @@ local function handler(msg)
     if b then ns.Print("baseline saved: gamma %.2f, brightness %d, contrast %d.", b.gamma, b.brightness, b.contrast) end
   elseif cmd == "style" or cmd == "styles" then styleCmd(args)
   elseif cmd == "chars" or cmd == "characters" then charsCmd(args)
+  elseif cmd == "mode" or cmd == "fade" or cmd == "adapt" or cmd == "timefade" then transitionCmd(args)
+  elseif cmd == "transition" then showTransition()
   elseif cmd == "debug" then
     ns.cfg.debug = not ns.cfg.debug
     ns.Print("debug %s.", ns.cfg.debug and "on" or "off")

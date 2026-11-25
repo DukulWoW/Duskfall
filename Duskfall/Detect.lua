@@ -34,8 +34,9 @@ local function signature(env)
     tostring(env.instance), tostring(env.itype), tostring(env.zone), tostring(env.map), tostring(env.sub),
     b(env.indoors), b(env.resting), b(env.combat), b(env.mounted), b(env.swimming), b(env.underwater), b(env.ghost),
   }
-  if usesTime(R.ActiveStyle()) then parts[#parts + 1] = env.hour .. ":" .. env.min end
-  return table.concat(parts, "|")
+  local base = table.concat(parts, "|")
+  if usesTime(R.ActiveStyle()) then return base .. "|" .. env.hour .. ":" .. env.min, base end
+  return base, base
 end
 
 function D.ClearHolds()
@@ -47,13 +48,16 @@ function D.Evaluate(why)
   if not ns.db or not ns.db.baseline or not state.started then return end
   local env = S.Snapshot()
   state.env = env
-  state.sig = signature(env)
+  local sig, base = signature(env)
+  -- Only the clock moved (a time: Look starts or ends): the slow time fade, whatever the mode.
+  local timeOnly = why == "change" and state.base ~= nil and base == state.base and sig ~= state.sig
+  state.sig, state.base = sig, base
   state.pendingSig = nil
   S.Discover(env)
   local target, source, style, cands = R.Resolve(env)
   if state.target and not C.SameAll(state.target, target) then D.ClearHolds() end
   state.target, state.source, state.style, state.cands = target, source, style, cands
-  if ns.cfg.enabled then T.Apply(target, state.held, why) end
+  if ns.cfg.enabled then T.Apply(target, state.held, why, timeOnly) end
   ns.Debug("evaluate (%s): g %.2f b %d c %d", tostring(why), target.gamma, target.brightness, target.contrast)
   ns.Fire("EVALUATED", why)
 end
@@ -65,7 +69,7 @@ end
 
 local function tick()
   if not state.started then return end
-  local sig = signature(S.Snapshot())
+  local sig = (signature(S.Snapshot()))
   if sig == state.sig then
     state.pendingSig = nil
     return
@@ -113,6 +117,7 @@ ns.On("CVAR_UPDATE", function(name, value)
     return
   end
   state.held[ch.key] = v
+  T.Drop(ch.key)
   ns.db.lastApplied[ch.key] = v
   ns.Debug("held %s = %s", ch.key, tostring(v))
   if not state.hinted then

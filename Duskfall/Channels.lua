@@ -1,6 +1,6 @@
 -- Duskfall Channels.lua: the values Duskfall can change, and every read and write of them.
 -- Ranges verified in game (Forever 1.60.x, 2026-11-25). A later channel (tint, sound, camera)
--- is a new row here.
+-- is a new row here. overshoot = Adapt may go past the target on this channel.
 -- Public: C.list, C.byKey, C.Read(key), C.ReadAll(), C.Clamp(key, v), C.Same(key, a, b),
 --         C.SameAll(a, b), C.Write(key, v), C.WriteAll(values), C.IsOurs(cvar, value), C.Format(key, v)
 local ADDON, ns = ...
@@ -8,8 +8,8 @@ local C = {}
 ns.Channels = C
 
 C.list = {
-  { key = "gamma",      cvar = "Gamma",      label = "Gamma",      min = 0.3, max = 2.8, eps = 0.011, fade = true },
-  { key = "brightness", cvar = "Brightness", label = "Brightness", min = 0,   max = 100, eps = 0.6,   fade = true },
+  { key = "gamma",      cvar = "Gamma",      label = "Gamma",      min = 0.3, max = 2.8, eps = 0.011, fade = true, overshoot = true },
+  { key = "brightness", cvar = "Brightness", label = "Brightness", min = 0,   max = 100, eps = 0.6,   fade = true, overshoot = true },
   { key = "contrast",   cvar = "Contrast",   label = "Contrast",   min = 0,   max = 100, eps = 0.6,   fade = true },
 }
 C.byKey, C.byCVar = {}, {}
@@ -20,6 +20,19 @@ end
 
 local writing = false   -- true while our own SetCVar runs (CVAR_UPDATE fires for our writes too)
 local written = {}      -- key -> the value we last wrote
+local recent = {}       -- key -> the last RECENT values we wrote (a late CVAR_UPDATE during a fade)
+local RECENT = 8
+
+local function remember(key, v)
+  written[key] = v
+  local list = recent[key]
+  if not list then
+    list = {}
+    recent[key] = list
+  end
+  list[#list + 1] = v
+  if #list > RECENT then table.remove(list, 1) end
+end
 
 function C.Clamp(key, v)
   local ch = C.byKey[key]
@@ -79,7 +92,7 @@ function C.Write(key, v)
   writing = true
   local ok = pcall(SetCVar, C.byKey[key].cvar, C.Format(key, v))
   writing = false
-  written[key] = tonumber(C.Format(key, v))
+  remember(key, tonumber(C.Format(key, v)))
   if ns.db then ns.db.lastApplied[key] = written[key] end
   if not ok then ns.Debug("SetCVar %s failed", key) end
   return ok
@@ -91,12 +104,16 @@ function C.WriteAll(values)
   end
 end
 
--- Was this CVAR_UPDATE caused by us? Guard flag, or the value is the one we last wrote
+-- Was this CVAR_UPDATE caused by us? Guard flag, or the value is one we wrote recently
 -- (covers the event arriving after the guard dropped). Not one of ours at all: treated as ours.
 function C.IsOurs(cvar, value)
   if writing then return true end
   local ch = type(cvar) == "string" and C.byCVar[cvar:lower()]
   if not ch then return true end
   local v = tonumber(value) or C.Read(ch.key)
-  return C.Same(ch.key, written[ch.key], v)
+  if C.Same(ch.key, written[ch.key], v) then return true end
+  for _, w in ipairs(recent[ch.key] or {}) do
+    if C.Same(ch.key, w, v) then return true end
+  end
+  return false
 end
