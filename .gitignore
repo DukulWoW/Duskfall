@@ -1,0 +1,12 @@
+# Claude Code project context (local only)
+CLAUDE.md
+HANDOVER.md
+FILEMAP.md
+_docs/
+_work/
+_reference/
+_filearchive/
+.claude/settings.local.json
+
+*.zip
+luac.out

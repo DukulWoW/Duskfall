@@ -1,0 +1,14 @@
+## Interface: 16001
+## Title: Duskfall
+## Notes: Sets gamma, brightness and contrast for where you are, with smooth transitions.
+## Author: Dukul
+## Version: 0.1.0-dev
+## SavedVariables: DuskfallDB
+
+Core.lua
+Channels.lua
+Situations.lua
+Resolver.lua
+Transition.lua
+Detect.lua
+Slash.lua

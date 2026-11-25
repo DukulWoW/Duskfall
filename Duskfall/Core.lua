@@ -1,0 +1,178 @@
+-- Duskfall Core.lua: namespace, events, internal messages, saved variables, migrations,
+-- character registry and scope helpers. Everything else builds on this file.
+-- Public: ns.On(event, fn), ns.Listen(msg, fn), ns.Fire(msg, ...), ns.Print(fmt, ...),
+--         ns.Debug(fmt, ...), ns.NewID(prefix), ns.ScopeOf(scope, guid), ns.CharName(guid),
+--         ns.db (DuskfallDB), ns.cfg (DuskfallDB.settings), ns.charKey (player GUID)
+-- Messages: READY (saved variables loaded), ENABLE (after PLAYER_LOGIN), EVALUATED (new target)
+local ADDON, ns = ...
+ns.name = ADDON
+ns.VERSION = "0.1.0-dev"
+
+local DB_VERSION = 1
+
+ns.DEFAULTS = {
+  enabled = true,     -- automatic adjusting on
+  debounce = 0.5,     -- seconds a new state must hold before it is applied (doorways)
+  clock = "server",   -- "server" (GetGameTime, matches the sky) or "local" (the computer's clock)
+  clock24 = true,     -- display only
+  buckets = { dawn = 5, day = 8, dusk = 17, night = 20 },   -- the hour each part of the day starts
+  debug = false,
+}
+
+-- Output ---------------------------------------------------------------------------------------
+local function fmt(s, ...)
+  if select("#", ...) == 0 then return tostring(s) end
+  local ok, out = pcall(string.format, s, ...)
+  if ok then return out end
+  return tostring(s)
+end
+
+function ns.Print(s, ...)
+  print("|cff9fb4ffDuskfall|r " .. fmt(s, ...))
+end
+
+function ns.Debug(s, ...)
+  if ns.cfg and ns.cfg.debug then print("|cff7f7f7fDuskfall|r " .. fmt(s, ...)) end
+end
+
+-- An error inside a handler is printed once per place, never stops the other handlers.
+local reported = {}
+local function report(where, err)
+  if reported[where] then return end
+  reported[where] = true
+  ns.Print("error in %s: %s", tostring(where), tostring(err))
+end
+
+function ns.Safe(fn, where, ...)
+  local ok, err = pcall(fn, ...)
+  if not ok then report(where, err) end
+  return ok
+end
+
+-- Events ---------------------------------------------------------------------------------------
+local frame = CreateFrame("Frame")
+local handlers = {}
+
+function ns.On(event, fn)
+  if not handlers[event] then
+    handlers[event] = {}
+    if not pcall(frame.RegisterEvent, frame, event) then ns.Debug("unknown event %s", event) end
+  end
+  local list = handlers[event]
+  list[#list + 1] = fn
+end
+
+frame:SetScript("OnEvent", function(_, event, ...)
+  local list = handlers[event]
+  if not list then return end
+  for i = 1, #list do ns.Safe(list[i], event, ...) end
+end)
+
+-- Internal messages ----------------------------------------------------------------------------
+local listeners = {}
+
+function ns.Listen(msg, fn)
+  listeners[msg] = listeners[msg] or {}
+  local list = listeners[msg]
+  list[#list + 1] = fn
+end
+
+function ns.Fire(msg, ...)
+  local list = listeners[msg]
+  if not list then return end
+  for i = 1, #list do ns.Safe(list[i], msg, ...) end
+end
+
+-- Helpers --------------------------------------------------------------------------------------
+function ns.NewID(prefix)
+  ns.db.nextID = (ns.db.nextID or 0) + 1
+  return (prefix or "x") .. ns.db.nextID
+end
+
+-- How a scope applies to a character: "char" (named), "global", or nil (not for this character).
+-- scope = { global = true } or { chars = { [guid] = true } }. A Look scope naming no one counts as
+-- Global; with strict (Styles) it means nobody: an unused Style, so two Globals never compete.
+function ns.ScopeOf(scope, guid, strict)
+  if type(scope) ~= "table" or scope.global then return "global" end
+  local chars = scope.chars
+  if type(chars) ~= "table" or next(chars) == nil then
+    if strict then return nil end
+    return "global"
+  end
+  if guid and chars[guid] then return "char" end
+  return nil
+end
+
+function ns.CharName(guid)
+  local c = ns.db and ns.db.chars[guid]
+  return c and c.name or tostring(guid)
+end
+
+function ns.IsGlobalStyle(st)
+  return ns.ScopeOf(st.scope, nil, true) == "global"
+end
+
+-- Saved variables ------------------------------------------------------------------------------
+local function fill(dst, src)
+  for k, v in pairs(src) do
+    if type(v) == "table" then
+      if type(dst[k]) ~= "table" then dst[k] = {} end
+      fill(dst[k], v)
+    elseif dst[k] == nil then
+      dst[k] = v
+    end
+  end
+end
+
+-- MIGRATIONS[n] upgrades a version n-1 table to version n. Add one with every schema change.
+local MIGRATIONS = {}
+
+local function newStyle(name)
+  return {
+    id = ns.NewID("s"), name = name, scope = { global = true },
+    transition = {
+      mode = "instant",
+      fade = { duration = 1.0 },
+      adapt = { toDark = { duration = 4.0, strength = 0.3 }, toLight = { duration = 1.0, strength = 0.3 } },
+    },
+    looks = {},
+  }
+end
+ns.NewStyle = newStyle
+
+ns.On("ADDON_LOADED", function(name)
+  if name ~= ADDON then return end
+  DuskfallDB = DuskfallDB or {}
+  local db = DuskfallDB
+  ns.db = db
+  local from = tonumber(db.version) or DB_VERSION
+  for v = from + 1, DB_VERSION do
+    if MIGRATIONS[v] then MIGRATIONS[v](db) end
+  end
+  db.version = DB_VERSION
+  db.settings = db.settings or {}
+  fill(db.settings, ns.DEFAULTS)
+  db.chars = db.chars or {}
+  db.places = db.places or {}
+  db.lastApplied = db.lastApplied or {}
+  db.styles = db.styles or {}
+  if #db.styles == 0 then db.styles[1] = newStyle("My Style") end
+  ns.cfg = db.settings
+  ns.Fire("READY")
+end)
+
+-- Characters are keyed by GUID: Forever names carry a surname in the realm slot, so a name is no key.
+ns.On("PLAYER_LOGIN", function()
+  local guid = UnitGUID("player")
+  ns.charKey = guid
+  local first, second = UnitName("player")
+  local display = first or "?"
+  if second and second ~= "" then display = display .. " " .. second end
+  local _, class = UnitClass("player")
+  if guid then
+    local c = ns.db.chars[guid] or {}
+    c.name, c.class, c.last = display, class, time()
+    ns.db.chars[guid] = c
+  end
+  ns.Fire("ENABLE")
+end)
