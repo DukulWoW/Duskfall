@@ -1,19 +1,21 @@
 -- Duskfall UI/Window.lua: the settings window. ButtonFrameTemplate (Forever draws its own metal
--- frame on it), the wood background and glow from Kahoof, four top tabs, and a status strip that
--- shows what Duskfall is doing right now. Built on first open.
--- Tabs register through W.AddTab(name, builder); builder(page) runs once, page:OnShow refreshes.
--- Public: ns.OpenWindow(), W.AddTab(id, title, builder), W.Select(id), W.frame
+-- frame on it), the wood background and glow from Kahoof, classic tabs outside the bottom edge
+-- (what the addon does on the left: Places, Styles; global things on the right: Settings, About),
+-- and a status strip that shows what Duskfall is doing right now. Built on first open.
+-- Tabs register through W.AddTab(id, title, builder, side); builder(page) runs once.
+-- A tab with sub-pages sets page.Back = fn() -> true when it went back (ESC goes back first).
+-- Public: ns.OpenWindow(), W.AddTab(id, title, builder, side), W.Select(id), W.UpdateStatus(), W.frame
 local ADDON, ns = ...
 local W = {}
 ns.Window = W
 local UI, C = ns.UI, ns.Channels
 
 local WIDTH, HEIGHT = 780, 560
-local tabs = {}          -- { id, title, builder, page, button }
+local tabs = {}          -- { id, title, builder, side, page, button }
 local frame
 
-function W.AddTab(id, title, builder)
-  tabs[#tabs + 1] = { id = id, title = title, builder = builder }
+function W.AddTab(id, title, builder, side)
+  tabs[#tabs + 1] = { id = id, title = title, builder = builder, side = side or "left" }
 end
 
 local function statusText()
@@ -43,6 +45,12 @@ end
 
 function W.UpdateStatus()
   if frame and frame:IsShown() then frame.status:SetText(statusText()) end
+end
+
+local function current()
+  for _, t in ipairs(tabs) do
+    if t.id == frame.selected then return t end
+  end
 end
 
 function W.Select(id)
@@ -100,24 +108,54 @@ local function build()
   end)
   tinsert(UISpecialFrames, "DuskfallWindow")
 
-  -- Tabs
-  local prev
+  -- ESC on a sub-page goes back to its overview first. Keyboard input can't be stopped from
+  -- passing on in combat, so there ESC simply closes the window (UISpecialFrames).
+  -- Propagation is left on at all times except for the one ESC that went back, and switched on
+  -- again on the next frame, so keys can never get stuck in the window if combat starts.
+  f:EnableKeyboard(true)
+  pcall(f.SetPropagateKeyboardInput, f, true)
+  f:SetScript("OnKeyDown", function(self, key)
+    if InCombatLockdown() or key ~= "ESCAPE" then return end
+    local t = current()
+    if t and t.page.Back and t.page.Back() then
+      pcall(self.SetPropagateKeyboardInput, self, false)
+      C_Timer.After(0, function()
+        if not InCombatLockdown() then pcall(self.SetPropagateKeyboardInput, self, true) end
+      end)
+    end
+  end)
+
+  -- Tabs: classic tabs hanging under the bottom edge, left group from the left, right group
+  -- from the right
+  local lastLeft, lastRight
+  local rightTabs = {}
   for i, t in ipairs(tabs) do
-    local b = CreateFrame("Button", "DuskfallWindowTab" .. i, f, "PanelTopTabButtonTemplate")
+    local b = CreateFrame("Button", "DuskfallWindowTab" .. i, f, "PanelTabButtonTemplate")
     b:SetText(t.title)
     b:SetID(i)
-    if prev then b:SetPoint("LEFT", prev, "RIGHT", 4, 0)
-    else b:SetPoint("TOPLEFT", f, "TOPLEFT", 64, -26) end
     b:SetScript("OnClick", function() W.Select(t.id) end)
     pcall(PanelTemplates_TabResize, b, 12)
     t.button = b
-    prev = b
+    if t.side == "right" then
+      rightTabs[#rightTabs + 1] = b
+    else
+      if lastLeft then b:SetPoint("LEFT", lastLeft, "RIGHT", -16, 0)
+      else b:SetPoint("TOPLEFT", f, "BOTTOMLEFT", 12, 2) end
+      lastLeft = b
+    end
 
     local page = CreateFrame("Frame", nil, f)
-    page:SetPoint("TOPLEFT", f, "TOPLEFT", 14, -64)
+    page:SetPoint("TOPLEFT", f, "TOPLEFT", 14, -32)
     page:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -14, 34)
     page:Hide()
     t.page = page
+  end
+  -- Right group: the last one sits at the right edge, the others go leftwards from it
+  for i = #rightTabs, 1, -1 do
+    local b = rightTabs[i]
+    if lastRight then b:SetPoint("RIGHT", lastRight, "LEFT", 16, 0)
+    else b:SetPoint("TOPRIGHT", f, "BOTTOMRIGHT", -12, 2) end
+    lastRight = b
   end
   f.Tabs = {}
   for i, t in ipairs(tabs) do f.Tabs[i] = t.button end
@@ -132,21 +170,27 @@ local function build()
   f.status = status
 
   f:SetScript("OnShow", function() W.UpdateStatus() end)
-  W.Select(ns.cfg.windowTab or tabs[1].id)
-  if not f.selected then W.Select(tabs[1].id) end
+  local want = ns.cfg.windowTab
+  local known = false
+  for _, t in ipairs(tabs) do if t.id == want then known = true end end
+  if not known then want = tabs[1].id end
+  W.Select(want)
   -- A new frame starts shown: hide it, or the first toggle below hides it again (two clicks to open)
   f:Hide()
 end
 
-function ns.OpenWindow()
+function ns.OpenWindow(tabID)
   if not ns.db or not ns.Detect.state.started then ns.Print("not ready yet.") return end
   if not frame then build() end
-  if frame:IsShown() then
+  if tabID then
+    W.Select(tabID)
+    frame:Show()
+  elseif frame:IsShown() then
     frame:Hide()
   else
     frame:Show()
-    W.UpdateStatus()
   end
+  W.UpdateStatus()
 end
 
 ns.Listen("EVALUATED", function() W.UpdateStatus() end)

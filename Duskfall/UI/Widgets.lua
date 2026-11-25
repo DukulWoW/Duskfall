@@ -6,7 +6,8 @@
 --   * the Forever look: wood background tiled on the window's Bg, soft glow on panels
 -- Public: UI.ART, UI.Wood(f), UI.Glow(host, region), UI.Header(parent, text), UI.Label(...),
 --         UI.Button(parent, text, w, onClick), UI.Check(parent, o), UI.Slider(parent, width, o),
---         UI.Dropdown(parent, width, o), UI.Confirm(text, onAccept), UI.SLIDER_H
+--         UI.Dropdown(parent, width, o), UI.Confirm(text, onAccept), UI.SLIDER_H,
+--         UI.IconButton(parent, size, symbol, o), UI.Copy(title, text)
 local ADDON, ns = ...
 local UI = {}
 ns.UI = UI
@@ -221,6 +222,95 @@ function UI.Dropdown(parent, width, o)
   end
   build()
   return h
+end
+
+-- Icon button ----------------------------------------------------------------------------------
+-- BigNoteBox's layered icon button (UI/IconButton.lua), normal look only: background, plate,
+-- hover, symbol, Forever border; the pressed symbol is its own drawing. Art in Assets:
+-- bt-background, bt-button, bt-button-pressed, bt-hover, bt-border-forever, bt-<symbol>-normal/-press.
+-- o = { onClick, tip, tipSub }. The button owns its mouse scripts; add behaviour with HookScript.
+function UI.IconButton(parent, size, symbol, o)
+  o = o or {}
+  local btn = CreateFrame("Button", nil, parent)
+  btn:SetSize(size, size)
+  local function layer(sub, file)
+    local t = btn:CreateTexture(nil, "ARTWORK", nil, sub)
+    t:SetAllPoints()
+    if file then t:SetTexture(UI.ART .. file) end
+    return t
+  end
+  local bg = layer(0, "bt-background")
+  local plate = layer(1)
+  local hover = layer(2, "bt-hover")
+  local sym = layer(3)
+  local border = layer(4, "bt-border-forever")
+  local over, down = false, false
+  local function refresh()
+    local dim = not btn:IsEnabled()
+    local pressed = down and not dim
+    plate:SetTexture(UI.ART .. (pressed and "bt-button-pressed" or "bt-button"))
+    sym:SetTexture(UI.ART .. "bt-" .. symbol .. (pressed and "-press" or "-normal"))
+    hover:SetShown(over and not pressed and not dim)
+    local d, ds = 1, 1
+    if dim then d, ds = 0.6, 0.35 end
+    for _, t in ipairs({ bg, plate, hover, border }) do
+      t:SetDesaturated(dim)
+      t:SetVertexColor(d, d, d)
+    end
+    sym:SetDesaturated(dim)
+    sym:SetVertexColor(ds, ds, ds)
+  end
+  if o.onClick then btn:SetScript("OnClick", function(self, mb) ns.Safe(o.onClick, "icon button", self, mb) end) end
+  btn:SetScript("OnEnter", function(self)
+    over = true
+    refresh()
+    if o.tip then
+      GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
+      GameTooltip:AddLine(o.tip, 1, 1, 1)
+      if o.tipSub then GameTooltip:AddLine(o.tipSub, 0.78, 0.78, 0.78, true) end
+      GameTooltip:Show()
+    end
+  end)
+  btn:SetScript("OnLeave", function(self)
+    over, down = false, false
+    refresh()
+    if GameTooltip:IsOwned(self) then GameTooltip:Hide() end
+  end)
+  btn:SetScript("OnMouseDown", function() down = true refresh() end)
+  btn:SetScript("OnMouseUp", function() down = false refresh() end)
+  btn:SetScript("OnEnable", refresh)
+  btn:SetScript("OnDisable", refresh)
+  btn:HookScript("OnHide", function() over, down = false, false refresh() end)
+  refresh()
+  return btn
+end
+
+-- Copy box -------------------------------------------------------------------------------------
+-- Addons cannot write the clipboard (C_System.SetClipboard is nil on Forever, BNB): show the text
+-- selected in a popup so Ctrl+C copies it.
+StaticPopupDialogs["DUSKFALL_COPY"] = {
+  text = "%s\n\nPress Ctrl+C to copy.",
+  button1 = CLOSE or "Close",
+  hasEditBox = true,
+  editBoxWidth = 320,
+  OnShow = function(self, data)
+    local eb = self.editBox or self.EditBox
+    if eb then
+      eb:SetText(data or self.data or "")
+      eb:HighlightText()
+      eb:SetFocus()
+    end
+  end,
+  EditBoxOnEscapePressed = function(self) self:GetParent():Hide() end,
+  EditBoxOnEnterPressed = function(self) self:GetParent():Hide() end,
+  timeout = 0,
+  whileDead = true,
+  hideOnEscape = true,
+  preferredIndex = 3,
+}
+
+function UI.Copy(title, text)
+  StaticPopup_Show("DUSKFALL_COPY", title, nil, text)
 end
 
 -- Confirm popup --------------------------------------------------------------------------------

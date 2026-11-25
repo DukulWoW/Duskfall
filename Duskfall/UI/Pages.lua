@@ -1,7 +1,18 @@
--- Duskfall UI/Pages.lua: the tabs of the settings window built in B-04a: Settings and Characters.
--- Places (B-04b) and Styles (B-04d) are placeholders until then.
+-- Duskfall UI/Pages.lua: the tabs of the settings window.
+--   left:  Places (B-04b), Styles (B-04d): placeholders until then
+--   right: Settings (an overview of sub-pages, like BigNoteBox's Modules tab: General, Time of day,
+--          Baseline, Characters), About (logo, version, links, commands)
 local ADDON, ns = ...
 local UI, W, C, D = ns.UI, ns.Window, ns.Channels, ns.Detect
+
+ns.LINKS = {
+  { key = "dukul", name = "Dukul.net", url = "https://dukul.net", sub = "Dukul's other addons" },
+  { key = "github", name = "GitHub", url = "https://github.com/DukulWoW/Duskfall" },
+  -- CurseForge and Wago get their urls when Duskfall is released
+  { key = "curseforge", name = "CurseForge", url = nil },
+  { key = "wago", name = "Wago", url = nil },
+  { key = "bugs", name = "Report a bug", url = "https://github.com/DukulWoW/Duskfall/issues", sub = "Opens the issue tracker link" },
+}
 
 -- An hour in the chosen clock format: 21 -> "21:00" or "9 PM".
 function ns.FormatHour(h, m)
@@ -22,156 +33,127 @@ local function placeholder(page, text)
   fs:SetJustifyH("CENTER")
 end
 
--- Places -----------------------------------------------------------------------------------------
+-- Places / Styles ----------------------------------------------------------------------------------
 W.AddTab("places", "Places", function(page)
   placeholder(page, "The place list comes in B-04b.\nUntil then: /dusk save, /dusk clear, /dusk looks.")
-end)
+end, "left")
 
--- Styles -----------------------------------------------------------------------------------------
 W.AddTab("styles", "Styles", function(page)
   placeholder(page, "Styles come in B-04d.\nUntil then: /dusk style, /dusk mode, /dusk fade, /dusk adapt.")
-end)
+end, "left")
 
--- Settings ---------------------------------------------------------------------------------------
-local ORDER = { "dawn", "day", "dusk", "night" }
-local PERIOD_LABEL = { dawn = "Dawn starts", day = "Day starts", dusk = "Dusk starts", night = "Night starts" }
+-- Settings: sub-page builders ----------------------------------------------------------------------
+local CONTENT_W = 700
 
-local function hoursValid(b)
-  return b.dawn < b.day and b.day < b.dusk and b.dusk < b.night
-end
-
-W.AddTab("settings", "Settings", function(page)
+-- Stacks widgets from the top of a frame; every widget with :Refresh() is refreshed on show.
+local function stacker(parent, y)
   local controls = {}
-  local COL_W = 340
-  local left = CreateFrame("Frame", nil, page)
-  left:SetPoint("TOPLEFT", page, "TOPLEFT", 0, 0)
-  left:SetPoint("BOTTOMLEFT", page, "BOTTOMLEFT", 0, 0)
-  left:SetWidth(COL_W + 24)
-  UI.Glow(left, nil, 0.8)
-  local right = CreateFrame("Frame", nil, page)
-  right:SetPoint("TOPLEFT", left, "TOPRIGHT", 10, 0)
-  right:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", 0, 0)
-  UI.Glow(right, nil, 0.8)
-
-  local function stack(parent)
-    local y = -12
-    return function(widget, h, gap)
-      widget:SetPoint("TOPLEFT", parent, "TOPLEFT", 12, y)
-      y = y - (h or 26) - (gap or 8)
-      controls[#controls + 1] = widget
-      return widget
-    end
+  y = y or -12
+  local add = function(widget, h, gap, x)
+    widget:SetPoint("TOPLEFT", parent, "TOPLEFT", 12 + (x or 0), y)
+    y = y - (h or 26) - (gap or 8)
+    controls[#controls + 1] = widget
+    return widget
   end
-
-  -- Left: behaviour
-  local L = stack(left)
-  L(UI.Header(left, "Behaviour"), 14, 6)
-  L(UI.Check(left, { label = "Duskfall on", tip = "Off puts your baseline back and leaves the sliders to you.",
-    get = function() return ns.cfg.enabled end,
-    set = function(v) D.SetEnabled(v) W.UpdateStatus() end }), 26, 10)
-  L(UI.Slider(left, COL_W, { label = "Doorway delay", min = 0, max = 2, step = 0.1, default = 0.5,
-    fmt = function(v) return string.format("%.1f s", v) end,
-    tip = "How long a new state (indoors, mounted...) must hold before Duskfall reacts. Stops flicker in doorways.",
-    get = function() return ns.cfg.debounce end,
-    onChange = function(v) ns.cfg.debounce = v end }), UI.SLIDER_H, 10)
-  L(UI.Slider(left, COL_W, { label = "Time of day fade", min = 0, max = 120, step = 5, default = 45,
-    fmt = function(v) return v .. " s" end,
-    tip = "How long a change caused only by the clock takes, in every mode, so dusk never snaps.",
-    get = function() return ns.cfg.timeFade end,
-    onChange = function(v) ns.cfg.timeFade = v end }), UI.SLIDER_H, 10)
-  L(UI.Slider(left, COL_W, { label = "Adapt overshoot gap", min = 0, max = 10, step = 0.5, default = 2,
-    fmt = function(v) return string.format("%.1f s", v) end,
-    tip = "Two Adapt dips or glares never come closer than this. Riding along a zone border dips once.",
-    get = function() return ns.cfg.adaptGap end,
-    onChange = function(v) ns.cfg.adaptGap = v end }), UI.SLIDER_H, 14)
-
-  L(UI.Header(left, "Baseline"), 14, 6)
-  local baseText = UI.Label(left, "", "GameFontHighlight")
-  L(baseText, 14, 8)
-  local function showBase()
-    local b, parts = ns.db.baseline or {}, {}
-    for _, ch in ipairs(C.list) do
-      local v = b[ch.key]
-      parts[#parts + 1] = ch.label .. " " .. (v and C.Format(ch.key, v) or "-")
-    end
-    baseText:SetText(table.concat(parts, "   "))
-  end
-  baseText.Refresh = showBase
-  L(UI.Button(left, "Save current as baseline", 200, function()
-    UI.Confirm("Make the values on screen now your baseline (the ones logging out brings back)?", function()
-      D.SaveBaseline()
-      showBase()
-      W.UpdateStatus()
-    end)
-  end), 22, 14)
-  L(UI.Check(left, { label = "Debug output", get = function() return ns.cfg.debug end,
-    set = function(v) ns.cfg.debug = v end }), 26, 8)
-
-  -- Right: clock
-  local R = stack(right)
-  R(UI.Header(right, "Clock"), 14, 6)
-  R(UI.Dropdown(right, 180, { label = "Time source",
-    tip = "Server time matches day and night in the world. Local is your computer's clock.",
-    items = { { "server", "Server (matches the sky)" }, { "local", "Local (your computer)" } },
-    get = function() return ns.cfg.clock end,
-    set = function(v) ns.cfg.clock = v D.Evaluate("settings") end }), UI.DROPDOWN_H, 8)
-  local hourDrops = {}
-  R(UI.Dropdown(right, 180, { label = "Clock format",
-    items = { { true, "24 hour" }, { false, "12 hour" } },
-    get = function() return ns.cfg.clock24 end,
-    set = function(v)
-      ns.cfg.clock24 = v
-      for _, d in ipairs(hourDrops) do d:Refresh() end
-    end }), UI.DROPDOWN_H, 14)
-  R(UI.Header(right, "Parts of the day"), 14, 6)
-  local warn = UI.Label(right, "", "GameFontRedSmall")
-  for _, key in ipairs(ORDER) do
-    local d = UI.Dropdown(right, 180, { label = PERIOD_LABEL[key],
-      items = function()
-        local list = {}
-        for hr = 0, 23 do list[#list + 1] = { hr, ns.FormatHour(hr) } end
-        return list
-      end,
-      get = function() return ns.cfg.buckets[key] end,
-      set = function(v)
-        local b = {}
-        for k, x in pairs(ns.cfg.buckets) do b[k] = x end
-        b[key] = v
-        if not hoursValid(b) then
-          warn:SetText("Must go Dawn < Day < Dusk < Night.")
-          return
-        end
-        warn:SetText("")
-        ns.cfg.buckets[key] = v
-        D.Evaluate("settings")
-      end })
-    hourDrops[#hourDrops + 1] = d
-    R(d, UI.DROPDOWN_H, 4)
-  end
-  R(warn, 14, 4)
-
-  page:SetScript("OnShow", function()
+  local refresh = function()
     for _, c in ipairs(controls) do
       if c.Refresh then c:Refresh() end
     end
-  end)
-end)
+  end
+  return add, refresh
+end
 
--- Characters ---------------------------------------------------------------------------------------
-W.AddTab("chars", "Characters", function(page)
-  UI.Glow(page, nil, 0.8)
-  local title = UI.Header(page, "Known characters")
-  title:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -12)
-  local note = UI.Label(page, "Characters are added when they log in. Remove the ones you deleted; they also leave every scope that names them.")
-  note:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -4)
-  note:SetPoint("RIGHT", page, "RIGHT", -12, 0)
+local function buildGeneral(p)
+  local add, refresh = stacker(p, -48)
+  local SL_W = 460
+  add(UI.Check(p, { label = "Duskfall on", tip = "Off puts your baseline back and leaves the sliders to you.",
+    get = function() return ns.cfg.enabled end,
+    set = function(v) D.SetEnabled(v) W.UpdateStatus() end }), 26, 12)
+  add(UI.Slider(p, SL_W, { label = "Doorway delay", min = 0, max = 2, step = 0.1, default = 0.5,
+    fmt = function(v) return string.format("%.1f s", v) end,
+    tip = "How long a new state (indoors, mounted...) must hold before Duskfall reacts. Stops flicker in doorways.",
+    get = function() return ns.cfg.debounce end,
+    onChange = function(v) ns.cfg.debounce = v end }), UI.SLIDER_H, 12)
+  add(UI.Slider(p, SL_W, { label = "Time of day fade", min = 0, max = 120, step = 5, default = 45,
+    fmt = function(v) return v .. " s" end,
+    tip = "How long a change caused only by the clock takes, in every mode, so dusk never snaps.",
+    get = function() return ns.cfg.timeFade end,
+    onChange = function(v) ns.cfg.timeFade = v end }), UI.SLIDER_H, 12)
+  add(UI.Slider(p, SL_W, { label = "Adapt overshoot gap", min = 0, max = 10, step = 0.5, default = 2,
+    fmt = function(v) return string.format("%.1f s", v) end,
+    tip = "Two Adapt dips or glares never come closer than this. Riding along a zone border dips once.",
+    get = function() return ns.cfg.adaptGap end,
+    onChange = function(v) ns.cfg.adaptGap = v end }), UI.SLIDER_H, 16)
+  add(UI.Check(p, { label = "Debug output", tip = "Prints what Duskfall does in chat.",
+    get = function() return ns.cfg.debug end,
+    set = function(v) ns.cfg.debug = v end }), 26, 8)
+  return refresh
+end
 
-  local box = CreateFrame("Frame", nil, page, "WowScrollBoxList")
+local function buildTime(p)
+  local add, refresh = stacker(p, -48)
+  local DD_W = 300
+  local bar
+  local src = UI.Dropdown(p, DD_W, { label = "Time source",
+    tip = "Server time matches day and night in the world. Local is your computer's clock.",
+    items = { { "server", "Server time (matches the sky)" }, { "local", "Local time (your computer)" } },
+    get = function() return ns.cfg.clock end,
+    set = function(v) ns.cfg.clock = v D.Evaluate("settings") if bar then bar:Refresh() end end })
+  add(src, UI.DROPDOWN_H, 8)
+  local fmt = UI.Dropdown(p, DD_W, { label = "Clock format",
+    items = { { true, "24 hour (21:00)" }, { false, "12 hour (9 PM)" } },
+    get = function() return ns.cfg.clock24 end,
+    set = function(v) ns.cfg.clock24 = v if bar then bar:Refresh() end end })
+  fmt:SetPoint("TOPLEFT", src, "TOPRIGHT", 40, 0)
+  add(UI.Header(p, "Parts of the day"), 14, 4)
+  local help = UI.Label(p, "A Look can be set to one part of the day. Drag the yellow edges to change when each part starts.")
+  help:SetWidth(CONTENT_W - 24)
+  add(help, 14, 12)
+  bar = UI.DayBar(p, CONTENT_W - 24)
+  add(bar, bar:GetHeight(), 8)
+  local r = refresh
+  return function() r() fmt:Refresh() end
+end
+
+local function buildBaseline(p)
+  local add, refresh = stacker(p, -48)
+  local text = UI.Label(p, "Your baseline is your own look: Duskfall starts from it (Looks are offsets from it) and puts it back when you log out or switch Duskfall off.")
+  text:SetWidth(CONTENT_W - 24)
+  add(text, 28, 12)
+  local vals = UI.Label(p, "", "GameFontHighlightLarge")
+  vals.Refresh = function()
+    local b, parts = ns.db.baseline or {}, {}
+    for _, ch in ipairs(C.list) do
+      local v = b[ch.key]
+      parts[#parts + 1] = ch.label .. " |cffffffff" .. (v and C.Format(ch.key, v) or "-") .. "|r"
+    end
+    vals:SetText(table.concat(parts, "     "))
+  end
+  add(vals, 20, 16)
+  add(UI.Button(p, "Save current as baseline", 220, function()
+    UI.Confirm("Make the values on screen now your baseline (the ones logging out brings back)?", function()
+      D.SaveBaseline()
+      vals:Refresh()
+      W.UpdateStatus()
+    end)
+  end), 22, 8)
+  local tip = UI.Label(p, "Tip: switch Duskfall off, set the game's sliders the way you like them, then save.")
+  tip:SetTextColor(0.7, 0.7, 0.7)
+  add(tip, 14, 8)
+  return refresh
+end
+
+local function buildCharacters(p)
+  local note = UI.Label(p, "Characters are added when they log in. Remove the ones you deleted; they also leave every scope that names them.")
+  note:SetPoint("TOPLEFT", p, "TOPLEFT", 12, -48)
+  note:SetPoint("RIGHT", p, "RIGHT", -12, 0)
+
+  local box = CreateFrame("Frame", nil, p, "WowScrollBoxList")
   box:SetPoint("TOPLEFT", note, "BOTTOMLEFT", 0, -10)
-  box:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -30, 10)
-  local bar = CreateFrame("EventFrame", nil, page, "MinimalScrollBar")
-  bar:SetPoint("TOPLEFT", box, "TOPRIGHT", 8, 0)
-  bar:SetPoint("BOTTOMLEFT", box, "BOTTOMRIGHT", 8, 0)
+  box:SetPoint("BOTTOMRIGHT", p, "BOTTOMRIGHT", -30, 10)
+  local scroll = CreateFrame("EventFrame", nil, p, "MinimalScrollBar")
+  scroll:SetPoint("TOPLEFT", box, "TOPRIGHT", 8, 0)
+  scroll:SetPoint("BOTTOMLEFT", box, "BOTTOMRIGHT", 8, 0)
 
   local refresh
   local view = CreateScrollBoxListLinearView()
@@ -213,7 +195,7 @@ W.AddTab("chars", "Characters", function(page)
       end)
     end)
   end)
-  ScrollUtil.InitScrollBoxListWithScrollBar(box, bar, view)
+  ScrollUtil.InitScrollBoxListWithScrollBar(box, scroll, view)
 
   refresh = function()
     local list = {}
@@ -222,6 +204,140 @@ W.AddTab("chars", "Characters", function(page)
     for i, e in ipairs(list) do e.index = i end
     box:SetDataProvider(CreateDataProvider(list))
   end
-  page:SetScript("OnShow", refresh)
-  refresh()
-end)
+  return refresh
+end
+
+local SUBPAGES = {
+  { key = "general", title = "General", build = buildGeneral,
+    desc = "Switch Duskfall on or off, doorway delay, transition timing, debug output." },
+  { key = "time", title = "Time of day", build = buildTime,
+    desc = "Server or local clock, 12 or 24 hour, and when dawn, day, dusk and night start." },
+  { key = "baseline", title = "Baseline", build = buildBaseline,
+    desc = "Your own look: what Duskfall starts from and puts back when you log out." },
+  { key = "chars", title = "Characters", build = buildCharacters,
+    desc = "Characters Duskfall knows. Remove the ones you deleted." },
+}
+
+-- Settings tab ------------------------------------------------------------------------------------
+W.AddTab("settings", "Settings", function(page)
+  UI.Glow(page, nil, 0.8)
+  local overview = CreateFrame("Frame", nil, page)
+  overview:SetAllPoints()
+  local open
+
+  local title = UI.Header(overview, "Settings")
+  title:SetFontObject("GameFontNormalLarge")
+  title:SetPoint("TOPLEFT", overview, "TOPLEFT", 12, -12)
+  local y = -48
+  local subs = {}
+  for _, def in ipairs(SUBPAGES) do
+    local sub = CreateFrame("Frame", nil, page)
+    sub:SetAllPoints()
+    sub:Hide()
+    local back = UI.IconButton(sub, 22, "left", { tip = "Back", onClick = function() page.Back() end })
+    back:SetPoint("TOPLEFT", sub, "TOPLEFT", 12, -12)
+    local h = UI.Header(sub, def.title)
+    h:SetFontObject("GameFontNormalLarge")
+    h:SetPoint("LEFT", back, "RIGHT", 8, 0)
+    local rule = sub:CreateTexture(nil, "ARTWORK")
+    rule:SetColorTexture(1, 0.82, 0, 0.25)
+    rule:SetHeight(1)
+    rule:SetPoint("TOPLEFT", sub, "TOPLEFT", 12, -40)
+    rule:SetPoint("TOPRIGHT", sub, "TOPRIGHT", -12, -40)
+    sub.def = def
+    subs[def.key] = sub
+
+    local row = CreateFrame("Frame", nil, overview)
+    row:SetPoint("TOPLEFT", overview, "TOPLEFT", 12, y)
+    row:SetPoint("RIGHT", overview, "RIGHT", -12, 0)
+    row:SetHeight(44)
+    local btn = UI.Button(row, "Settings", 100, function() open(def.key) end)
+    btn:SetPoint("TOPRIGHT", row, "TOPRIGHT", 0, -2)
+    local rt = UI.Label(row, def.title, "GameFontNormal")
+    rt:SetPoint("TOPLEFT", row, "TOPLEFT", 0, -4)
+    local rd = UI.Label(row, def.desc)
+    rd:SetTextColor(0.65, 0.65, 0.65)
+    rd:SetPoint("TOPLEFT", rt, "BOTTOMLEFT", 0, -4)
+    rd:SetPoint("RIGHT", btn, "LEFT", -12, 0)
+    y = y - 54
+  end
+
+  open = function(key)
+    local sub = subs[key]
+    if not sub.refresh then sub.refresh = sub.def.build(sub) end
+    overview:Hide()
+    for _, s in pairs(subs) do s:Hide() end
+    sub:Show()
+    if sub.refresh then sub.refresh() end
+    page.openSub = key
+  end
+  page.Back = function()
+    if not page.openSub then return false end
+    subs[page.openSub]:Hide()
+    page.openSub = nil
+    overview:Show()
+    return true
+  end
+  page:SetScript("OnShow", function()
+    if page.openSub then
+      local sub = subs[page.openSub]
+      if sub.refresh then sub.refresh() end
+    end
+  end)
+  ns.OpenSettingsPage = function(key)
+    ns.OpenWindow("settings")
+    open(key)
+  end
+end, "right")
+
+-- About tab ---------------------------------------------------------------------------------------
+W.AddTab("about", "About", function(page)
+  UI.Glow(page, nil, 0.8)
+  local logo = page:CreateTexture(nil, "ARTWORK")
+  logo:SetSize(96, 96)
+  logo:SetPoint("TOP", page, "TOP", 0, -16)
+  logo:SetTexture(UI.ART .. "icon")
+
+  local name = page:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge3")
+  name:SetPoint("TOP", logo, "BOTTOM", 0, -6)
+  name:SetText("|cff3355ccD|cff506ac5u|cff6d7fbes|cff8a94b7k|cffa8a9aff|cffc5bea8a|cffe2d3a1l|cffffe89al|r")
+  local ver = UI.Label(page, "Version " .. ns.VERSION, "GameFontHighlight")
+  ver:SetPoint("TOP", name, "BOTTOM", 0, -4)
+  ver:SetTextColor(0.7, 0.7, 0.7)
+  local by = UI.Label(page, "by Dukul", "GameFontHighlightSmall")
+  by:SetPoint("TOP", ver, "BOTTOM", 0, -2)
+  by:SetTextColor(0.55, 0.55, 0.55)
+
+  local desc = UI.Label(page, "Duskfall sets gamma, brightness, contrast and bloom for every place you go: a cave, a city, "
+    .. "a dungeon, indoors or out, day or night. Changes glide in, or adapt like real eyes do.", "GameFontHighlight")
+  desc:SetPoint("TOP", by, "BOTTOM", 0, -12)
+  desc:SetWidth(560)
+  desc:SetJustifyH("CENTER")
+
+  -- Link buttons (BigNoteBox's icon buttons); a site without a url yet is left out
+  local SZ, GAP = 32, 8
+  local shown = {}
+  for _, l in ipairs(ns.LINKS) do if l.url then shown[#shown + 1] = l end end
+  local rowW = #shown * SZ + (#shown - 1) * GAP
+  for i, l in ipairs(shown) do
+    local b = UI.IconButton(page, SZ, l.key, {
+      tip = l.name, tipSub = l.sub or ("Copy the " .. l.name .. " link"),
+      onClick = function() UI.Copy(l.name, l.url) end,
+    })
+    b:SetPoint("TOPLEFT", desc, "BOTTOM", -math.floor(rowW / 2) + (i - 1) * (SZ + GAP), -14)
+  end
+
+  local cmdH = UI.Header(page, "Commands")
+  cmdH:SetPoint("TOP", desc, "BOTTOM", 0, -(14 + SZ + 24))
+  cmdH:SetPoint("LEFT", page, "LEFT", 60, 0)
+  local cmds = UI.Label(page, table.concat({
+    "|cffffd100/dusk|r  status: where you are and what Duskfall shows",
+    "|cffffd100/dusk config|r  this window",
+    "|cffffd100/dusk save|r sub, zone or instance [conditions]  save the values on screen for here",
+    "|cffffd100/dusk clear|r sub, zone or instance [conditions]  remove that Look",
+    "|cffffd100/dusk on|r, |cffffd100/dusk off|r  automatic adjusting on or off (also a key binding)",
+    "|cffffd100/dusk help|r  every command",
+  }, "\n"), "GameFontHighlight")
+  cmds:SetPoint("TOPLEFT", cmdH, "BOTTOMLEFT", 0, -6)
+  cmds:SetSpacing(3)
+end, "right")

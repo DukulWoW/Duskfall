@@ -1,0 +1,228 @@
+-- Duskfall UI/DayBar.lua: the parts of the day as a 24 hour bar.
+--
+--   Now 21:38 - Night
+--   |## Night ##|== Dawn ==|------ Day ------|== Dusk ==|## Night ##|
+--   0           5          8                17         20          24
+--
+-- Drag an edge to move when a part starts (whole hours; an edge never passes its neighbours, so
+-- the order Dawn < Day < Dusk < Night always holds). Under the bar one line per part with its icon
+-- (BNB's ui-dawn / day / dusk / night) and from - to. Reset puts back 5, 8, 17, 20.
+-- Public: UI.DayBar(parent, width) -> holder with :Refresh()
+local ADDON, ns = ...
+local UI = ns.UI
+
+local ORDER = { "dawn", "day", "dusk", "night" }
+local NAME = { dawn = "Dawn", day = "Day", dusk = "Dusk", night = "Night" }
+local COLOR = {
+  night = { 0.13, 0.17, 0.42 },
+  dawn  = { 0.86, 0.47, 0.52 },
+  day   = { 0.98, 0.88, 0.52 },
+  dusk  = { 0.86, 0.56, 0.24 },
+}
+local TEXT_COLOR = { night = { 0.85, 0.88, 1 }, dawn = { 0.15, 0.05, 0.05 }, day = { 0.2, 0.15, 0.05 }, dusk = { 0.15, 0.07, 0 } }
+local DEFAULT = { dawn = 5, day = 8, dusk = 17, night = 20 }
+local BAR_H, HANDLE_W = 26, 10
+
+function UI.DayBar(parent, width)
+  local h = CreateFrame("Frame", nil, parent)
+  local LINES_H = 4 * 24
+  h:SetSize(width, 20 + BAR_H + 18 + 12 + LINES_H + 30)
+
+  local nowText = UI.Label(h, "", "GameFontHighlight")
+  nowText:SetPoint("TOPLEFT", h, "TOPLEFT", 0, 0)
+
+  local bar = CreateFrame("Frame", nil, h)
+  bar:SetPoint("TOPLEFT", h, "TOPLEFT", 0, -20)
+  bar:SetSize(width, BAR_H)
+  local frameTex = bar:CreateTexture(nil, "BACKGROUND")
+  frameTex:SetPoint("TOPLEFT", -1, 1)
+  frameTex:SetPoint("BOTTOMRIGHT", 1, -1)
+  frameTex:SetColorTexture(0, 0, 0, 0.8)
+
+  -- Five segments: night before dawn, dawn, day, dusk, night after.
+  local segs = {}
+  for i, key in ipairs({ "night", "dawn", "day", "dusk", "night" }) do
+    local t = bar:CreateTexture(nil, "ARTWORK")
+    t:SetColorTexture(COLOR[key][1], COLOR[key][2], COLOR[key][3], 1)
+    local fs = bar:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    fs:SetTextColor(TEXT_COLOR[key][1], TEXT_COLOR[key][2], TEXT_COLOR[key][3])
+    fs:SetShadowOffset(0, 0)
+    segs[i] = { key = key, tex = t, text = fs }
+  end
+
+  -- Hour ticks every 3 hours
+  local ticks = {}
+  for hr = 0, 24, 3 do
+    local fs = UI.Label(h, "", "GameFontHighlightSmall")
+    fs:SetTextColor(0.7, 0.7, 0.7)
+    ticks[#ticks + 1] = { hr = hr, fs = fs }
+  end
+
+  -- Now marker
+  local now = bar:CreateTexture(nil, "OVERLAY", nil, 2)
+  now:SetColorTexture(1, 1, 1, 0.95)
+  now:SetSize(2, BAR_H + 6)
+
+  local function x(hour) return width * hour / 24 end
+  local function buckets() return ns.cfg.buckets end
+
+  -- Lines under the bar
+  local lines = {}
+  for i, key in ipairs(ORDER) do
+    local row = CreateFrame("Frame", nil, h)
+    row:SetSize(width, 22)
+    row:SetPoint("TOPLEFT", h, "TOPLEFT", 0, -(20 + BAR_H + 30 + (i - 1) * 24))
+    local icon = row:CreateTexture(nil, "ARTWORK")
+    icon:SetSize(20, 20)
+    icon:SetPoint("LEFT", row, "LEFT", 0, 0)
+    icon:SetTexture(UI.ART .. "ui-" .. key)
+    local sw = row:CreateTexture(nil, "ARTWORK")
+    sw:SetSize(12, 12)
+    sw:SetPoint("LEFT", icon, "RIGHT", 8, 0)
+    sw:SetColorTexture(COLOR[key][1], COLOR[key][2], COLOR[key][3], 1)
+    local name = UI.Label(row, NAME[key], "GameFontNormal")
+    name:SetPoint("LEFT", sw, "RIGHT", 8, 0)
+    name:SetWidth(70)
+    local span = UI.Label(row, "", "GameFontHighlight")
+    span:SetPoint("LEFT", name, "RIGHT", 8, 0)
+    lines[key] = span
+  end
+
+  local function draw()
+    local b = buckets()
+    local edges = { 0, b.dawn, b.day, b.dusk, b.night, 24 }
+    for i, s in ipairs(segs) do
+      local a, z = edges[i], edges[i + 1]
+      s.tex:ClearAllPoints()
+      s.text:ClearAllPoints()
+      if z > a then
+        s.tex:SetPoint("TOPLEFT", bar, "TOPLEFT", x(a), 0)
+        s.tex:SetPoint("BOTTOMRIGHT", bar, "BOTTOMLEFT", x(z), 0)
+        s.tex:Show()
+        s.text:SetPoint("CENTER", s.tex, "CENTER")
+        s.text:SetText(NAME[s.key])
+        if x(z) - x(a) > s.text:GetStringWidth() + 6 then s.text:Show() else s.text:Hide() end
+      else
+        s.tex:Hide()
+        s.text:Hide()
+      end
+    end
+    for _, t in ipairs(ticks) do
+      t.fs:ClearAllPoints()
+      if t.hr == 24 and ns.cfg.clock24 then t.fs:SetText("24:00") else t.fs:SetText(ns.FormatHour(t.hr % 24)) end
+      local point = "TOP"
+      if t.hr == 0 then point = "TOPLEFT" elseif t.hr == 24 then point = "TOPRIGHT" end
+      t.fs:SetPoint(point, bar, "BOTTOMLEFT", x(t.hr), -4)
+    end
+    for i, key in ipairs(ORDER) do
+      local nextKey = ORDER[i % 4 + 1]
+      lines[key]:SetText(ns.FormatHour(b[key]) .. "  -  " .. ns.FormatHour(b[nextKey]))
+    end
+  end
+
+  local function drawNow()
+    local env = ns.Situations.Snapshot()
+    now:ClearAllPoints()
+    now:SetPoint("CENTER", bar, "LEFT", x(env.hour + env.min / 60), 0)
+    nowText:SetText(string.format("Now %s - %s", ns.FormatHour(env.hour, env.min), NAME[env.period]))
+  end
+
+  -- Handles on the four inner edges
+  local handles = {}
+  local dragging
+  for i, key in ipairs(ORDER) do
+    local hd = CreateFrame("Button", nil, bar)
+    hd:SetSize(HANDLE_W, BAR_H + 10)
+    hd:SetFrameLevel(bar:GetFrameLevel() + 5)
+    local line = hd:CreateTexture(nil, "OVERLAY")
+    line:SetColorTexture(1, 0.82, 0, 1)
+    line:SetPoint("TOP")
+    line:SetPoint("BOTTOM")
+    line:SetWidth(2)
+    local knob = hd:CreateTexture(nil, "OVERLAY", nil, 1)
+    knob:SetColorTexture(1, 0.82, 0, 1)
+    knob:SetSize(8, 8)
+    knob:SetPoint("BOTTOM", hd, "BOTTOM", 0, 0)
+    hd.line, hd.knob = line, knob
+    hd:SetScript("OnEnter", function(self)
+      line:SetColorTexture(1, 1, 1, 1)
+      knob:SetColorTexture(1, 1, 1, 1)
+      GameTooltip:SetOwner(self, "ANCHOR_TOP")
+      GameTooltip:AddLine(NAME[key] .. " starts at " .. ns.FormatHour(buckets()[key]), 1, 1, 1)
+      GameTooltip:AddLine("Drag to move it.", 0.8, 0.8, 0.8)
+      GameTooltip:Show()
+    end)
+    hd:SetScript("OnLeave", function()
+      if dragging ~= key then
+        line:SetColorTexture(1, 0.82, 0, 1)
+        knob:SetColorTexture(1, 0.82, 0, 1)
+      end
+      GameTooltip:Hide()
+    end)
+    hd:SetScript("OnMouseDown", function() dragging = key end)
+    hd:SetScript("OnMouseUp", function()
+      dragging = nil
+      line:SetColorTexture(1, 0.82, 0, 1)
+      knob:SetColorTexture(1, 0.82, 0, 1)
+      ns.Detect.Evaluate("settings")
+      drawNow()
+    end)
+    handles[i] = { key = key, btn = hd }
+  end
+
+  local function placeHandles()
+    local b = buckets()
+    for _, hd in ipairs(handles) do
+      hd.btn:ClearAllPoints()
+      hd.btn:SetPoint("CENTER", bar, "LEFT", x(b[hd.key]), -2)
+    end
+  end
+
+  local elapsed = 0
+  h:SetScript("OnUpdate", function(_, dt)
+    if dragging then
+      local scale = bar:GetEffectiveScale()
+      local cx = GetCursorPosition() / scale
+      local hour = math.floor((cx - bar:GetLeft()) / width * 24 + 0.5)
+      local b = buckets()
+      local i
+      for n, key in ipairs(ORDER) do if key == dragging then i = n end end
+      local lo = 0
+      if i > 1 then lo = b[ORDER[i - 1]] + 1 end
+      local hi = 23
+      if i < 4 then hi = b[ORDER[i + 1]] - 1 end
+      hour = math.max(lo, math.min(hi, hour))
+      if hour ~= b[dragging] then
+        b[dragging] = hour
+        draw()
+        placeHandles()
+        if GameTooltip:IsShown() then
+          GameTooltip:ClearLines()
+          GameTooltip:AddLine(NAME[dragging] .. " starts at " .. ns.FormatHour(hour), 1, 1, 1)
+          GameTooltip:Show()
+        end
+      end
+    end
+    elapsed = elapsed + dt
+    if elapsed > 15 then
+      elapsed = 0
+      drawNow()
+    end
+  end)
+
+  local reset = UI.Button(h, "Reset to default", 140, function()
+    for k, v in pairs(DEFAULT) do ns.cfg.buckets[k] = v end
+    h:Refresh()
+    ns.Detect.Evaluate("settings")
+  end)
+  reset:SetPoint("TOPRIGHT", h, "TOPRIGHT", 0, -(20 + BAR_H + 30))
+
+  function h:Refresh()
+    draw()
+    placeHandles()
+    drawNow()
+  end
+  h:SetScript("OnShow", function(self) self:Refresh() end)
+  h:Refresh()
+  return h
+end
