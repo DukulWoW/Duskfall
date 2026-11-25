@@ -53,19 +53,22 @@ local function current()
   end
 end
 
+-- Tabs are selected one by one (as BigNoteBox does), never with PanelTemplates_SetTab: that
+-- re-anchors the whole row in a line, which broke the left / right groups (Kim's screenshot).
 function W.Select(id)
-  for i, t in ipairs(tabs) do
+  for _, t in ipairs(tabs) do
     if t.id == id then
       if not t.page.built then
         t.page.built = true
         ns.Safe(t.builder, "tab " .. t.id, t.page)
       end
       t.page:Show()
-      PanelTemplates_SetTab(frame, i)
+      pcall(PanelTemplates_SelectTab, t.button)
       frame.selected = id
       ns.cfg.windowTab = id
     else
       t.page:Hide()
+      pcall(PanelTemplates_DeselectTab, t.button)
     end
   end
 end
@@ -139,6 +142,7 @@ local function build()
     if t.side == "right" then
       rightTabs[#rightTabs + 1] = b
     else
+      b:ClearAllPoints()
       if lastLeft then b:SetPoint("LEFT", lastLeft, "RIGHT", -16, 0)
       else b:SetPoint("TOPLEFT", f, "BOTTOMLEFT", 12, 2) end
       lastLeft = b
@@ -153,13 +157,13 @@ local function build()
   -- Right group: the last one sits at the right edge, the others go leftwards from it
   for i = #rightTabs, 1, -1 do
     local b = rightTabs[i]
+    b:ClearAllPoints()
     if lastRight then b:SetPoint("RIGHT", lastRight, "LEFT", 16, 0)
     else b:SetPoint("TOPRIGHT", f, "BOTTOMRIGHT", -12, 2) end
     lastRight = b
   end
-  f.Tabs = {}
-  for i, t in ipairs(tabs) do f.Tabs[i] = t.button end
   PanelTemplates_SetNumTabs(f, #tabs)
+  f.numTabs = #tabs
 
   -- Status strip
   local status = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
