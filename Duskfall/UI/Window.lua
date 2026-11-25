@@ -11,8 +11,8 @@ ns.Window = W
 local UI, C = ns.UI, ns.Channels
 
 local WIDTH, HEIGHT = 780, 560
-local PORTRAIT_OUT = 12   -- how much further out of the top-left corner the portrait sits
-local PAGE_TOP = 44       -- page content starts this far below the window top (clear of the portrait)
+local ICON_SIZE, ICON_OUT = 62, 18   -- our round icon, and how far it sits out of the top-left corner
+local PAGE_TOP = 34                  -- page content starts this far below the window top
 local tabs = {}          -- { id, title, builder, side, page, button }
 local frame
 
@@ -96,17 +96,16 @@ local function build()
   end
   if f.SetTitle then f:SetTitle("Duskfall")
   elseif f.TitleContainer and f.TitleContainer.TitleText then f.TitleContainer.TitleText:SetText("Duskfall") end
-  local portrait = (f.PortraitContainer and f.PortraitContainer.portrait) or f.portrait
-  if portrait then portrait:SetTexture(UI.ART .. "icon") end
-  -- Push the round portrait further out of the corner, so it no longer covers page titles (Kim)
-  local pc = f.PortraitContainer or portrait
-  if pc then
-    local point, rel, relPoint, x, y = pc:GetPoint(1)
-    if point then
-      pc:ClearAllPoints()
-      pc:SetPoint(point, rel, relPoint, (x or 0) - PORTRAIT_OUT, (y or 0) + PORTRAIT_OUT)
-    end
-  end
+  -- The window without the portrait ring (as BNB's windows), and our round icon on its own,
+  -- half out of the top-left corner so it never covers page titles (Kim)
+  pcall(ButtonFrameTemplate_HidePortrait, f)
+  local badge = CreateFrame("Frame", nil, f)
+  badge:SetSize(ICON_SIZE, ICON_SIZE)
+  badge:SetPoint("TOPLEFT", f, "TOPLEFT", -ICON_OUT, ICON_OUT)
+  badge:SetFrameLevel(f:GetFrameLevel() + 30)
+  local icon = badge:CreateTexture(nil, "ARTWORK")
+  icon:SetAllPoints()
+  icon:SetTexture(UI.ART .. "icon")
   pcall(ButtonFrameTemplate_HideButtonBar, f)
   if f.Inset then f.Inset:Hide() end
   UI.Wood(f)
@@ -156,7 +155,7 @@ local function build()
       rightTabs[#rightTabs + 1] = b
     else
       b:ClearAllPoints()
-      if lastLeft then b:SetPoint("LEFT", lastLeft, "RIGHT", -16, 0)
+      if lastLeft then b:SetPoint("LEFT", lastLeft, "RIGHT", 4, 0)
       else b:SetPoint("TOPLEFT", f, "BOTTOMLEFT", 12, 2) end
       lastLeft = b
     end
@@ -171,7 +170,7 @@ local function build()
   for i = #rightTabs, 1, -1 do
     local b = rightTabs[i]
     b:ClearAllPoints()
-    if lastRight then b:SetPoint("RIGHT", lastRight, "LEFT", 16, 0)
+    if lastRight then b:SetPoint("RIGHT", lastRight, "LEFT", -4, 0)
     else b:SetPoint("TOPRIGHT", f, "BOTTOMRIGHT", -12, 2) end
     lastRight = b
   end
@@ -208,10 +207,13 @@ local function build()
   f:Hide()
 end
 
-function ns.OpenWindow(tabID)
+-- tabID: open on that tab (closes it if it is already showing, unless keepOpen)
+function ns.OpenWindow(tabID, keepOpen)
   if not ns.db or not ns.Detect.state.started then ns.Print("not ready yet.") return end
   if not frame then build() end
   if tabID then
+    -- Same tab already showing: the command closes the window again (a toggle)
+    if not keepOpen and frame:IsShown() and frame.selected == tabID then frame:Hide() return end
     W.Select(tabID)
     frame:Show()
   elseif frame:IsShown() then

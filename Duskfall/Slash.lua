@@ -126,8 +126,9 @@ end
 
 local function help()
   ns.Print("commands (%s/dusk|r, %s/duskfall|r, %s/df|r):", Y, Y, Y)
-  print("  " .. Y .. "/dusk|r status")
-  print("  " .. Y .. "/dusk config|r open the settings window")
+  print("  " .. Y .. "/dusk|r open the Duskfall window (Places)")
+  print("  " .. Y .. "/dusk config|r or " .. Y .. "/dusk settings|r open it on Settings")
+  print("  " .. Y .. "/dusk status|r where you are and what Duskfall shows, in chat")
   print("  " .. Y .. "/dusk save sub||zone||instance [when...]|r save the current values here")
   print("    " .. G .. "when: dawn day dusk night, 21:00-05:30, indoors outdoors resting combat mounted swimming underwater ghost; ! in front = not|r")
   print("  " .. Y .. "/dusk clear sub||zone||instance [when...]|r remove that Look")
@@ -355,7 +356,9 @@ local function handler(msg)
   local args = words(msg)
   local cmd = args[1] and args[1]:lower() or ""
   if not ns.db or not D.state.started then ns.Print("not ready yet.") return end
-  if cmd == "" or cmd == "status" then status()
+  if cmd == "" then
+    if ns.OpenWindow then ns.OpenWindow("places") else status() end
+  elseif cmd == "status" then status()
   elseif cmd == "help" or cmd == "?" then help()
   elseif cmd == "save" then save(args)
   elseif cmd == "clear" then clear(args)
@@ -369,8 +372,8 @@ local function handler(msg)
   elseif cmd == "chars" or cmd == "characters" then charsCmd(args)
   elseif cmd == "mode" or cmd == "fade" or cmd == "adapt" or cmd == "timefade" then transitionCmd(args)
   elseif cmd == "transition" then showTransition()
-  elseif cmd == "config" or cmd == "options" or cmd == "window" then
-    if ns.OpenWindow then ns.OpenWindow() end
+  elseif cmd == "config" or cmd == "settings" or cmd == "options" then
+    if ns.OpenWindow then ns.OpenWindow("settings") end
   elseif cmd == "debug" then
     ns.cfg.debug = not ns.cfg.debug
     ns.Print("debug %s.", ns.cfg.debug and "on" or "off")

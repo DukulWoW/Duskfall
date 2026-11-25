@@ -18,7 +18,7 @@ end
 local function openSettings()
   if SettingsPanel and SettingsPanel:IsShown() then HideUIPanel(SettingsPanel) end
   if ns.OpenWindow then
-    ns.OpenWindow(ns.cfg.windowTab or "places")
+    ns.OpenWindow("settings", true)
   elseif ns.Help then
     ns.Help()
   end

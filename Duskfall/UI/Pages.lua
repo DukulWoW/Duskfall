@@ -285,7 +285,7 @@ W.AddTab("settings", "Settings", function(page)
     end
   end)
   ns.OpenSettingsPage = function(key)
-    ns.OpenWindow("settings")
+    ns.OpenWindow("settings", true)
     open(key)
   end
 end, "right")
@@ -331,8 +331,9 @@ W.AddTab("about", "About", function(page)
   cmdH:SetPoint("TOP", desc, "BOTTOM", 0, -(14 + SZ + 24))
   cmdH:SetPoint("LEFT", page, "LEFT", 60, 0)
   local cmds = UI.Label(page, table.concat({
-    "|cffffd100/dusk|r  status: where you are and what Duskfall shows",
-    "|cffffd100/dusk config|r  this window",
+    "|cffffd100/dusk|r  this window, on Places",
+    "|cffffd100/dusk config|r or |cffffd100/dusk settings|r  this window, on Settings",
+    "|cffffd100/dusk status|r  where you are and what Duskfall shows, in chat",
     "|cffffd100/dusk save|r sub, zone or instance [conditions]  save the values on screen for here",
     "|cffffd100/dusk clear|r sub, zone or instance [conditions]  remove that Look",
     "|cffffd100/dusk on|r, |cffffd100/dusk off|r  automatic adjusting on or off (also a key binding)",
