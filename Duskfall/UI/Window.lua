@@ -133,7 +133,9 @@ local function build()
   local lastLeft, lastRight
   local rightTabs = {}
   for i, t in ipairs(tabs) do
-    local b = CreateFrame("Button", "DuskfallWindowTab" .. i, f, "PanelTabButtonTemplate")
+    -- Not named <window>Tab<n>: Blizzard's tab code finds tabs by that name and lines them all up
+    -- in one row, which stretched Settings between Styles and About (Kim's screenshots)
+    local b = CreateFrame("Button", "DuskfallTabButton" .. i, f, "PanelTabButtonTemplate")
     b:SetText(t.title)
     b:SetID(i)
     b:SetScript("OnClick", function() W.Select(t.id) end)
@@ -162,8 +164,6 @@ local function build()
     else b:SetPoint("TOPRIGHT", f, "BOTTOMRIGHT", -12, 2) end
     lastRight = b
   end
-  PanelTemplates_SetNumTabs(f, #tabs)
-  f.numTabs = #tabs
 
   -- Status strip
   local status = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
@@ -173,7 +173,15 @@ local function build()
   status:SetWordWrap(false)
   f.status = status
 
-  f:SetScript("OnShow", function() W.UpdateStatus() end)
+  -- The tab template sets its own look when it is first shown (every tab gold): select again
+  -- after that, on the next frame
+  f:SetScript("OnShow", function(self)
+    W.UpdateStatus()
+    if self.selected then
+      W.Select(self.selected)
+      C_Timer.After(0, function() if self:IsShown() and self.selected then W.Select(self.selected) end end)
+    end
+  end)
   local want = ns.cfg.windowTab
   local known = false
   for _, t in ipairs(tabs) do if t.id == want then known = true end end
