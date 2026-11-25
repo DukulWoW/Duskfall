@@ -22,7 +22,7 @@ function UI.Wood(f)
     bg = f:CreateTexture(nil, "BACKGROUND", nil, 0)
     bg:SetAllPoints(f)
   end
-  bg:SetTexture(UI.ART .. "Theme\\Background\\wood", "REPEAT", "REPEAT")
+  bg:SetTexture(UI.ART .. "wood", "REPEAT", "REPEAT")
   bg:SetHorizTile(true)
   bg:SetVertTile(true)
   return bg
@@ -32,7 +32,7 @@ end
 function UI.Glow(host, region, alpha)
   local glow = host:CreateTexture(nil, "BACKGROUND", nil, 7)
   glow:SetAllPoints(region or host)
-  glow:SetTexture(UI.ART .. "Theme\\Background\\glow")
+  glow:SetTexture(UI.ART .. "glow")
   if alpha then glow:SetAlpha(alpha) end
   return glow
 end
