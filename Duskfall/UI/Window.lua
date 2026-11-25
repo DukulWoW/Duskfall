@@ -134,6 +134,8 @@ local function build()
   f:SetScript("OnShow", function() W.UpdateStatus() end)
   W.Select(ns.cfg.windowTab or tabs[1].id)
   if not f.selected then W.Select(tabs[1].id) end
+  -- A new frame starts shown: hide it, or the first toggle below hides it again (two clicks to open)
+  f:Hide()
 end
 
 function ns.OpenWindow()
