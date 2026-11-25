@@ -11,6 +11,8 @@ ns.Window = W
 local UI, C = ns.UI, ns.Channels
 
 local WIDTH, HEIGHT = 780, 560
+local PORTRAIT_OUT = 12   -- how much further out of the top-left corner the portrait sits
+local PAGE_TOP = 44       -- page content starts this far below the window top (clear of the portrait)
 local tabs = {}          -- { id, title, builder, side, page, button }
 local frame
 
@@ -96,6 +98,15 @@ local function build()
   elseif f.TitleContainer and f.TitleContainer.TitleText then f.TitleContainer.TitleText:SetText("Duskfall") end
   local portrait = (f.PortraitContainer and f.PortraitContainer.portrait) or f.portrait
   if portrait then portrait:SetTexture(UI.ART .. "icon") end
+  -- Push the round portrait further out of the corner, so it no longer covers page titles (Kim)
+  local pc = f.PortraitContainer or portrait
+  if pc then
+    local point, rel, relPoint, x, y = pc:GetPoint(1)
+    if point then
+      pc:ClearAllPoints()
+      pc:SetPoint(point, rel, relPoint, (x or 0) - PORTRAIT_OUT, (y or 0) + PORTRAIT_OUT)
+    end
+  end
   pcall(ButtonFrameTemplate_HideButtonBar, f)
   if f.Inset then f.Inset:Hide() end
   UI.Wood(f)
@@ -151,7 +162,7 @@ local function build()
     end
 
     local page = CreateFrame("Frame", nil, f)
-    page:SetPoint("TOPLEFT", f, "TOPLEFT", 14, -32)
+    page:SetPoint("TOPLEFT", f, "TOPLEFT", 14, -PAGE_TOP)
     page:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -14, 34)
     page:Hide()
     t.page = page
@@ -166,9 +177,15 @@ local function build()
   end
 
   -- Status strip
-  local status = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-  status:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", 16, 12)
-  status:SetPoint("RIGHT", f, "RIGHT", -16, 0)
+  -- Status strip on its own frame above the pages: a page's glow (a child frame) drew over a
+  -- string on the window itself, and the RIGHT anchor stretched it to mid-window (it vanished)
+  local strip = CreateFrame("Frame", nil, f)
+  strip:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", 16, 10)
+  strip:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -16, 10)
+  strip:SetHeight(16)
+  strip:SetFrameLevel(f:GetFrameLevel() + 20)
+  local status = strip:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  status:SetAllPoints(strip)
   status:SetJustifyH("LEFT")
   status:SetWordWrap(false)
   f.status = status
