@@ -119,7 +119,8 @@ end
 
 local function buildTime(p)
   local add, refresh = stacker(p, -48)
-  local DD_W = 300
+  -- The two dropdowns as wide as the day cards below and over them (Kim): (FULL_W - 12) / 2, 12 apart
+  local DD_W = math.floor((FULL_W - 12) / 2)
   local bar
   local src = UI.Dropdown(p, DD_W, { label = "Time source",
     tip = "Server time matches day and night in the world. Local is your computer's clock.",
@@ -131,7 +132,7 @@ local function buildTime(p)
     items = { { true, "24 hour (21:00)" }, { false, "12 hour (9 PM)" } },
     get = function() return ns.cfg.clock24 end,
     set = function(v) ns.cfg.clock24 = v if bar then bar:Refresh() end end })
-  fmt:SetPoint("TOPLEFT", src, "TOPRIGHT", 40, 0)
+  fmt:SetPoint("TOPLEFT", src, "TOPRIGHT", 12, 0)
   local partsHead = UI.Header(p, "Parts of the day")
   add(partsHead, 14, 4)
   local partsHelp = UI.HelpIcon(p, "time", "Parts of the day", "When Dawn, Day, Dusk and Night start. A setting " ..
