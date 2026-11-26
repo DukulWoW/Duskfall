@@ -103,32 +103,103 @@ local function buildTime(p)
   return function() r() fmt:Refresh() end
 end
 
+-- Baseline: the four values as cards in 2 x 2 (as Time of day), each with its value large and a
+-- slider on the game's own range, the mark at the game's default. Moving one changes the
+-- baseline at once, and the screen with it (settings are changes from it) (Kim, 2026-11-26).
+local GAME_DEFAULT = { gamma = 1.0, brightness = 50, contrast = 50, bloom = 1.0 }
+local BASE_STEP = { gamma = 0.01, brightness = 1, contrast = 1, bloom = 0.05 }
+
 local function buildBaseline(p)
-  local add, refresh = stacker(p, -48)
-  local text = UI.Label(p, "Your baseline is your own look: Duskfall starts from it (Looks are offsets from it) and puts it back when you log out or switch Duskfall off.")
-  text:SetWidth(CONTENT_W - 24)
-  add(text, 28, 12)
-  local vals = UI.Label(p, "", "GameFontHighlightLarge")
-  vals.Refresh = function()
-    local b, parts = ns.db.baseline or {}, {}
-    for _, ch in ipairs(C.list) do
-      local v = b[ch.key]
-      parts[#parts + 1] = ch.label .. " |cffffffff" .. (v and C.Format(ch.key, v) or "-") .. "|r"
-    end
-    vals:SetText(table.concat(parts, "     "))
+  local text = UI.Label(p, "Your baseline is your own look: Duskfall starts from it, every setting in Places is a "
+    .. "change from it, and logging out or switching Duskfall off puts it back.")
+  text:SetPoint("TOPLEFT", p, "TOPLEFT", 12, -50)
+  text:SetWidth(FULL_W)
+  text:SetSpacing(2)
+
+  local GAP, CARD_H = 12, 104
+  local cardW = math.floor((FULL_W - GAP) / 2)
+  local cards = {}
+  local pending = false
+  local function apply()
+    if pending then return end
+    pending = true
+    C_Timer.After(0.04, function()
+      pending = false
+      -- Off: the screen is the baseline itself, so it is written straight away
+      if not ns.cfg.enabled then
+        if ns.db.baseline then C.WriteAll(ns.db.baseline) end
+        W.UpdateStatus()
+        return
+      end
+      D.ClearHolds()
+      D.state.target = nil
+      D.Evaluate("edit")
+    end)
   end
-  add(vals, 20, 16)
-  add(UI.Button(p, "Save current as baseline", 220, function()
+  for i, ch in ipairs(C.list) do
+    local k = ch.key
+    local g = UI.CHANNEL_GRADIENT[k]
+    local card = CreateFrame("Frame", nil, p)
+    card:SetSize(cardW, CARD_H)
+    card:SetPoint("TOPLEFT", p, "TOPLEFT", 12 + ((i - 1) % 2) * (cardW + GAP), -92 - math.floor((i - 1) / 2) * (CARD_H + GAP))
+    local t = g.to
+    UI.RoundBox(card, { radius = 10, bottom = { 0, 0, 0, 0.5 }, top = { t[1] * 0.3, t[2] * 0.3, t[3] * 0.3, 0.55 },
+      border = { t[1], t[2], t[3], 0.35 } })
+    local name = UI.Label(card, ch.label, "GameFontNormalLarge")
+    name:SetPoint("TOPLEFT", card, "TOPLEFT", 16, -14)
+    local def = UI.Label(card, "Game default " .. C.Format(k, GAME_DEFAULT[k]), "GameFontHighlightSmall")
+    def:SetPoint("TOPLEFT", name, "BOTTOMLEFT", 0, -4)
+    def:SetTextColor(0.6, 0.6, 0.6)
+    local big = UI.Label(card, "", "GameFontHighlightHuge")
+    big:SetPoint("TOPRIGHT", card, "TOPRIGHT", -16, -14)
+    big:SetJustifyH("RIGHT")
+    local sl = UI.LightSlider(card, cardW - 24, { label = ch.label, labelW = 0, valueW = 0,
+      min = ch.min, max = ch.max, step = BASE_STEP[k], mid = GAME_DEFAULT[k], from = g.from, to = g.to,
+      get = function() return ns.db.baseline and ns.db.baseline[k] or GAME_DEFAULT[k] end,
+      set = function(v)
+        if not ns.db.baseline then return end
+        ns.db.baseline[k] = tonumber(C.Format(k, C.Clamp(k, v)))
+        big:SetText(C.Format(k, ns.db.baseline[k]))
+        apply()
+      end })
+    sl:SetPoint("BOTTOMLEFT", card, "BOTTOMLEFT", 12, 10)
+    cards[i] = { big = big, slider = sl, key = k }
+  end
+
+  local function refreshCards()
+    for _, c in ipairs(cards) do
+      c.slider:Refresh()
+      local v = ns.db.baseline and ns.db.baseline[c.key]
+      c.big:SetText(v and C.Format(c.key, v) or "-")
+    end
+  end
+
+  local y = -92 - 2 * (CARD_H + GAP) - 6
+  local save = UI.Button(p, "Use what is on screen", 190, function()
     UI.Confirm("Make the values on screen now your baseline (the ones logging out brings back)?", function()
       D.SaveBaseline()
-      vals:Refresh()
+      refreshCards()
       W.UpdateStatus()
     end)
-  end), 22, 8)
-  local tip = UI.Label(p, "Tip: switch Duskfall off, set the game's sliders the way you like them, then save.")
+  end)
+  save:SetPoint("TOPLEFT", p, "TOPLEFT", 12, y)
+  UI.Tooltip(save, "Use what is on screen", "Takes the values on screen now as your baseline. Handy after you set " ..
+    "the game's own sliders with Duskfall switched off.")
+  local reset = UI.Button(p, "Game defaults", 150, function()
+    UI.Confirm("Set your baseline to the game's defaults (Gamma 1.00, Brightness 50, Contrast 50, Bloom 1.00)?", function()
+      if not ns.db.baseline then return end
+      for k, v in pairs(GAME_DEFAULT) do ns.db.baseline[k] = v end
+      refreshCards()
+      apply()
+    end)
+  end)
+  reset:SetPoint("LEFT", save, "RIGHT", 8, 0)
+  local tip = UI.Label(p, "Drag a slider and the screen follows. Right-click a slider for the game default.")
+  tip:SetPoint("TOPLEFT", save, "BOTTOMLEFT", 0, -10)
   tip:SetTextColor(0.7, 0.7, 0.7)
-  add(tip, 14, 8)
-  return refresh
+  local help = UI.HelpIcon(p, "own", "Baseline", "Your own look, which every setting in Places changes from.")
+  help:SetPoint("LEFT", reset, "RIGHT", 10, 0)
+  return refreshCards
 end
 
 local function buildCharacters(p)

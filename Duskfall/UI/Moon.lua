@@ -12,6 +12,7 @@
 -- or hidden, and when the Duskfall window opens.
 -- Public: ns.Moon.Apply(), ns.Moon.Found(), ns.Moon.Searched(), ns.Moon.Usable(), ns.Moon.Check()
 local ADDON, ns = ...
+local UI = ns.UI
 local M = {}
 ns.Moon = M
 
@@ -118,6 +119,12 @@ local function hook()
   catcher:SetAllPoints(moon)
   catcher:SetFrameStrata("MEDIUM")
   catcher:RegisterForClicks("AnyUp")
+  -- A tiny Duskfall icon on the moon's lower right: the moon opens Duskfall (Kim). On the catcher,
+  -- so it shows and hides with the takeover.
+  local badge = catcher:CreateTexture(nil, "OVERLAY")
+  badge:SetSize(13, 13)
+  badge:SetPoint("CENTER", catcher, "BOTTOMRIGHT", -3, 3)
+  badge:SetTexture(UI.ART .. "icon")
   catcher:SetScript("OnClick", function(_, button)
     ns.Debug("moon click %s", tostring(button))
     ns.Safe(ns.LauncherClick, "moon click", button)

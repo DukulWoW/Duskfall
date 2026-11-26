@@ -24,13 +24,13 @@ local GREY = "|cff9d9d9d"
 local GREEN = "|cff40ff40"
 
 local SLIDERS = {
-  { key = "gamma", min = -1, max = 1, step = 0.05, from = { 0.05, 0.05, 0.09 }, to = { 0.96, 0.93, 0.82 },
+  { key = "gamma", min = -1, max = 1, step = 0.05,
     tip = "How light the dark parts of the picture are. The strongest of the four." },
-  { key = "brightness", min = -50, max = 50, step = 1, from = { 0.13, 0.1, 0.07 }, to = { 1, 0.93, 0.66 },
+  { key = "brightness", min = -50, max = 50, step = 1,
     tip = "The whole picture lighter or darker." },
-  { key = "contrast", min = -50, max = 50, step = 1, from = { 0.4, 0.4, 0.43 }, to = { 0.96, 0.56, 0.16 },
+  { key = "contrast", min = -50, max = 50, step = 1,
     tip = "Flat and soft, or deep and punchy." },
-  { key = "bloom", min = -1, max = 1, step = 0.05, from = { 0.2, 0.18, 0.26 }, to = { 1, 0.87, 0.56 },
+  { key = "bloom", min = -1, max = 1, step = 0.05,
     tip = "The glow around bright light (the game's Bloom Intensity)." },
 }
 
@@ -347,7 +347,7 @@ function SP.Create(parent, hooks)
   local function sliderOpts(def)
     local ch = C.byKey[def.key]
     return { label = ch.label, min = def.min, max = def.max, step = def.step,
-      from = def.from, to = def.to, tip = def.tip,
+      from = UI.CHANNEL_GRADIENT[def.key].from, to = UI.CHANNEL_GRADIENT[def.key].to, tip = def.tip,
       -- What you get, as the game's own slider shows it, and the change from your baseline (Kim)
       fmt = function(v)
         local base = ns.db.baseline and ns.db.baseline[def.key] or 0

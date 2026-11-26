@@ -634,16 +634,26 @@ function UI.Segmented(parent, width, o)
   return f
 end
 
+-- The colours of each channel's slider track: dark to light, as the value works on the picture.
+UI.CHANNEL_GRADIENT = {
+  gamma = { from = { 0.05, 0.05, 0.09 }, to = { 0.96, 0.93, 0.82 } },
+  brightness = { from = { 0.13, 0.1, 0.07 }, to = { 1, 0.93, 0.66 } },
+  contrast = { from = { 0.4, 0.4, 0.43 }, to = { 0.96, 0.56, 0.16 } },
+  bloom = { from = { 0.2, 0.18, 0.26 }, to = { 1, 0.87, 0.56 } },
+}
+
 -- Light slider ---------------------------------------------------------------------------------
 --   Gamma      [ dark ======|=====O====== light ]    +0.10
 -- Simple mode's slider: the track is a gradient (what the value does to the picture), the mark in
 -- the middle is 0 ("no change"), a gold line under the track runs from the mark to the thumb.
 -- Right-click puts it back to 0. The range should be symmetric around 0.
 -- o = { label, min, max, step, from = { r, g, b }, to = { r, g, b }, get = fn() -> v,
+--       mid = the mark's value (default 0), labelW / valueW = column widths (0 = none),
 --       set = fn(v), fmt = fn(v) -> text, tip, lineH = height of the middle mark (the row
 --       spacing joins stacked sliders' marks into one line) }. :Refresh(), :SetEnabled(on).
 function UI.LightSlider(parent, width, o)
-  local LABEL_W, VALUE_W, H = 84, 96, 30
+  local LABEL_W, VALUE_W, H = o.labelW or 84, o.valueW or 96, 30
+  local MID = o.mid or 0      -- the mark: "no change" (0) or, for fixed values, the game default
   local INSET   -- half the thumb width, set once the thumb is known
   local h = CreateFrame("Frame", nil, parent)
   h:SetSize(width, H)
@@ -654,16 +664,17 @@ function UI.LightSlider(parent, width, o)
   val:SetPoint("RIGHT", h, "RIGHT", 0, 0)
   val:SetWidth(VALUE_W)
   val:SetJustifyH("LEFT")   -- right next to the track, so the track can be long (Kim)
+  if VALUE_W == 0 then val:Hide() end
   if o.tip then
     local hot = CreateFrame("Frame", nil, h)
     hot:SetPoint("LEFT", h, "LEFT", 0, 0)
     hot:SetSize(LABEL_W, H)
     hot:EnableMouse(true)
-    tooltip(hot, o.label, o.tip .. "\n\nRight-click the slider: back to no change.")
+    tooltip(hot, o.label, o.tip .. "\n\nRight-click the slider: back to the middle mark.")
   end
 
   local sl = CreateFrame("Slider", nil, h)
-  sl:SetPoint("LEFT", h, "LEFT", LABEL_W - 6, 0)
+  sl:SetPoint("LEFT", h, "LEFT", LABEL_W > 0 and LABEL_W - 6 or 0, 0)
   sl:SetPoint("RIGHT", h, "RIGHT", -VALUE_W + 2, 0)
   sl:SetHeight(H)
   sl:SetOrientation("HORIZONTAL")
@@ -712,9 +723,9 @@ function UI.LightSlider(parent, width, o)
     return INSET + (v - o.min) / (o.max - o.min) * w
   end
   local function show()
-    if math.abs(cur) < o.step / 2 then val:SetText(o.zero and o.zero() or "|cff9d9d9dNo change|r")
+    if math.abs(cur - MID) < o.step / 2 then val:SetText(o.zero and o.zero() or "|cff9d9d9dNo change|r")
     else val:SetText(o.fmt and o.fmt(cur) or tostring(cur)) end
-    local x0, x1 = xOf(0), xOf(cur)
+    local x0, x1 = xOf(MID), xOf(cur)
     mark:ClearAllPoints()
     mark:SetPoint("CENTER", sl, "LEFT", x0, 0)
     fill:ClearAllPoints()
@@ -734,7 +745,7 @@ function UI.LightSlider(parent, width, o)
     if not muted then ns.Safe(o.set, "slider", v) end
   end)
   sl:SetScript("OnMouseUp", function(self, button)
-    if button == "RightButton" and self:IsEnabled() then self:SetValue(0) end
+    if button == "RightButton" and self:IsEnabled() then self:SetValue(MID) end
   end)
   sl:SetScript("OnSizeChanged", show)
 
