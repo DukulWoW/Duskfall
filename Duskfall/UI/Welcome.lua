@@ -18,9 +18,22 @@ local function build()
   f:SetFrameStrata("DIALOG")
   f:SetToplevel(true)
   f:EnableMouse(true)
-  UI.RoundBox(f, { radius = 12, bottom = { 0.03, 0.02, 0.01, 0.9 }, top = { 0.16, 0.12, 0.08, 0.9 },
-    border = { 1, 0.82, 0, 0.45 } })
-  UI.Glow(f, nil, 0.6)
+  -- As the main window (Kim): the slate, cut round (Assets/round-rect-mask, made for this 2:1
+  -- panel), at its own scale; the thin border sweeping gold to blue
+  local slate = f:CreateTexture(nil, "BACKGROUND", nil, 0)
+  slate:SetAllPoints()
+  slate:SetTexture(UI.ART .. UI.BACKGROUND)
+  slate:SetTexCoord(0, 480 / 512, 0, 244 / 512)
+  local cut = f:CreateMaskTexture()
+  cut:SetAllPoints()
+  cut:SetTexture(UI.ART .. "round-rect-mask", "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+  slate:AddMaskTexture(cut)
+  if ns.CursorLight then
+    local lit = ns.CursorLight.Copy(slate, "fill")
+    if lit then lit:AddMaskTexture(cut) end
+  end
+  UI.RoundBox(f, { radius = 12, bottom = { 0, 0, 0, 0 }, top = { 0, 0, 0, 0 },
+    border = { 1, 0.82, 0, 0.85 }, sweep = true })
   -- The round icon half out of the top-left corner, as on the main window
   local badge = CreateFrame("Frame", nil, f)
   badge:SetSize(56, 56)

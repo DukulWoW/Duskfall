@@ -119,6 +119,11 @@ function W.Select(id)
       t.page:Show()
       pcall(PanelTemplates_SelectTab, t.button)
       paintTab(t.button, true)
+      -- The About tab keeps the old wood (Kim); everything else the slate
+      local file = UI.ART .. (id == "about" and "wood" or UI.BACKGROUND)
+      for _, bg in ipairs({ frame.Bg, frame.bgLit }) do
+        if bg then bg:SetTexture(file, "REPEAT", "REPEAT") bg:SetHorizTile(true) bg:SetVertTile(true) end
+      end
       frame.selected = id
       ns.cfg.windowTab = id
     else
@@ -231,7 +236,7 @@ local function build()
     end
   end
   if CL then
-    if f.Bg then CL.Copy(f.Bg, "fill") end
+    if f.Bg then f.bgLit = CL.Copy(f.Bg, "fill") end
     CL.Copy(icon, "art")
   end
   UI.Glow(f, f.Bg, 0.6)
