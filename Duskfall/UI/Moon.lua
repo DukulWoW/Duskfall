@@ -130,7 +130,7 @@ local function hook()
   local function place()
     local env = ns.Situations.Snapshot()
     local a = ((env.hour + env.min / 60) - 12) / 24 * 2 * math.pi
-    local r = math.max(8, (disc:GetWidth() or 30) / 2 - 3)
+    local r = math.max(8, (disc:GetWidth() or 30) / 2 + 1)   -- centred just outside the rim (Kim)
     badge:ClearAllPoints()
     badge:SetPoint("CENTER", disc, "CENTER", r * math.sin(a), r * math.cos(a))
   end
