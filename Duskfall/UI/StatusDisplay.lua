@@ -6,7 +6,7 @@
 --   "always"   always shown
 -- It only takes the mouse when it is always shown or being moved ("Move" on the Display page),
 -- so popping up never blocks a click in the world. Position saved in settings.statusPos.
--- Public: ns.StatusDisplay.Refresh(), .Unlock(seconds), .ResetPosition()
+-- Public: ns.StatusDisplay.Refresh(), .Unlock(seconds), .ResetPosition(), .Test()
 local ADDON, ns = ...
 local UI, D = ns.UI, ns.Detect
 local SD = {}
@@ -18,6 +18,7 @@ local frame
 local hideAt          -- GetTime() at which "change" mode starts fading out
 local unlockedUntil   -- GetTime() until which it is shown and draggable
 local lastKey         -- which Looks were in effect last time (to see a change)
+local testing         -- SD.Test: shown as on a change, whatever the mode
 
 local function mode() return (ns.cfg and ns.cfg.statusDisplay) or "change" end
 
@@ -90,11 +91,12 @@ local function build()
       SD.Refresh()
       return
     end
-    if mode() == "change" and not unlocked and hideAt then
+    if (mode() == "change" or testing) and not unlocked and hideAt then
       if ns.Transition.IsRunning() then
         hideAt = math.max(hideAt, now + 1)
       elseif now >= hideAt + FADE then
         hideAt = nil
+        testing = nil
         self:Hide()
       elseif now >= hideAt then
         self:SetAlpha(1 - (now - hideAt) / FADE)
@@ -127,6 +129,19 @@ function SD.Refresh(pop)
     hideAt = nil
     frame:Hide()
   end
+end
+
+-- Test button (Kim): show it as it shows on a change (stays, then fades), in any mode but "always"
+-- (there it is shown anyway).
+function SD.Test()
+  if not ns.cfg then return end
+  if not frame then build() end
+  if mode() == "always" then SD.Refresh() return end
+  testing = true
+  hideAt = GetTime() + (tonumber(ns.cfg.statusSeconds) or 4)
+  frame:SetAlpha(1)
+  fill()
+  frame:Show()
 end
 
 -- Show it for `seconds` so it can be dragged into place.

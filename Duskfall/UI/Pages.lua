@@ -472,6 +472,10 @@ local function buildDisplay(p)
   sd(move, 22, 8)
   local reset = UI.Button(p, "Reset position", 120, function() ns.StatusDisplay.ResetPosition() end)
   reset:SetPoint("LEFT", move, "RIGHT", 8, 0)
+  local test = UI.Button(p, "Test", 90, function() ns.StatusDisplay.Test() end)
+  test:SetPoint("LEFT", reset, "RIGHT", 8, 0)
+  UI.Tooltip(test, "Test", "Shows the display as it shows when the setting in effect changes: it stays for the time " ..
+    "set above, then fades. Works even when Show it is off.")
   return refresher(controls)
 end
 
