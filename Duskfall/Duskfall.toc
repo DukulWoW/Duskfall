@@ -5,6 +5,11 @@
 ## Version: 0.1.0-dev
 ## IconTexture: Interface\AddOns\Duskfall\Assets\icon
 ## SavedVariables: DuskfallDB
+## AddonCompartmentFunc: Duskfall_OnAddonCompartmentClick
+## AddonCompartmentFuncOnEnter: Duskfall_OnAddonCompartmentEnter
+## AddonCompartmentFuncOnLeave: Duskfall_OnAddonCompartmentLeave
+
+libs\libs.xml
 
 Core.lua
 Channels.lua
@@ -19,5 +24,7 @@ UI\DayBar.lua
 UI\LookEditor.lua
 UI\Places.lua
 UI\Styles.lua
+UI\Broker.lua
+UI\StatusDisplay.lua
 UI\Pages.lua
 OptionsPanel.lua

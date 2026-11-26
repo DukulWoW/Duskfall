@@ -191,11 +191,49 @@ local function buildCharacters(p)
   return refresh
 end
 
+local function buildDisplay(p)
+  local add, refresh = stacker(p, -48)
+  local DD_W = 300
+  add(UI.Check(p, { label = "Minimap button",
+    tip = "Left-click opens Duskfall, right-click switches it on or off, shift-right-click opens Settings. The same clicks work in the addon compartment and on broker bars.",
+    get = function() return not ns.cfg.minimap.hide end,
+    set = function(v) ns.SetMinimapShown(v) end }), 26, 12)
+  add(UI.Dropdown(p, DD_W, { label = "Broker text",
+    tip = "What broker bars (Titan Panel, ChocolateBar, ElvUI datatexts...) show next to the icon.",
+    items = { { "look", "The Look in effect" }, { "values", "The values on screen" }, { "both", "Look and values" }, { "none", "Nothing (icon only)" } },
+    get = function() return ns.cfg.brokerText end,
+    set = function(v) ns.cfg.brokerText = v ns.UpdateBroker() end }), UI.DROPDOWN_H, 18)
+  add(UI.Header(p, "Status display"), 14, 6)
+  local help = UI.Label(p, "A small floating display of the Look in effect and the values on screen.")
+  help:SetWidth(CONTENT_W - 24)
+  add(help, 14, 10)
+  add(UI.Dropdown(p, DD_W, { label = "Show it",
+    items = { { "off", "Never" }, { "change", "When the Look changes" }, { "always", "Always" } },
+    get = function() return ns.cfg.statusDisplay end,
+    set = function(v)
+      ns.cfg.statusDisplay = v
+      ns.StatusDisplay.Refresh(v == "change")
+    end }), UI.DROPDOWN_H, 8)
+  add(UI.Slider(p, 460, { label = "Stays for", min = 1, max = 15, step = 1, default = 4,
+    fmt = function(v) return v .. " s" end,
+    tip = "When the Look changes: how long the display stays once the change is done.",
+    get = function() return ns.cfg.statusSeconds end,
+    onChange = function(v) ns.cfg.statusSeconds = v end }), UI.SLIDER_H, 12)
+  local move = UI.Button(p, "Move it", 120, function() ns.StatusDisplay.Unlock(20) end)
+  UI.Tooltip(move, "Move it", "Shows the display for 20 seconds so you can drag it where you want it.")
+  add(move, 22, 8)
+  local reset = UI.Button(p, "Reset position", 120, function() ns.StatusDisplay.ResetPosition() end)
+  reset:SetPoint("LEFT", move, "RIGHT", 8, 0)
+  return refresh
+end
+
 local SUBPAGES = {
   { key = "general", title = "General", build = buildGeneral,
     desc = "Switch Duskfall on or off, doorway delay, transition timing, debug output." },
   { key = "time", title = "Time of day", build = buildTime,
     desc = "Server or local clock, 12 or 24 hour, and when dawn, day, dusk and night start." },
+  { key = "display", title = "Display", build = buildDisplay,
+    desc = "Minimap button, broker text, and the floating status display." },
   { key = "baseline", title = "Baseline", build = buildBaseline,
     desc = "Your own look: what Duskfall starts from and puts back when you log out." },
   { key = "chars", title = "Characters", build = buildCharacters,

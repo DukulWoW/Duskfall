@@ -3,7 +3,8 @@
 -- Public: ns.On(event, fn), ns.Listen(msg, fn), ns.Fire(msg, ...), ns.Print(fmt, ...),
 --         ns.Debug(fmt, ...), ns.NewID(prefix), ns.ScopeOf(scope, guid), ns.CharName(guid),
 --         ns.db (DuskfallDB), ns.cfg (DuskfallDB.settings), ns.charKey (player GUID)
--- Messages: READY (saved variables loaded), ENABLE (after PLAYER_LOGIN), EVALUATED (new target)
+-- Messages: READY (saved variables loaded), ENABLE (after PLAYER_LOGIN), EVALUATED (new target),
+--           ONOFF (Duskfall switched on or off)
 local ADDON, ns = ...
 ns.name = ADDON
 ns.VERSION = "0.1.0-dev"
@@ -19,6 +20,10 @@ ns.DEFAULTS = {
   timeFade = 45,      -- seconds a change caused only by the clock takes, whatever the mode
   adaptGap = 2,       -- seconds after an Adapt overshoot before the next one may overshoot
   debug = false,
+  minimap = { hide = false },   -- LibDBIcon keeps its position here too
+  brokerText = "look",          -- broker bars: "look", "values", "both", "none"
+  statusDisplay = "change",     -- floating display: "off", "change", "always"
+  statusSeconds = 4,            -- "change": seconds it stays after the change is done
 }
 
 -- Output ---------------------------------------------------------------------------------------

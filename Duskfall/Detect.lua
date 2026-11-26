@@ -125,6 +125,7 @@ function D.SetEnabled(on)
   elseif ns.db.baseline then
     C.WriteAll(ns.db.baseline)
   end
+  ns.Fire("ONOFF", ns.cfg.enabled)
 end
 
 function D.SaveBaseline()
