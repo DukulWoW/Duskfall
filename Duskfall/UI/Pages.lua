@@ -10,7 +10,7 @@ ns.LINKS = {
   { key = "github", name = "GitHub", url = "https://github.com/DukulWoW/Duskfall" },
   { key = "curseforge", name = "CurseForge", url = "https://www.curseforge.com/wow/addons/duskfall" },
   { key = "wago", name = "Wago", url = "https://addons.wago.io/addons/duskfall" },
-  { key = "bugs", name = "Report a bug", url = "https://github.com/DukulWoW/Duskfall/issues", sub = "Opens the issue tracker link" },
+  { key = "bugs", name = "Report a bug", url = "https://github.com/DukulWoW/Duskfall/issues/new/choose", sub = "Copy the link to report a bug" },
 }
 
 -- An hour in the chosen clock format: 21 -> "21:00" or "9 PM".
