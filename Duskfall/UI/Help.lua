@@ -79,7 +79,14 @@ local function show(i)
   body:SetText(table.concat(TOPICS[i][2], "\n\n"))
   for n, b in ipairs(buttons) do
     b.pick:SetShown(n == i)
-    if n == i then b.text:SetTextColor(0.16, 0.09, 0) else b.text:SetTextColor(1, 0.82, 0) end
+    -- Dark on the gold, without the drop shadow (it smeared the letters, Kim)
+    if n == i then
+      b.text:SetTextColor(0.14, 0.08, 0)
+      b.text:SetShadowOffset(0, 0)
+    else
+      b.text:SetTextColor(1, 0.82, 0)
+      b.text:SetShadowOffset(1, -1)
+    end
   end
 end
 

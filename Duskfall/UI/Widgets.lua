@@ -612,12 +612,13 @@ function UI.Segmented(parent, width, o)
       local first, last = i == 1, i == #items
       b.pick:SetCorners(first, last, first, last)
       b.pick:SetShown(on)
+      -- Dark on the gold, without the drop shadow (it smeared the letters, Kim)
       if on then
-        b.text:SetTextColor(0.16, 0.09, 0)
-        b.text:SetShadowColor(1, 0.9, 0.6, 0.35)
+        b.text:SetTextColor(0.14, 0.08, 0)
+        b.text:SetShadowOffset(0, 0)
       else
         b.text:SetTextColor(1, 0.82, 0)
-        b.text:SetShadowColor(0, 0, 0, 1)
+        b.text:SetShadowOffset(1, -1)
       end
       b:SetEnabled(enabled)
       b:Show()
