@@ -27,7 +27,7 @@ local CARD_H, CARD_GAP = 72, 12
 
 function UI.DayBar(parent, width)
   local h = CreateFrame("Frame", nil, parent)
-  h:SetSize(width, GRID_TOP + 2 * CARD_H + CARD_GAP + 44)
+  h:SetSize(width, GRID_TOP + 2 * CARD_H + CARD_GAP)
 
   local nowText = UI.Label(h, "", "GameFontHighlight")
   nowText:SetPoint("TOPLEFT", h, "TOPLEFT", 0, 0)
@@ -244,7 +244,7 @@ function UI.DayBar(parent, width)
     h:Refresh()
     ns.Detect.Evaluate("settings")
   end)
-  reset:SetPoint("BOTTOMRIGHT", h, "BOTTOMRIGHT", 0, 6)
+  h.resetBtn = reset   -- placed by the page (Time of day: in its bottom card)
 
   function h:Refresh()
     draw()

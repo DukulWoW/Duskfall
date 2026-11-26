@@ -98,18 +98,13 @@ local function buildGeneral(p)
   controls[#controls + 1] = dbg
 
   local SL_W = FULL_W - 32
-  local _, timing = card(p, 12, -158, FULL_W, 216, "Timing",
+  local _, timing = card(p, 12, -158, FULL_W, 166, "Timing",
     "How quickly Duskfall reacts. The feel of the changes themselves is on the Styles tab.", controls)
   timing(UI.Slider(p, SL_W, { label = "Doorway delay", min = 0, max = 2, step = 0.1, default = 0.5,
     fmt = function(v) return string.format("%.1f s", v) end,
     tip = "How long a new state (indoors, mounted...) must hold before Duskfall reacts. Stops flicker in doorways.",
     get = function() return ns.cfg.debounce end,
     onChange = function(v) ns.cfg.debounce = v end }), UI.SLIDER_H, 10)
-  timing(UI.Slider(p, SL_W, { label = "Time of day fade", min = 0, max = 120, step = 5, default = 45,
-    fmt = function(v) return v .. " s" end,
-    tip = "How long a change caused only by the clock takes, in every mode, so dusk never snaps.",
-    get = function() return ns.cfg.timeFade end,
-    onChange = function(v) ns.cfg.timeFade = v end }), UI.SLIDER_H, 10)
   timing(UI.Slider(p, SL_W, { label = "Adapt overshoot gap", min = 0, max = 10, step = 0.5, default = 2,
     fmt = function(v) return string.format("%.1f s", v) end,
     tip = "Two Adapt dips or glares never come closer than this. Riding along a zone border dips once.",
@@ -119,8 +114,8 @@ local function buildGeneral(p)
   -- Factory reset (Kim, 2026-11-26): a red box at the bottom, one button per kind of reset, each
   -- asks first. None of them can be undone.
   local danger = CreateFrame("Frame", nil, p)
-  danger:SetPoint("TOPLEFT", p, "TOPLEFT", 12, -386)
-  danger:SetSize(FULL_W, 98)
+  danger:SetPoint("TOPLEFT", p, "TOPLEFT", 12, -336)
+  danger:SetSize(FULL_W, 148)
   danger:SetFrameLevel(p:GetFrameLevel())
   UI.RoundBox(danger, { radius = 10, bottom = { 0.12, 0.02, 0.01, 0.55 }, top = { 0.3, 0.06, 0.04, 0.45 },
     border = { 0.95, 0.35, 0.22, 0.5 } })
@@ -137,6 +132,7 @@ local function buildGeneral(p)
     D.Evaluate("edit")
     W.UpdateStatus()
   end
+  -- { button, tooltip, question, action, caption under the button }
   local RESETS = {
     { "Settings", "Every option on the Settings pages back to its default. Your places, Styles and baseline stay.",
       "Put every Settings option back to its default?", function()
@@ -156,18 +152,18 @@ local function buildGeneral(p)
         if ns.StatusDisplay then ns.StatusDisplay.ResetPosition() ns.StatusDisplay.Refresh() end
         if ns.CursorLight then ns.CursorLight.Refresh() end
         after()
-      end },
+      end, "Options back to default." },
     { "Place settings", "Remove every setting in the Style you use now: every place goes back to your baseline. " ..
       "Other Styles, the places found and your options stay.",
       "Remove every setting in this Style?", function()
         wipe(ns.Resolver.ActiveStyle().looks)
         after()
-      end },
+      end, "Clears the Style you use." },
     { "Places found", "Forget the list of places you have been. Settings that use a place keep it.",
       "Forget every place Duskfall has found?", function()
         wipe(ns.db.places)
         after()
-      end },
+      end, "Forgets where you have been." },
     { "Screen defaults", "Gamma, Brightness, Contrast and Bloom to the game's defaults (1.00, 50, 50, 1.00), " ..
       "and those become your baseline.",
       "Set the screen to the game's defaults and make them your baseline?", function()
@@ -175,7 +171,7 @@ local function buildGeneral(p)
         C.WriteAll(GAME_DEFAULT)
         D.SaveBaseline()
         after()
-      end },
+      end, "Game values as your baseline." },
     { "Everything", "Delete all of Duskfall's saved data and reload the interface, as a new install. " ..
       "Your own screen values are put back first.",
       "Delete ALL of Duskfall's data and reload the interface?", function()
@@ -183,7 +179,7 @@ local function buildGeneral(p)
         if ns.db and ns.db.baseline then C.WriteAll(ns.db.baseline) end
         DuskfallDB = nil
         ReloadUI()
-      end },
+      end, "As a new install." },
   }
   local BW = math.floor((FULL_W - 32 - (#RESETS - 1) * 8) / #RESETS)
   for i, r in ipairs(RESETS) do
@@ -193,6 +189,11 @@ local function buildGeneral(p)
     b:SetKind("danger")
     b:SetPoint("TOPLEFT", danger, "TOPLEFT", 16 + (i - 1) * (BW + 8), -54)
     UI.Tooltip(b, "Reset: " .. r[1], r[2])
+    local cap = UI.Label(danger, r[5])
+    cap:SetPoint("TOP", b, "BOTTOM", 0, -8)
+    cap:SetWidth(BW)
+    cap:SetJustifyH("CENTER")
+    cap:SetTextColor(0.78, 0.66, 0.6)
   end
   return refresher(controls)
 end
@@ -223,8 +224,26 @@ local function buildTime(p)
   add(help, 14, 12)
   bar = UI.DayBar(p, FULL_W)
   add(bar, bar:GetHeight(), 8)
+  -- Bottom card (Kim): what happens when a part of the day begins; the day bar's Reset in it
+  local tc = UI.Card(p, 12, 0, FULL_W, 96)
+  tc:ClearAllPoints()
+  tc:SetPoint("TOPLEFT", bar, "BOTTOMLEFT", 0, -12)
+  local tcTitle = UI.Label(tc, "When a part of the day begins", "GameFontNormalLarge")
+  tcTitle:SetPoint("TOPLEFT", tc, "TOPLEFT", 16, -14)
+  local fade = UI.Slider(p, FULL_W - 32, { label = "Time of day fade", min = 0, max = 120, step = 5, default = 45,
+    fmt = function(v) return v .. " s" end,
+    tip = "How long a change caused only by the clock takes, in every mode, so dusk never snaps.",
+    get = function() return ns.cfg.timeFade end,
+    onChange = function(v) ns.cfg.timeFade = v end })
+  fade:SetPoint("TOPLEFT", tc, "TOPLEFT", 16, -44)
+  if bar.resetBtn then
+    bar.resetBtn:SetParent(p)
+    bar.resetBtn:ClearAllPoints()
+    bar.resetBtn:SetPoint("TOPRIGHT", tc, "TOPRIGHT", -16, -12)
+    UI.Tooltip(bar.resetBtn, "Reset to default", "Dawn 05:00, day 08:00, dusk 17:00, night 20:00.")
+  end
   local r = refresh
-  return function() r() fmt:Refresh() end
+  return function() r() fmt:Refresh() fade:Refresh() end
 end
 
 -- Baseline: the four values as cards in 2 x 2 (as Time of day), each with its value large and a
@@ -239,7 +258,7 @@ local function buildBaseline(p)
   text:SetWidth(FULL_W)
   text:SetSpacing(2)
 
-  local GAP, CARD_H = 12, 104
+  local GAP, CARD_H = 12, 155   -- tall enough to fill down to the actions box (Kim)
   local cardW = math.floor((FULL_W - GAP) / 2)
   local cards = {}
   local pending = false
@@ -297,7 +316,13 @@ local function buildBaseline(p)
     end
   end
 
-  local y = -92 - 2 * (CARD_H + GAP) - 6
+  -- Actions in a rounded box at the bottom, the hint just above, as on Places (Kim)
+  local actions = CreateFrame("Frame", nil, p)
+  actions:SetPoint("BOTTOMLEFT", p, "BOTTOMLEFT", 12, 8)
+  actions:SetSize(FULL_W, 46)
+  actions:SetFrameLevel(p:GetFrameLevel())
+  UI.RoundBox(actions, { radius = 10, bottom = { 0, 0, 0, 0.5 }, top = { 0.22, 0.17, 0.1, 0.4 },
+    border = { 1, 0.82, 0, 0.12 } })
   local save = UI.Button(p, "Use what is on screen", 190, function()
     UI.Confirm("Make the values on screen now your baseline (the ones logging out brings back)?", function()
       D.SaveBaseline()
@@ -305,7 +330,7 @@ local function buildBaseline(p)
       W.UpdateStatus()
     end)
   end)
-  save:SetPoint("TOPLEFT", p, "TOPLEFT", 12, y)
+  save:SetPoint("LEFT", actions, "LEFT", 10, 0)
   UI.Tooltip(save, "Use what is on screen", "Takes the values on screen now as your baseline. Handy after you set " ..
     "the game's own sliders with Duskfall switched off.")
   local reset = UI.Button(p, "Game defaults", 150, function()
@@ -318,7 +343,7 @@ local function buildBaseline(p)
   end)
   reset:SetPoint("LEFT", save, "RIGHT", 8, 0)
   local tip = UI.Label(p, "Drag a slider and the screen follows. Right-click a slider for the game default.")
-  tip:SetPoint("TOPLEFT", save, "BOTTOMLEFT", 0, -10)
+  tip:SetPoint("BOTTOMLEFT", actions, "TOPLEFT", 4, 6)
   tip:SetTextColor(0.7, 0.7, 0.7)
   local help = UI.HelpIcon(p, "own", "Baseline", "Your own look, which every setting in Places changes from.")
   help:SetPoint("LEFT", reset, "RIGHT", 10, 0)
