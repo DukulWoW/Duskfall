@@ -781,6 +781,43 @@ function UI.RoundBox(f, o)
   return box
 end
 
+-- Back button: round, in the buttons' normal look (dark, gold edge) with our gold chevron
+-- pointing left (Kim). o = { tip, tipSub, onClick }. Same size rules as UI.IconButton.
+function UI.BackButton(parent, size, o)
+  o = o or {}
+  local b = CreateFrame("Button", nil, parent)
+  b:SetSize(size, size)
+  local R = math.min(12, math.floor(size / 2))
+  UI.RoundBox(b, { radius = R, bottom = { 0.09, 0.06, 0.03, 0.92 }, top = { 0.26, 0.19, 0.1, 0.92 },
+    border = { 1, 0.82, 0, 0.55 } })
+  local hover = UI.RoundBox(b, { radius = R, layer = "ARTWORK", bottom = { 1, 1, 1, 0.03 }, top = { 1, 1, 1, 0.14 } })
+  hover:SetShown(false)
+  local arrow = b:CreateTexture(nil, "OVERLAY")
+  arrow:SetSize(size - 8, size - 8)
+  arrow:SetPoint("CENTER", -1, 0)
+  arrow:SetTexture(UI.ART .. "chevron")
+  arrow:SetVertexColor(1, 0.82, 0)
+  arrow:SetRotation(math.pi)
+  b:SetScript("OnMouseDown", function() arrow:SetPoint("CENTER", 0, -1) end)
+  b:SetScript("OnMouseUp", function() arrow:SetPoint("CENTER", -1, 0) end)
+  b:SetScript("OnEnter", function(self)
+    hover:SetShown(true)
+    if o.tip then
+      GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
+      GameTooltip:AddLine(o.tip, 1, 1, 1)
+      if o.tipSub then GameTooltip:AddLine(o.tipSub, 0.78, 0.78, 0.78, true) end
+      GameTooltip:Show()
+    end
+  end)
+  b:SetScript("OnLeave", function(self)
+    hover:SetShown(false)
+    arrow:SetPoint("CENTER", -1, 0)
+    if GameTooltip:IsOwned(self) then GameTooltip:Hide() end
+  end)
+  if o.onClick then b:SetScript("OnClick", function(self, mb) ns.Safe(o.onClick, "back", self, mb) end) end
+  return b
+end
+
 -- Card: a rounded, softly shaded box with a faint gold edge (the Settings pages' look), placed on
 -- host at host's own frame level, so everything in host's child frames draws over it.
 -- Returns the card frame.

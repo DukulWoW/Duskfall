@@ -201,7 +201,7 @@ function E.Create(parent, hooks)
   end
 
   -- Header -------------------------------------------------------------------------------------
-  local back = UI.IconButton(ed, 22, "left", { tip = "Back", tipSub = "Back to the place (ESC)", onClick = function() ed:Close() end })
+  local back = UI.BackButton(ed, 24, { tip = "Back", tipSub = "Back to the place (ESC)", onClick = function() ed:Close() end })
   back:SetPoint("TOPLEFT", ed, "TOPLEFT", 12, -10)
   local title = UI.Header(ed, "Edit Look")
   title:SetFontObject("GameFontNormalLarge")
