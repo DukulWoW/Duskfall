@@ -310,9 +310,10 @@ C_Timer.NewTicker(0.25, function()
   if frame and frame:IsShown() and ns.Transition.IsRunning() then W.UpdateStatus() end
 end)
 
--- TEMPORARY preview (Kim, 2026-11-26; remove after test T8): /dusk framepreview switches the main
--- window to a fully custom frame (rounded, gold edge, our title line and round close X, pill tabs)
--- and back, so Kim can see it before deciding. Nothing is saved; a /reload undoes it too.
+-- TEMPORARY preview (Kim, 2026-11-26; remove after test T8): /dusk framepreview steps the main
+-- window through: the game's frame -> a fully custom frame (rounded, gold edge, our title line and
+-- round close X, pill tabs) -> the game's frame tinted like the icon's ring (gold top left, blue
+-- bottom right) -> back. Nothing is saved; a /reload undoes it too.
 local preview
 function W.FramePreview()
   local f = frame
@@ -368,7 +369,35 @@ function W.FramePreview()
     end
     hooksecurefunc(W, "Select", function() if preview.on then preview.paint() end end)
   end
-  preview.on = not preview.on
+  -- The tinted game frame: each border piece greyed, then shaded; corners solid, edges blending
+  -- between their two corners, so the whole border sweeps from gold (top left) to blue (bottom right)
+  local GOLD, BLUE = { 1, 0.85, 0.4, 1 }, { 0.36, 0.5, 1, 1 }
+  local MID = { (GOLD[1] + BLUE[1]) / 2, (GOLD[2] + BLUE[2]) / 2, (GOLD[3] + BLUE[3]) / 2, 1 }
+  local PIECES = {
+    TopLeftCorner = { GOLD }, TopRightCorner = { MID }, BottomLeftCorner = { MID }, BottomRightCorner = { BLUE },
+    TopEdge = { "HORIZONTAL", GOLD, MID }, BottomEdge = { "HORIZONTAL", MID, BLUE },
+    LeftEdge = { "VERTICAL", MID, GOLD }, RightEdge = { "VERTICAL", BLUE, MID },
+  }
+  local function tint(on)
+    local ns9 = f.NineSlice
+    if not ns9 then return end
+    for key, spec in pairs(PIECES) do
+      local t = ns9[key]
+      if t then
+        t:SetDesaturated(on)
+        if not on then t:SetVertexColor(1, 1, 1, 1)
+        elseif #spec == 1 then t:SetVertexColor(spec[1][1], spec[1][2], spec[1][3], 1)
+        elseif CreateColor then
+          -- Straight on the piece: its art and texture coordinates stay as they are
+          local a, b = spec[2], spec[3]
+          pcall(t.SetGradient, t, spec[1], CreateColor(a[1], a[2], a[3], 1), CreateColor(b[1], b[2], b[3], 1))
+        end
+      end
+    end
+  end
+  preview.mode = ((preview.mode or 0) + 1) % 3
+  tint(preview.mode == 2)
+  preview.on = preview.mode == 1
   local on = preview.on
   local a = on and 0 or 1
   if f.NineSlice then f.NineSlice:SetAlpha(a) end
@@ -384,5 +413,6 @@ function W.FramePreview()
     e.pill:SetShown(on)
   end
   if on then preview.paint() else W.Select(frame.selected) end
-  ns.Print("frame preview %s (/dusk framepreview again switches back).", on and "on" or "off")
+  local names = { [0] = "the game's frame", "fully custom", "the game's frame, tinted gold to blue" }
+  ns.Print("frame preview: %s (/dusk framepreview again for the next).", names[preview.mode])
 end
