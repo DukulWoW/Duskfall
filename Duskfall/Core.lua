@@ -20,7 +20,8 @@ ns.DEFAULTS = {
   timeFade = 45,      -- seconds a change caused only by the clock takes, whatever the mode
   adaptGap = 2,       -- seconds after an Adapt overshoot before the next one may overshoot
   debug = false,
-  minimap = { hide = false },   -- LibDBIcon keeps its position here too
+  minimap = { hide = true },    -- LibDBIcon's table (position, hide); hide follows minimapButton
+  minimapButton = "auto",       -- "auto" (only when the minimap moon can't be used), "always", "never"
   moon = true,                  -- the minimap's day / night moon opens Duskfall (C-06)
   brokerText = "look",          -- broker bars: "look", "values", "both", "none"
   statusDisplay = "change",     -- floating display: "off", "change", "always"

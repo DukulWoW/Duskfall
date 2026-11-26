@@ -194,10 +194,6 @@ end
 local function buildDisplay(p)
   local add, refresh = stacker(p, -48)
   local DD_W = 300
-  add(UI.Check(p, { label = "Minimap button",
-    tip = "Left-click opens Duskfall, right-click switches it on or off, shift-right-click opens Settings. The same clicks work in the addon compartment and on broker bars.",
-    get = function() return not ns.cfg.minimap.hide end,
-    set = function(v) ns.SetMinimapShown(v) end }), 26, 6)
   add(UI.Check(p, { label = "Minimap moon opens Duskfall",
     tip = "The day / night moon on the minimap gets the same clicks and tooltip as the minimap button. With this on you may not need the button at all.",
     get = function() return ns.cfg.moon ~= false end,
@@ -205,7 +201,12 @@ local function buildDisplay(p)
       ns.cfg.moon = v
       ns.Moon.Apply()
       if v and not ns.Moon.Found() then ns.Print("can't find the minimap moon on this client.") end
-    end }), 26, 12)
+    end }), 26, 10)
+  add(UI.Dropdown(p, DD_W, { label = "Minimap button",
+    tip = "Left-click opens Duskfall, right-click switches it on or off, shift-right-click opens Settings. The same clicks work on the moon, in the addon compartment and on broker bars. Automatic shows the button only when the moon can't be used (switched off above, or hidden by another addon).",
+    items = { { "auto", "Automatic (when the moon can't be used)" }, { "always", "Always" }, { "never", "Never" } },
+    get = function() return ns.cfg.minimapButton or "auto" end,
+    set = function(v) ns.cfg.minimapButton = v ns.UpdateMinimapButton() end }), UI.DROPDOWN_H, 12)
   add(UI.Dropdown(p, DD_W, { label = "Broker text",
     tip = "What broker bars (Titan Panel, ChocolateBar, ElvUI datatexts...) show next to the icon.",
     items = { { "look", "The Look in effect" }, { "values", "The values on screen" }, { "both", "Look and values" }, { "none", "Nothing (icon only)" } },

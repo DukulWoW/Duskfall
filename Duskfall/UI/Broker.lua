@@ -4,7 +4,7 @@
 --   left: the window on Places   right: Duskfall on / off   shift-right: Settings
 -- Broker text (Settings > Display): the Look in effect, the values, both, or nothing.
 -- Public: ns.ActiveLooks(), ns.StateText(), ns.HereText(), ns.ValuesText(), ns.LauncherClick(button),
---         ns.FillTooltip(tooltip), ns.SetMinimapShown(on), ns.UpdateBroker()
+--         ns.FillTooltip(tooltip), ns.UpdateMinimapButton(), ns.UpdateBroker()
 -- Globals for the TOC: Duskfall_OnAddonCompartmentClick / Enter / Leave
 local ADDON, ns = ...
 local UI, C, D = ns.UI, ns.Channels, ns.Detect
@@ -116,13 +116,19 @@ function ns.UpdateBroker()
   obj.text = text
 end
 
-function ns.SetMinimapShown(on)
-  ns.cfg.minimap.hide = not on
+-- settings.minimapButton: "auto" (only when the minimap moon can't be used, see UI/Moon.lua),
+-- "always" or "never". Until the moon search is done, auto keeps the button hidden.
+function ns.UpdateMinimapButton()
+  local m = ns.cfg.minimapButton or "auto"
+  local show = m == "always" or (m == "auto" and ns.Moon and not ns.Moon.Usable() and ns.Moon.Searched())
+  ns.cfg.minimap.hide = not show
   if not DBIcon then return end
-  if on then DBIcon:Show(NAME) else DBIcon:Hide(NAME) end
+  if show then DBIcon:Show(NAME) else DBIcon:Hide(NAME) end
 end
 
 ns.Listen("READY", function()
+  local m = ns.cfg.minimapButton or "auto"
+  ns.cfg.minimap.hide = m ~= "always"
   if DBIcon and obj then DBIcon:Register(NAME, obj, ns.cfg.minimap) end
 end)
 ns.Listen("EVALUATED", function() ns.UpdateBroker() end)

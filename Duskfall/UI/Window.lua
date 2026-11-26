@@ -202,6 +202,7 @@ local function build()
   -- after that, on the next frame
   f:SetScript("OnShow", function(self)
     badge.Lift()
+    if ns.Moon then ns.Safe(ns.Moon.Check, "moon check") end
     W.UpdateStatus()
     if self.selected then
       W.Select(self.selected)
