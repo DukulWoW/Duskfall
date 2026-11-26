@@ -164,6 +164,17 @@ local function build()
   if ns.CursorLight then ns.CursorLight.Attach(f) end
   if f.Inset then f.Inset:Hide() end
   UI.Wood(f)
+  -- The cursor light also catches the wood, the window's border and the logo (Kim; UI/CursorLight.lua)
+  if ns.CursorLight then
+    local CL = ns.CursorLight
+    if f.Bg then CL.Copy(f.Bg, "fill") end
+    if f.NineSlice then
+      for _, r in ipairs({ f.NineSlice:GetRegions() }) do
+        if r.IsObjectType and r:IsObjectType("Texture") then CL.Copy(r, "edge") end
+      end
+    end
+    CL.Copy(icon, "art")
+  end
   UI.Glow(f, f.Bg, 0.6)
 
   f:SetMovable(true)

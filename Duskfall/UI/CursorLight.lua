@@ -1,68 +1,167 @@
--- Duskfall UI/CursorLight.lua: a soft warm light that follows the mouse over Duskfall's own windows
--- (the main window, the mini panel, the welcome; Kim, 2026-11-26). Idea from Hoverlight, written
--- from scratch (Hoverlight is GPL; nothing of its code or art is used). Two additive layers of
--- Assets/cursor-light (our own radial falloff): a wide faint glow and a small brighter core, kept
--- inside the window (a clipping frame), breathing a little. Fades in when the mouse comes over the
--- window and out when it leaves. Its OnUpdate runs only while the window is shown.
--- settings.cursorLight = false switches it off, settings.cursorLightStrength scales it (Settings > Display).
--- Public: ns.CursorLight.Attach(window)
+-- Duskfall UI/CursorLight.lua: light that follows the mouse over Duskfall's own windows (the main
+-- window, the mini panel, the welcome; Kim, 2026-11-26). Idea from Hoverlight, written from scratch
+-- (Hoverlight is GPL; nothing of its code or art is used).
+--
+-- An addon has no shaders, so the light is made from what there is (probe T1: one mask texture
+-- reaches textures in any frame):
+--   * twins: every piece of art Duskfall draws (rounded boxes, the slider diamond, icons, the wood,
+--     the window border, the logo) gets an additive copy of itself, shown only through one soft
+--     round mask per window that sits at the mouse. So things brighten in their own colour: gold
+--     gets more golden, blue bluer, dark stays dark. Edges (borders, rings) get a stronger copy,
+--     so they catch a glint. Text can't be masked and stays as it is.
+--   * haze: a faint flat warm glow under the twins (Assets/cursor-light, additive, clipped to the
+--     window), so a dark screen still lifts.
+-- The light grows from nothing when the mouse comes over a window and shrinks away when it leaves
+-- (FADE seconds), breathing a little. Its OnUpdate runs only while the window is shown.
+-- settings.cursorLight = false switches it off, settings.cursorLightStrength scales it.
+--
+-- Twins are made where the art is made (CL.NewTwin, CL.Copy) and wait, hidden, until the window
+-- they live in has its light (CL.Attach); twins outside a lit window (the status display) are dropped.
+-- Public: CL.Attach(window), CL.NewTwin(frame, layer, sub, kind) -> texture, CL.Copy(texture, kind,
+--         owner) -> texture, CL.Want(twin, shown), CL.Refresh()
 local ADDON, ns = ...
 local UI = ns.UI
 local CL = {}
 ns.CursorLight = CL
 
-local WIDE, CORE = 300, 110          -- sizes of the two layers
-local WIDE_A, CORE_A = 0.17, 0.14    -- their strength at full light
-local FADE = 0.25                    -- seconds to fade in or out
+local MASK = 240                     -- the light's size at full
+local HAZE, HAZE_A = 300, 0.06       -- the flat haze: a third of the old flat light
+local FADE = 0.25                    -- seconds to grow or shrink
 local BREATH = 1.6                   -- radians a second (about 4 s a breath)
-local LEVEL_UP = 400                 -- above everything in the window, the border included
+local LEVEL_UP = 400                 -- the haze frame: above everything in the window
+local KIND = { fill = 0.55, edge = 1, art = 0.6 }   -- twin strength by kind
+
+local pending, masked = {}, {}
 
 local function on() return not ns.cfg or ns.cfg.cursorLight ~= false end
+local function strength() return tonumber(ns.cfg and ns.cfg.cursorLightStrength) or 1 end
+
+local function alphaOf(t) return math.min(1, (KIND[t.duskKind] or 0.6) * strength()) end
+
+-- A new twin: hidden until its window's light masks it.
+function CL.NewTwin(frame, layer, sub, kind)
+  local t = frame:CreateTexture(nil, layer or "ARTWORK", nil, math.max(-8, math.min(7, sub or 0)))
+  t:SetBlendMode("ADD")
+  t:Hide()
+  t.duskKind = kind or "fill"
+  t.duskWant = true
+  pending[#pending + 1] = t
+  return t
+end
+
+-- Shown or hidden with its original (it only shows once masked).
+function CL.Want(t, shown)
+  if not t then return end
+  t.duskWant = shown and true or false
+  if t.duskMasked then t:SetShown(t.duskWant) end
+end
+
+-- A twin of an existing texture: same picture, texture coordinates, tiling, colour and rotation,
+-- on top of it (owner: the frame to draw it on, default the texture's own). Follows its Show / Hide.
+function CL.Copy(tex, kind, owner)
+  if not tex then return nil end
+  local layer, sub = tex:GetDrawLayer()
+  local t = CL.NewTwin(owner or tex:GetParent(), layer, (sub or 0) + 1, kind)
+  t:SetAllPoints(tex)
+  local atlas = tex.GetAtlas and tex:GetAtlas()
+  if atlas and atlas ~= "" then
+    t:SetAtlas(atlas)
+  else
+    local file = tex:GetTexture()
+    if not file then return nil end
+    t:SetTexture(file, tex.GetWrapModeHorizontal and tex:GetWrapModeHorizontal() or nil,
+      tex.GetWrapModeVertical and tex:GetWrapModeVertical() or nil)
+    t:SetTexCoord(tex:GetTexCoord())
+  end
+  if tex.GetHorizTile then t:SetHorizTile(tex:GetHorizTile()) t:SetVertTile(tex:GetVertTile()) end
+  t:SetVertexColor(tex:GetVertexColor())
+  if tex.GetRotation and t.SetRotation then pcall(t.SetRotation, t, tex:GetRotation()) end
+  t.duskWant = tex:IsShown()
+  hooksecurefunc(tex, "Show", function() CL.Want(t, true) end)
+  hooksecurefunc(tex, "Hide", function() CL.Want(t, false) end)
+  hooksecurefunc(tex, "SetShown", function(_, v) CL.Want(t, v) end)
+  return t
+end
+
+-- Give waiting twins the mask of the lit window they live in; drop the ones in no lit window.
+local function flush()
+  local keep = {}
+  for _, t in ipairs(pending) do
+    local f = t:GetParent()
+    while f and not f.duskMask do f = f.GetParent and f:GetParent() or nil end
+    if f then
+      if pcall(t.AddMaskTexture, t, f.duskMask) then
+        t.duskMasked = true
+        t:SetAlpha(alphaOf(t))
+        t:SetShown(t.duskWant)
+        masked[#masked + 1] = t
+      end
+    elseif t:GetParent() and t:GetParent():GetParent() == nil then
+      keep[#keep + 1] = t   -- not parented yet: try again
+    end
+  end
+  pending = keep
+end
+
+-- The strength slider changed
+function CL.Refresh()
+  for _, t in ipairs(masked) do t:SetAlpha(alphaOf(t)) end
+end
 
 function CL.Attach(win)
-  if not win or win.duskLight then return end
+  if not win or win.duskMask then return end
+  local mask = win:CreateMaskTexture()
+  mask:SetTexture(UI.ART .. "cursor-light", "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+  mask:SetSize(1, 1)
+  mask:SetPoint("CENTER", UIParent, "BOTTOMLEFT", -1000, -1000)
+  win.duskMask = mask
+
+  -- The haze, clipped to the window, above everything in it
   local clip = CreateFrame("Frame", nil, win)
   clip:SetAllPoints(win)
   pcall(clip.SetClipsChildren, clip, true)
   clip:EnableMouse(false)
   clip:SetFrameLevel(math.min(9000, win:GetFrameLevel() + LEVEL_UP))
-  win.duskLight = clip
+  local haze = clip:CreateTexture(nil, "OVERLAY", nil, 7)
+  haze:SetTexture(UI.ART .. "cursor-light")
+  haze:SetBlendMode("ADD")
+  haze:SetSize(HAZE, HAZE)
+  haze:SetVertexColor(1, 0.85, 0.55)
+  haze:Hide()
 
-  local function layer(size, r, g, b)
-    local t = clip:CreateTexture(nil, "OVERLAY", nil, 7)
-    t:SetTexture(UI.ART .. "cursor-light")
-    t:SetBlendMode("ADD")
-    t:SetSize(size, size)
-    t:SetVertexColor(r, g, b)
-    t:Hide()
-    return t
-  end
-  local wide = layer(WIDE, 1, 0.82, 0.5)
-  local core = layer(CORE, 1, 0.93, 0.78)
-
-  local level, clock = 0, 0
+  local level, clock, parked = 0, 0, true
   clip:SetScript("OnUpdate", function(_, dt)
+    if pending[1] then flush() end
     clock = clock + dt
     local want = (on() and win:IsMouseOver()) and 1 or 0
     if level < want then level = math.min(1, level + dt / FADE)
     elseif level > want then level = math.max(0, level - dt / FADE) end
     if level <= 0 then
-      if wide:IsShown() then wide:Hide() core:Hide() end
+      if not parked then
+        mask:ClearAllPoints()
+        mask:SetPoint("CENTER", UIParent, "BOTTOMLEFT", -1000, -1000)
+        mask:SetSize(1, 1)
+        haze:Hide()
+        parked = true
+      end
       return
     end
+    parked = false
     local scale = win:GetEffectiveScale()
     local x, y = GetCursorPosition()
     local left, bottom = win:GetLeft(), win:GetBottom()
     if not (scale and x and left and bottom) then return end
     x, y = x / scale - left, y / scale - bottom
-    wide:ClearAllPoints()
-    wide:SetPoint("CENTER", win, "BOTTOMLEFT", x, y)
-    core:ClearAllPoints()
-    core:SetPoint("CENTER", win, "BOTTOMLEFT", x, y)
-    local breath = 0.92 + 0.08 * math.sin(clock * BREATH)
-    local k = level * breath * (tonumber(ns.cfg and ns.cfg.cursorLightStrength) or 1)
-    wide:SetAlpha(math.min(1, WIDE_A * k))
-    core:SetAlpha(math.min(1, CORE_A * k))
-    if not wide:IsShown() then wide:Show() core:Show() end
+    local breath = 0.94 + 0.06 * math.sin(clock * BREATH)
+    local e = level * level * (3 - 2 * level)
+    local size = math.max(1, MASK * e * breath)
+    mask:ClearAllPoints()
+    mask:SetPoint("CENTER", win, "BOTTOMLEFT", x, y)
+    mask:SetSize(size, size)
+    haze:ClearAllPoints()
+    haze:SetPoint("CENTER", win, "BOTTOMLEFT", x, y)
+    haze:SetAlpha(math.min(1, HAZE_A * e * breath * strength()))
+    haze:Show()
   end)
+  flush()
 end

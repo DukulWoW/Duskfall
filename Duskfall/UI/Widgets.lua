@@ -95,7 +95,7 @@ function UI.Button(parent, text, w, onClick, h)
     boxes[k] = UI.RoundBox(b, { radius = 7, bottom = L.bottom, top = L.top, border = L.border })
     boxes[k]:SetShown(false)
   end
-  local hover = UI.RoundBox(b, { radius = 7, layer = "ARTWORK", bottom = { 1, 1, 1, 0.03 }, top = { 1, 1, 1, 0.13 } })
+  local hover = UI.RoundBox(b, { radius = 7, layer = "ARTWORK", unlit = true, bottom = { 1, 1, 1, 0.03 }, top = { 1, 1, 1, 0.13 } })
   hover:SetShown(false)
   local fs = b:CreateFontString(nil, "OVERLAY", "GameFontNormal")
   fs:SetPoint("CENTER", b, "CENTER", 0, 0)
@@ -240,6 +240,11 @@ function UI.Switch(parent, o)
   local disc = knob:CreateTexture(nil, "ARTWORK")
   disc:SetAllPoints()
   UI.Gradient(disc, "VERTICAL", { 0.8, 0.8, 0.84, 1 }, { 1, 1, 1, 1 }, UI.ART .. "dot")
+  if ns.CursorLight then
+    local lit = ns.CursorLight.NewTwin(knob, "ARTWORK", 2, "art")
+    lit:SetAllPoints(disc)
+    UI.Gradient(lit, "VERTICAL", { 0.8, 0.8, 0.84, 1 }, { 1, 1, 1, 1 }, UI.ART .. "dot")
+  end
   local hover = knob:CreateTexture(nil, "OVERLAY")
   hover:SetAllPoints()
   hover:SetTexture(UI.ART .. "dot")
@@ -586,40 +591,31 @@ function UI.ScopeDropdown(parent, width, o)
 end
 
 -- Icon button ----------------------------------------------------------------------------------
--- BigNoteBox's layered icon button (UI/IconButton.lua), normal look only: background, plate,
--- hover, symbol, Forever border; the pressed symbol is its own drawing. Art in Assets:
--- bt-background, bt-button, bt-button-pressed, bt-hover, bt-border-forever, bt-<symbol>-normal/-press.
--- o = { onClick, tip, tipSub }. The button owns its mouse scripts; add behaviour with HookScript.
+-- A square link button in our buttons' normal look (rounded, dark, gold edge; Kim) with
+-- BigNoteBox's coloured symbol on top (Assets/bt-<symbol>-normal, -press when pressed, 1 px down).
+-- Hover brightens it, disabled greys the symbol. o = { onClick, tip, tipSub }. The button owns its
+-- mouse scripts; add behaviour with HookScript.
 function UI.IconButton(parent, size, symbol, o)
   o = o or {}
   local btn = CreateFrame("Button", nil, parent)
   btn:SetSize(size, size)
-  local function layer(sub, file)
-    local t = btn:CreateTexture(nil, "ARTWORK", nil, sub)
-    t:SetAllPoints()
-    if file then t:SetTexture(UI.ART .. file) end
-    return t
-  end
-  local bg = layer(0, "bt-background")
-  local plate = layer(1)
-  local hover = layer(2, "bt-hover")
-  local sym = layer(3)
-  local border = layer(4, "bt-border-forever")
+  UI.RoundBox(btn, { radius = 7, bottom = { 0.09, 0.06, 0.03, 0.92 }, top = { 0.26, 0.19, 0.1, 0.92 },
+    border = { 1, 0.82, 0, 0.55 } })
+  local hover = UI.RoundBox(btn, { radius = 7, layer = "ARTWORK", unlit = true, bottom = { 1, 1, 1, 0.03 },
+    top = { 1, 1, 1, 0.14 } })
+  hover:SetShown(false)
+  local sym = btn:CreateTexture(nil, "OVERLAY")
+  sym:SetSize(size - 4, size - 4)
   local over, down = false, false
   local function refresh()
     local dim = not btn:IsEnabled()
     local pressed = down and not dim
-    plate:SetTexture(UI.ART .. (pressed and "bt-button-pressed" or "bt-button"))
     sym:SetTexture(UI.ART .. "bt-" .. symbol .. (pressed and "-press" or "-normal"))
-    hover:SetShown(over and not pressed and not dim)
-    local d, ds = 1, 1
-    if dim then d, ds = 0.6, 0.35 end
-    for _, t in ipairs({ bg, plate, hover, border }) do
-      t:SetDesaturated(dim)
-      t:SetVertexColor(d, d, d)
-    end
+    sym:ClearAllPoints()
+    sym:SetPoint("CENTER", pressed and 1 or 0, pressed and -1 or 0)
     sym:SetDesaturated(dim)
-    sym:SetVertexColor(ds, ds, ds)
+    sym:SetAlpha(dim and 0.45 or 1)
+    hover:SetShown(over and not pressed and not dim)
   end
   if o.onClick then btn:SetScript("OnClick", function(self, mb) ns.Safe(o.onClick, "icon button", self, mb) end) end
   btn:SetScript("OnEnter", function(self)
@@ -699,10 +695,24 @@ function UI.RoundBox(f, o)
   local layer, sub = o.layer or "BACKGROUND", o.sub or 1
   local box = { round = { tl = true, tr = true, bl = true, br = true } }
   local all = {}
-  local function tex(level)
+  -- Every piece has a twin for the cursor light (UI/CursorLight.lua), painted the same way;
+  -- o.unlit = none (the light's own haze, hover overlays)
+  local twins = {}
+  local CL = not o.unlit and layer ~= "HIGHLIGHT" and ns.CursorLight or nil
+  local function tex(level, kind)
     local t = f:CreateTexture(nil, layer, nil, level)
     all[#all + 1] = t
+    if CL then
+      local w = CL.NewTwin(f, layer, level + 3, kind)
+      w:SetAllPoints(t)
+      twins[t] = w
+    end
     return t
+  end
+  local function both(t, method, ...)
+    t[method](t, ...)
+    local w = twins[t]
+    if w then w[method](w, ...) end
   end
   local c = {}
   for k, point in pairs(CORNER_POINT) do
@@ -721,17 +731,17 @@ function UI.RoundBox(f, o)
   if o.border then
     local col = o.border
     local function solid()
-      local t = tex(sub + 1)
-      t:SetColorTexture(col[1], col[2], col[3], col[4] or 1)
+      local t = tex(sub + 1, "edge")
+      both(t, "SetColorTexture", col[1], col[2], col[3], col[4] or 1)
       return t
     end
     for k, point in pairs(CORNER_POINT) do
-      local t = tex(sub + 1)
+      local t = tex(sub + 1, "edge")
       t:SetSize(R, R)
       t:SetPoint(point, f, point, 0, 0)
-      t:SetTexture(UI.ART .. "round-ring-" .. R)
-      t:SetTexCoord(unpack(CORNERS[k]))
-      t:SetVertexColor(col[1], col[2], col[3], col[4] or 1)
+      both(t, "SetTexture", UI.ART .. "round-ring-" .. R)
+      both(t, "SetTexCoord", unpack(CORNERS[k]))
+      both(t, "SetVertexColor", col[1], col[2], col[3], col[4] or 1)
     end
     local tl = solid()
     tl:SetPoint("TOPLEFT", f, "TOPLEFT", R, 0)
@@ -759,11 +769,12 @@ function UI.RoundBox(f, o)
     local lo, hi = o.bottom, o.top or o.bottom
     local function shade(t, from, to, file)
       UI.Gradient(t, "VERTICAL", lerp(lo, hi, from), lerp(lo, hi, to), file)
+      if twins[t] then UI.Gradient(twins[t], "VERTICAL", lerp(lo, hi, from), lerp(lo, hi, to), file) end
     end
     for k, t in pairs(c) do
       local file = box.round[k] and (UI.ART .. "round-corner") or nil
       if k == "tl" or k == "tr" then shade(t, b, 1, file) else shade(t, 0, a, file) end
-      if file then t:SetTexCoord(unpack(CORNERS[k])) else t:SetTexCoord(0, 1, 0, 1) end
+      if file then both(t, "SetTexCoord", unpack(CORNERS[k])) else both(t, "SetTexCoord", 0, 1, 0, 1) end
     end
     shade(top, b, 1)
     shade(mid, a, b)
@@ -775,6 +786,7 @@ function UI.RoundBox(f, o)
   end
   function box:SetShown(on)
     for _, t in ipairs(all) do t:SetShown(on) end
+    if CL then for _, w in pairs(twins) do CL.Want(w, on) end end
   end
   f:HookScript("OnSizeChanged", function() box:Layout() end)
   box:Layout()
@@ -790,7 +802,7 @@ function UI.BackButton(parent, size, o)
   local R = math.min(12, math.floor(size / 2))
   UI.RoundBox(b, { radius = R, bottom = { 0.09, 0.06, 0.03, 0.92 }, top = { 0.26, 0.19, 0.1, 0.92 },
     border = { 1, 0.82, 0, 0.55 } })
-  local hover = UI.RoundBox(b, { radius = R, layer = "ARTWORK", bottom = { 1, 1, 1, 0.03 }, top = { 1, 1, 1, 0.14 } })
+  local hover = UI.RoundBox(b, { radius = R, layer = "ARTWORK", unlit = true, bottom = { 1, 1, 1, 0.03 }, top = { 1, 1, 1, 0.14 } })
   hover:SetShown(false)
   local arrow = b:CreateTexture(nil, "OVERLAY")
   arrow:SetSize(size - 8, size - 8)
@@ -999,6 +1011,12 @@ function UI.LightSlider(parent, width, o)
   thumb:SetSize(22, 22)
   sl:SetThumbTexture(thumb)
   thumb:SetDrawLayer("OVERLAY", 7)
+  -- The cursor light catches the diamond (UI/CursorLight.lua); it follows the thumb
+  if ns.CursorLight then
+    local lit = ns.CursorLight.NewTwin(sl, "OVERLAY", 7, "edge")
+    lit:SetAllPoints(thumb)
+    lit:SetTexture(UI.ART .. "diamond")
+  end
   -- The thumb's centre travels from half its width to the other end minus that: the track too
   INSET = 11
 
@@ -1012,6 +1030,11 @@ function UI.LightSlider(parent, width, o)
   track:SetPoint("RIGHT", sl, "RIGHT", -INSET, 0)
   track:SetHeight(8)
   UI.Gradient(track, "HORIZONTAL", o.from, o.to)
+  if ns.CursorLight then
+    local lit = ns.CursorLight.NewTwin(sl, "ARTWORK", 1, "fill")
+    lit:SetAllPoints(track)
+    UI.Gradient(lit, "HORIZONTAL", o.from, o.to)
+  end
   local shine = sl:CreateTexture(nil, "ARTWORK", nil, 2)
   shine:SetPoint("TOPLEFT", track, "TOPLEFT", 0, 0)
   shine:SetPoint("TOPRIGHT", track, "TOPRIGHT", 0, 0)

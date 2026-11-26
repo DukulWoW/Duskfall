@@ -340,78 +340,6 @@ local function transitionCmd(args)
   showTransition()
 end
 
--- TEMPORARY probe for the realistic cursor light (Kim, 2026-11-26; remove after test T1).
--- Question: can one MaskTexture light textures that live in other frames? A test panel in the
--- middle of the screen: four coloured squares, each with an additive "lit twin" masked by a soft
--- round light that follows the cursor. The twins sit in different places relative to the mask:
---   A  same frame as the mask           B  a child frame of the mask's frame
---   C  a grandchild frame (2 deep)      D  a sibling frame (not under the mask's frame)
--- Chat says which AddMaskTexture calls were accepted; your eyes say which squares light up.
--- /dusk lightprobe again closes it.
-local probe
-local function lightProbe()
-  if probe then
-    probe:SetShown(not probe:IsShown())
-    return
-  end
-  local UI = ns.UI
-  local host = CreateFrame("Frame", nil, UIParent)
-  host:SetSize(460, 200)
-  host:SetPoint("CENTER")
-  host:SetFrameStrata("DIALOG")
-  local bg = host:CreateTexture(nil, "BACKGROUND")
-  bg:SetAllPoints()
-  bg:SetColorTexture(0.05, 0.04, 0.03, 0.95)
-  local title = host:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-  title:SetPoint("TOP", 0, -8)
-  title:SetText("Duskfall light probe: move the mouse over the squares")
-  -- The mask's frame: the panel's body
-  local body = CreateFrame("Frame", nil, host)
-  body:SetPoint("TOPLEFT", 0, -28)
-  body:SetPoint("BOTTOMRIGHT", 0, 0)
-  local mask = body:CreateMaskTexture()
-  mask:SetTexture(UI.ART .. "cursor-light", "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
-  mask:SetSize(170, 170)
-  local frames = {}
-  frames.A = body
-  frames.B = CreateFrame("Frame", nil, body)
-  frames.C = CreateFrame("Frame", nil, CreateFrame("Frame", nil, body))
-  frames.D = CreateFrame("Frame", nil, host)
-  local colours = { A = { 0.55, 0.42, 0.1 }, B = { 0.2, 0.33, 0.8 }, C = { 0.5, 0.2, 0.2 }, D = { 0.2, 0.5, 0.25 } }
-  local results = {}
-  for i, key in ipairs({ "A", "B", "C", "D" }) do
-    local f = frames[key]
-    if f ~= body then f:SetAllPoints(body) end
-    local c = colours[key]
-    local x = 20 + (i - 1) * 110
-    local base = f:CreateTexture(nil, "ARTWORK")
-    base:SetSize(90, 90)
-    base:SetPoint("LEFT", body, "LEFT", x, -6)
-    base:SetColorTexture(c[1], c[2], c[3], 1)
-    local twin = f:CreateTexture(nil, "OVERLAY")
-    twin:SetAllPoints(base)
-    twin:SetColorTexture(c[1], c[2], c[3], 1)
-    twin:SetBlendMode("ADD")
-    local ok, err = pcall(twin.AddMaskTexture, twin, mask)
-    results[key] = ok and "accepted" or ("refused: " .. tostring(err))
-    local label = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    label:SetPoint("TOP", base, "BOTTOM", 0, -4)
-    label:SetText(key)
-  end
-  body:SetScript("OnUpdate", function()
-    local scale = body:GetEffectiveScale()
-    local cx, cy = GetCursorPosition()
-    local l, b = body:GetLeft(), body:GetBottom()
-    if not (l and b) then return end
-    mask:ClearAllPoints()
-    mask:SetPoint("CENTER", body, "BOTTOMLEFT", cx / scale - l, cy / scale - b)
-  end)
-  probe = host
-  ns.Print("light probe: A (same frame) %s; B (child) %s; C (grandchild) %s; D (sibling) %s.",
-    results.A, results.B, results.C, results.D)
-  ns.Print("Note which squares light up under the mouse. /dusk lightprobe closes it.")
-end
-
 local function handler(msg)
   local args = words(msg)
   local cmd = args[1] and args[1]:lower() or ""
@@ -434,7 +362,6 @@ local function handler(msg)
   elseif cmd == "transition" then showTransition()
   elseif cmd == "config" or cmd == "settings" or cmd == "options" then
     if ns.OpenWindow then ns.OpenWindow("settings") end
-  elseif cmd == "lightprobe" then lightProbe()
   elseif cmd == "welcome" then
     if ns.Welcome then ns.Welcome.Show() end
   elseif cmd == "moon" then

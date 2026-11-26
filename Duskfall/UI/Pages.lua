@@ -497,6 +497,8 @@ W.AddTab("settings", "Settings", function(page)
     icon:SetSize(46, 46)
     icon:SetPoint("LEFT", tile, "LEFT", 16, 0)
     if def.icon then icon:SetTexture(def.icon) icon:SetTexCoord(0.08, 0.92, 0.08, 0.92) end
+    -- Fixed icons catch the cursor light too (not the ones that change: portrait, moon phase)
+    if def.icon and not def.iconFn and not def.portrait and ns.CursorLight then ns.CursorLight.Copy(icon, "art") end
     if tile.CreateMaskTexture then
       local mask = tile:CreateMaskTexture()
       mask:SetAllPoints(icon)
@@ -514,6 +516,7 @@ W.AddTab("settings", "Settings", function(page)
       orb:SetPoint("CENTER", icon, "CENTER", -F / 63, 0)
       orb:SetTexture(237655)
       orb:SetTexCoord(946 / 1024, 1009 / 1024, 0, 63 / 1024)
+      if ns.CursorLight then ns.CursorLight.Copy(orb, "edge") end
     end
     local name = UI.Label(tile, def.title, "GameFontNormalLarge")
     name:SetPoint("TOPLEFT", icon, "TOPRIGHT", 16, 2)
