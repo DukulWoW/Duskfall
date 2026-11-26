@@ -134,6 +134,12 @@ ns.Listen("READY", function()
     -- The same glow ring as the moon badge, behind the button's icon
     local btn = DBIcon:GetMinimapButton(NAME)
     if btn and ns.Moon and ns.Moon.AddRing then ns.Moon.AddRing(btn, btn.icon or btn, 40) end
+    -- Its icon grey while Duskfall is off (Kim)
+    if btn and btn.icon then
+      local function dim() btn.icon:SetDesaturated(not ns.cfg.enabled) end
+      dim()
+      ns.Listen("ONOFF", function() ns.Safe(dim, "minimap button") end)
+    end
   end
 end)
 ns.Listen("EVALUATED", function() ns.UpdateBroker() end)

@@ -58,7 +58,7 @@ local function build()
   end)
   -- Rounded with a gold edge, as the mini panel (Kim)
   UI.RoundBox(f, { radius = 10, bottom = { 0.02, 0.02, 0.01, 0.72 }, top = { 0.14, 0.11, 0.07, 0.72 },
-    border = { 1, 0.82, 0, 0.45 } })
+    border = { 1, 0.82, 0, 0.85 }, sweep = true })   -- gold to blue, as the window frame (Kim)
   local icon = f:CreateTexture(nil, "ARTWORK")
   icon:SetSize(34, 34)
   icon:SetPoint("LEFT", f, "LEFT", 6, 0)

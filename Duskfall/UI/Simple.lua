@@ -467,7 +467,7 @@ function SP.Create(parent, hooks)
     if type(pos) == "table" and pos.point then m:SetPoint(pos.point, UIParent, pos.rel or pos.point, pos.x or 0, pos.y or 0)
     else m:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, 140) end
     UI.RoundBox(m, { radius = 12, bottom = { 0.03, 0.02, 0.01, 0.72 }, top = { 0.14, 0.11, 0.07, 0.72 },
-      border = { 1, 0.82, 0, 0.45 } })
+      border = { 1, 0.82, 0, 0.85 }, sweep = true })   -- gold to blue, as the window frame (Kim)
     -- The round icon half out of the top-left corner, as on the main window (Kim)
     local badge = CreateFrame("Frame", nil, m)
     badge:SetSize(52, 52)

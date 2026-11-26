@@ -19,6 +19,8 @@ ns.UI = UI
 UI.ART = "Interface\\AddOns\\Duskfall\\Assets\\"
 UI.SLIDER_H = 40
 UI.DROPDOWN_H = 44
+-- The icon's ring: gold at the top left, Duskfall blue at the bottom right (window frame, sweeps)
+UI.RING_GOLD, UI.RING_BLUE = { 1, 0.85, 0.4 }, { 0.36, 0.5, 1 }
 
 -- Forever look ---------------------------------------------------------------------------------
 function UI.Wood(f)
@@ -681,7 +683,9 @@ end
 -- A rectangle with rounded corners (Assets/round-corner, a quarter disc), shaded from o.bottom to
 -- o.top, with an optional 1 px rounded frame (o.border, Assets/round-ring; for boxes rounded on all
 -- four corners). Corners can be square: :SetCorners(tl, tr, bl, br).
--- o = { radius, bottom = {r,g,b,a}, top = {r,g,b,a}, border = {r,g,b,a}, layer, sub }.
+-- o = { radius, bottom = {r,g,b,a}, top = {r,g,b,a}, border = {r,g,b,a}, layer, sub, unlit,
+--       sweep = true: the border sweeps from gold (top left) to Duskfall blue (bottom right), as the
+--       icon's ring and the main window's frame; border[4] is its alpha }.
 -- Returns a box with :SetCorners(...), :SetShown(on), :Layout() (also on the frame's size change).
 local CORNERS = { tl = { 0, 1, 0, 1 }, tr = { 1, 0, 0, 1 }, bl = { 0, 1, 1, 0 }, br = { 1, 0, 1, 0 } }
 local CORNER_POINT = { tl = "TOPLEFT", tr = "TOPRIGHT", bl = "BOTTOMLEFT", br = "BOTTOMRIGHT" }
@@ -730,10 +734,25 @@ function UI.RoundBox(f, o)
 
   if o.border then
     local col = o.border
+    -- Corner colours: one colour, or the gold-to-blue sweep
+    local cc = { tl = col, tr = col, bl = col, br = col }
+    if o.sweep then
+      local A = col[4] or 1
+      local g, b2 = UI.RING_GOLD, UI.RING_BLUE
+      local m = { (g[1] + b2[1]) / 2, (g[2] + b2[2]) / 2, (g[3] + b2[3]) / 2 }
+      cc = { tl = { g[1], g[2], g[3], A }, br = { b2[1], b2[2], b2[3], A }, tr = { m[1], m[2], m[3], A },
+             bl = { m[1], m[2], m[3], A } }
+    end
     local function solid()
       local t = tex(sub + 1, "edge")
       both(t, "SetColorTexture", col[1], col[2], col[3], col[4] or 1)
       return t
+    end
+    -- A line shaded between two corner colours (only with sweep)
+    local function shadeLine(t, orient, a, b)
+      if not o.sweep then return end
+      UI.Gradient(t, orient, a, b)
+      if twins[t] then UI.Gradient(twins[t], orient, a, b) end
     end
     for k, point in pairs(CORNER_POINT) do
       local t = tex(sub + 1, "edge")
@@ -741,7 +760,8 @@ function UI.RoundBox(f, o)
       t:SetPoint(point, f, point, 0, 0)
       both(t, "SetTexture", UI.ART .. "round-ring-" .. R)
       both(t, "SetTexCoord", unpack(CORNERS[k]))
-      both(t, "SetVertexColor", col[1], col[2], col[3], col[4] or 1)
+      local c = cc[k]
+      both(t, "SetVertexColor", c[1], c[2], c[3], c[4] or 1)
     end
     local tl = solid()
     tl:SetPoint("TOPLEFT", f, "TOPLEFT", R, 0)
@@ -759,6 +779,10 @@ function UI.RoundBox(f, o)
     rl:SetPoint("TOPRIGHT", f, "TOPRIGHT", 0, -R)
     rl:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", 0, R)
     rl:SetWidth(1)
+    shadeLine(tl, "HORIZONTAL", cc.tl, cc.tr)
+    shadeLine(bl, "HORIZONTAL", cc.bl, cc.br)
+    shadeLine(ll, "VERTICAL", cc.bl, cc.tl)
+    shadeLine(rl, "VERTICAL", cc.br, cc.tr)
   end
 
   -- The fill is shaded per piece, each with its own slice of the bottom-to-top gradient

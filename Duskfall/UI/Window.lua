@@ -11,6 +11,48 @@ local W = {}
 ns.Window = W
 local UI, C = ns.UI, ns.Channels
 
+-- The icon's ring colours (Kim, 2026-11-26: "looks epic"): the window border sweeps from gold at
+-- the top left to Duskfall blue at the bottom right; the tabs are blue, the picked one gold.
+local GOLD = { UI.RING_GOLD[1], UI.RING_GOLD[2], UI.RING_GOLD[3], 1 }
+local BLUE = { UI.RING_BLUE[1], UI.RING_BLUE[2], UI.RING_BLUE[3], 1 }
+local MID = { (GOLD[1] + BLUE[1]) / 2, (GOLD[2] + BLUE[2]) / 2, (GOLD[3] + BLUE[3]) / 2, 1 }
+W.GOLD, W.BLUE = GOLD, BLUE
+-- Border pieces: corners solid, edges blending between their two corners
+local PIECES = {
+  TopLeftCorner = { GOLD }, TopRightCorner = { MID }, BottomLeftCorner = { MID }, BottomRightCorner = { BLUE },
+  TopEdge = { "HORIZONTAL", GOLD, MID }, BottomEdge = { "HORIZONTAL", MID, BLUE },
+  LeftEdge = { "VERTICAL", MID, GOLD }, RightEdge = { "VERTICAL", BLUE, MID },
+}
+-- Greyed first, so the colours come out clean; the gradient goes straight on the piece (its art
+-- and texture coordinates stay)
+local function tintPiece(t, spec)
+  if not t then return end
+  t:SetDesaturated(true)
+  if #spec == 1 then
+    t:SetVertexColor(spec[1][1], spec[1][2], spec[1][3], 1)
+  elseif CreateColor then
+    local a, b = spec[2], spec[3]
+    pcall(t.SetGradient, t, spec[1], CreateColor(a[1], a[2], a[3], 1), CreateColor(b[1], b[2], b[3], 1))
+  end
+end
+
+-- Tabs: every picture of a tab (not its hover highlight) greyed and coloured, gold when picked;
+-- the picked tab's text gold too (Kim)
+local function paintTab(b, picked)
+  local col = picked and GOLD or BLUE
+  for _, r in ipairs({ b:GetRegions() }) do
+    if r.IsObjectType and r:IsObjectType("Texture") and r:GetDrawLayer() ~= "HIGHLIGHT" then
+      r:SetDesaturated(true)
+      r:SetVertexColor(col[1], col[2], col[3], 1)
+    end
+  end
+  local fs = b:GetFontString()
+  if fs then
+    fs:SetTextColor(1, 0.82, 0)
+    fs:SetShadowOffset(1, -1)
+  end
+end
+
 local WIDTH, HEIGHT = 780, 560
 local ICON_SIZE, ICON_OUT = 62, 18   -- our round icon, and how far it sits out of the top-left corner
 local PAGE_TOP = 34                  -- page content starts this far below the window top
@@ -76,11 +118,13 @@ function W.Select(id)
       end
       t.page:Show()
       pcall(PanelTemplates_SelectTab, t.button)
+      paintTab(t.button, true)
       frame.selected = id
       ns.cfg.windowTab = id
     else
       t.page:Hide()
       pcall(PanelTemplates_DeselectTab, t.button)
+      paintTab(t.button, false)
     end
   end
 end
@@ -123,13 +167,15 @@ local function build()
   local function liftBadge()
     local top = f:GetFrameLevel()
     for _, child in ipairs({ f:GetChildren() }) do
-      if child ~= badge and child ~= f.advCheck and child ~= f.helpBtn and child:GetFrameLevel() > top then
+      if child ~= badge and child ~= f.advCheck and child ~= f.helpBtn and child ~= f.closeBtn
+        and child:GetFrameLevel() > top then
         top = child:GetFrameLevel()
       end
     end
     badge:SetFrameLevel(top + 5)
     if f.advCheck then raise(f.advCheck, top + 5) end
     if f.helpBtn then f.helpBtn:SetFrameLevel(top + 5) end
+    if f.closeBtn then f.closeBtn:SetFrameLevel(top + 5) end
   end
   badge.Lift = liftBadge
   local icon = badge:CreateTexture(nil, "ARTWORK")
@@ -137,7 +183,8 @@ local function build()
   icon:SetTexture(UI.ART .. "icon")
   -- Advanced mode, left of the close button (Kim): Places shows the full list and Look editor
   -- Simple | Advanced as a small picker (Kim: two views of the same page)
-  local adv = UI.Segmented(f, 136, { height = 18,
+  local TB = 16   -- the title bar controls (picker, help, close) share one height (Kim)
+  local adv = UI.Segmented(f, 132, { height = TB,
     items = function()
       return { { "simple", "Simple", nil, "Places and Styles in a few plain choices." },
                { "advanced", "Advanced", nil, "Every place you have been, the full Look editor and every " ..
@@ -145,13 +192,23 @@ local function build()
     end,
     get = function() return ns.cfg.advanced and "advanced" or "simple" end,
     set = function(v) W.SetAdvanced(v == "advanced") end })
-  local close = f.CloseButton or _G.DuskfallWindowCloseButton
+  -- Close: our link-button look with a gold X (Assets/bt-close-*), in the place of the template's
+  -- red one (hidden, still the anchor); ESC closes the window as before
+  local old = f.CloseButton or _G.DuskfallWindowCloseButton
+  local close = UI.IconButton(f, TB, "close", { tip = "Close", onClick = function() f:Hide() end })
+  if old then
+    close:SetPoint("CENTER", old, "CENTER", -2, 0)
+    old:SetAlpha(0)
+    old:EnableMouse(false)
+  else
+    close:SetPoint("TOPRIGHT", f, "TOPRIGHT", -8, -4)
+  end
+  f.closeBtn = close
   -- Help, between Advanced and the close button: our link-button look with Kim's coloured "?"
   -- (Assets/bt-help-normal / -press), as the About tab's buttons
-  local help = UI.IconButton(f, 22, "help", { tip = "Help", tipSub = "How Duskfall works.",
+  local help = UI.IconButton(f, TB, "help", { tip = "Help", tipSub = "How Duskfall works.",
     onClick = function() if ns.Help then ns.Help.Toggle() end end })
-  if close then help:SetPoint("RIGHT", close, "LEFT", -2, 0)
-  else help:SetPoint("TOPRIGHT", f, "TOPRIGHT", -40, 0) end
+  help:SetPoint("RIGHT", close, "LEFT", -4, 0)
   f.helpBtn = help
   adv:SetPoint("RIGHT", help, "LEFT", -8, 0)
   adv:Refresh()   -- the picker makes its buttons in Refresh
@@ -161,14 +218,20 @@ local function build()
   if f.Inset then f.Inset:Hide() end
   UI.Wood(f)
   -- The cursor light also catches the wood, the window's border and the logo (Kim; UI/CursorLight.lua)
-  if ns.CursorLight then
-    local CL = ns.CursorLight
-    if f.Bg then CL.Copy(f.Bg, "fill") end
-    if f.NineSlice then
-      for _, r in ipairs({ f.NineSlice:GetRegions() }) do
-        if r.IsObjectType and r:IsObjectType("Texture") then CL.Copy(r, "edge") end
+  -- The border in the icon's ring colours; the light's copies of it get the same tint
+  local CL = ns.CursorLight
+  if f.NineSlice then
+    for key, spec in pairs(PIECES) do
+      local t = f.NineSlice[key]
+      if t then
+        local lit = CL and CL.Copy(t, "edge")
+        tintPiece(t, spec)
+        tintPiece(lit, spec)
       end
     end
+  end
+  if CL then
+    if f.Bg then CL.Copy(f.Bg, "fill") end
     CL.Copy(icon, "art")
   end
   UI.Glow(f, f.Bg, 0.6)
@@ -309,110 +372,3 @@ end)
 C_Timer.NewTicker(0.25, function()
   if frame and frame:IsShown() and ns.Transition.IsRunning() then W.UpdateStatus() end
 end)
-
--- TEMPORARY preview (Kim, 2026-11-26; remove after test T8): /dusk framepreview steps the main
--- window through: the game's frame -> a fully custom frame (rounded, gold edge, our title line and
--- round close X, pill tabs) -> the game's frame tinted like the icon's ring (gold top left, blue
--- bottom right) -> back. Nothing is saved; a /reload undoes it too.
-local preview
-function W.FramePreview()
-  local f = frame
-  if not f then
-    ns.OpenWindow("settings", true)
-    f = frame
-    if not f then return end
-  end
-  if not preview then
-    preview = { on = false, tabs = {} }
-    local skin = CreateFrame("Frame", nil, f)
-    skin:SetAllPoints()
-    skin:SetFrameLevel(f:GetFrameLevel())
-    UI.RoundBox(skin, { radius = 12, bottom = { 0.05, 0.035, 0.02, 0.97 }, top = { 0.17, 0.12, 0.07, 0.97 },
-      border = { 1, 0.82, 0, 0.6 } })
-    UI.Glow(skin, nil, 0.7)
-    local line = skin:CreateTexture(nil, "ARTWORK")
-    line:SetColorTexture(1, 0.82, 0, 0.35)
-    line:SetHeight(1)
-    line:SetPoint("TOPLEFT", skin, "TOPLEFT", 12, -28)
-    line:SetPoint("TOPRIGHT", skin, "TOPRIGHT", -12, -28)
-    skin:Hide()
-    preview.skin = skin
-    local x = UI.ClearX(f, 20, function() f:Hide() end, "Close")
-    x:SetPoint("TOPRIGHT", f, "TOPRIGHT", -8, -4)
-    x:SetFrameLevel(f:GetFrameLevel() + 500)
-    x:Hide()
-    preview.x = x
-    for _, t in ipairs(tabs) do
-      local b = t.button
-      local pill = CreateFrame("Frame", nil, b)
-      pill:SetPoint("TOPLEFT", b, "TOPLEFT", 2, -4)
-      pill:SetPoint("BOTTOMRIGHT", b, "BOTTOMRIGHT", -2, 6)
-      pill:SetFrameLevel(b:GetFrameLevel())
-      local normal = UI.RoundBox(pill, { radius = 8, bottom = { 0.05, 0.035, 0.02, 0.95 }, top = { 0.2, 0.15, 0.09, 0.95 },
-        border = { 1, 0.82, 0, 0.45 } })
-      local picked = UI.RoundBox(pill, { radius = 8, sub = 3, bottom = { 0.5, 0.33, 0.05, 1 }, top = { 0.95, 0.75, 0.26, 1 },
-        border = { 1, 0.92, 0.55, 0.95 } })
-      pill:Hide()
-      preview.tabs[#preview.tabs + 1] = { t = t, pill = pill, normal = normal, picked = picked }
-    end
-    preview.paint = function()
-      for _, e in ipairs(preview.tabs) do
-        local sel = frame.selected == e.t.id
-        e.picked:SetShown(sel)
-        e.normal:SetShown(not sel)
-        local fs = e.t.button:GetFontString()
-        if fs then
-          if sel then fs:SetTextColor(0.14, 0.08, 0) fs:SetShadowOffset(0, 0)
-          else fs:SetTextColor(1, 0.82, 0) fs:SetShadowOffset(1, -1) end
-        end
-      end
-    end
-    hooksecurefunc(W, "Select", function() if preview.on then preview.paint() end end)
-  end
-  -- The tinted game frame: each border piece greyed, then shaded; corners solid, edges blending
-  -- between their two corners, so the whole border sweeps from gold (top left) to blue (bottom right)
-  local GOLD, BLUE = { 1, 0.85, 0.4, 1 }, { 0.36, 0.5, 1, 1 }
-  local MID = { (GOLD[1] + BLUE[1]) / 2, (GOLD[2] + BLUE[2]) / 2, (GOLD[3] + BLUE[3]) / 2, 1 }
-  local PIECES = {
-    TopLeftCorner = { GOLD }, TopRightCorner = { MID }, BottomLeftCorner = { MID }, BottomRightCorner = { BLUE },
-    TopEdge = { "HORIZONTAL", GOLD, MID }, BottomEdge = { "HORIZONTAL", MID, BLUE },
-    LeftEdge = { "VERTICAL", MID, GOLD }, RightEdge = { "VERTICAL", BLUE, MID },
-  }
-  local function tint(on)
-    local ns9 = f.NineSlice
-    if not ns9 then return end
-    for key, spec in pairs(PIECES) do
-      local t = ns9[key]
-      if t then
-        t:SetDesaturated(on)
-        if not on then t:SetVertexColor(1, 1, 1, 1)
-        elseif #spec == 1 then t:SetVertexColor(spec[1][1], spec[1][2], spec[1][3], 1)
-        elseif CreateColor then
-          -- Straight on the piece: its art and texture coordinates stay as they are
-          local a, b = spec[2], spec[3]
-          pcall(t.SetGradient, t, spec[1], CreateColor(a[1], a[2], a[3], 1), CreateColor(b[1], b[2], b[3], 1))
-        end
-      end
-    end
-  end
-  preview.mode = ((preview.mode or 0) + 1) % 3
-  tint(preview.mode == 2)
-  preview.on = preview.mode == 1
-  local on = preview.on
-  local a = on and 0 or 1
-  if f.NineSlice then f.NineSlice:SetAlpha(a) end
-  if f.TopTileStreaks then f.TopTileStreaks:SetAlpha(a) end
-  if f.Bg then f.Bg:SetAlpha(a) end
-  if f.CloseButton then f.CloseButton:SetShown(not on) end
-  preview.skin:SetShown(on)
-  preview.x:SetShown(on)
-  for _, e in ipairs(preview.tabs) do
-    for _, r in ipairs({ e.t.button:GetRegions() }) do
-      if r.IsObjectType and r:IsObjectType("Texture") then r:SetAlpha(a) end
-    end
-    e.pill:SetShown(on)
-  end
-  if on then preview.paint() else W.Select(frame.selected) end
-  local names = { [0] = "the game's frame", "fully custom", "the game's frame, tinted gold to blue" }
-  ns.Print("frame preview: %s (/dusk framepreview again for the next).", names[preview.mode])
-end

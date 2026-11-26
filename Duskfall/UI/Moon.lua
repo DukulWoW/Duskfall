@@ -163,6 +163,10 @@ local function hook()
   end
   -- Behind it, the glow ring while a setting is in effect where you stand (M.AddRing)
   M.AddRing(catcher, badge, 36)
+  -- Grey while Duskfall is off (Kim)
+  local function dim() badge:SetDesaturated(not ns.cfg.enabled) end
+  dim()
+  ns.Listen("ONOFF", function() ns.Safe(dim, "moon badge") end)
   M.PlaceBadge = place
   place()
   C_Timer.NewTicker(30, function()
