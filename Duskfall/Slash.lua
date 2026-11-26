@@ -84,6 +84,7 @@ local function findLook(style, key, when)
   end
   return nil
 end
+ns.FindLook = findLook
 
 local function roundTo(key, v)
   return tonumber(C.Format(key, v))

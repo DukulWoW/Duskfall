@@ -1,5 +1,5 @@
 -- Duskfall UI/Pages.lua: the tabs of the settings window.
---   left:  Places (B-04b), Styles (B-04d): placeholders until then
+--   left:  Places (UI/Places.lua, loads first so it is the first tab), Styles (B-04d): placeholder
 --   right: Settings (an overview of sub-pages, like BigNoteBox's Modules tab: General, Time of day,
 --          Baseline, Characters), About (logo, version, links, commands)
 local ADDON, ns = ...
@@ -33,11 +33,7 @@ local function placeholder(page, text)
   fs:SetJustifyH("CENTER")
 end
 
--- Places / Styles ----------------------------------------------------------------------------------
-W.AddTab("places", "Places", function(page)
-  placeholder(page, "The place list comes in B-04b.\nUntil then: /dusk save, /dusk clear, /dusk looks.")
-end, "left")
-
+-- Styles -------------------------------------------------------------------------------------------
 W.AddTab("styles", "Styles", function(page)
   placeholder(page, "Styles come in B-04d.\nUntil then: /dusk style, /dusk mode, /dusk fade, /dusk adapt.")
 end, "left")
