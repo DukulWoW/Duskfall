@@ -600,7 +600,9 @@ function UI.Segmented(parent, width, o)
       b:SetPoint("TOPLEFT", f, "TOPLEFT", x, 0)
       b:SetSize(w, H)
       x = x + w
-      b.sep:SetShown(i > 1)
+      -- No divider next to the picked choice: its gold edge is the divider (Kim)
+      local prevPicked = i > 1 and items[i - 1][1] == cur
+      b.sep:SetShown(i > 1 and it[1] ~= cur and not prevPicked)
       b.icon:SetShown(it[3] ~= nil)
       if it[3] then b.icon:SetTexture(it[3]) end
       b.text:ClearAllPoints()
