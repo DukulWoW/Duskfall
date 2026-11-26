@@ -174,12 +174,14 @@ function SP.Create(parent, hooks)
   f:Hide()
 
   local sel = {}             -- the setting the sliders show
-  local picked = false       -- sel was clicked, so it stays when you walk somewhere else
+  local picked = false       -- sel was clicked in Your places, so it stays when you walk somewhere
+                             -- else; a pick in the Place / Time / Inside rows follows you (Kim)
   local lastPlace
   local previewEnd
   local refresh
 
   local function current() return findLook(sel) end
+  f.CurrentLook = current   -- UI/Places.lua: Advanced opens the setting being adjusted
 
   -- Showing edits ------------------------------------------------------------------------------
   local function evaluate()
@@ -233,10 +235,11 @@ function SP.Create(parent, hooks)
     show()
   end
 
-  local function pick(sh, byClick)
+  -- how: "list" (Your places: stays when you walk on) or "row" (the pickers: follows you)
+  local function pick(sh, how)
     if noIndoors(sh.key) then sh.io = nil end
     sel = sh
-    if byClick then picked = true end
+    picked = how == "list"
     stopPreview()
     refresh(true)
   end
@@ -297,14 +300,20 @@ function SP.Create(parent, hooks)
       local mine = sel.key or EVERYWHERE
       local found = false
       for _, it in ipairs(out) do if it[1] == mine then found = true end end
-      if not found then table.insert(out, 1, { mine, placeLabel(sel.key), nil, "The place you picked in Your places." }) end
+      if not found then
+        -- Two places can share a name (Ruins of Lordaeron in Undercity and in Tirisfal): add the zone
+        local label = placeLabel(sel.key)
+        for _, it in ipairs(out) do if it[2] == label then label = placeLabel(sel.key, true) end end
+        table.insert(out, 1, { mine, label, nil, "The place you picked in Your places." })
+      end
       return out
     end,
     get = function() return sel.key or EVERYWHERE end,
     set = function(v)
       local key = v
       if key == EVERYWHERE then key = nil end
-      pick({ key = key, time = sel.time, io = sel.io }, true)
+      -- A place where you are follows you; only the Your places pick (first button) stays put
+      pick({ key = key, time = sel.time, io = sel.io }, (picked and key == sel.key) and "list" or "row")
     end })
   local function tip(label, topic, title, text)
     local q = UI.HelpIcon(left, topic, title, text)
@@ -325,7 +334,7 @@ function SP.Create(parent, hooks)
     get = function() return sel.time or "any" end,
     set = function(v)
       if v == "any" then v = nil end
-      pick({ key = sel.key, time = v, io = sel.io }, true)
+      pick({ key = sel.key, time = v, io = sel.io }, picked and "list" or "row")
     end })
   tip(row("Time", timeSeg), "time", "Time", "Only at one part of the day, or any time.")
 
@@ -338,7 +347,7 @@ function SP.Create(parent, hooks)
     get = function() return sel.io or "any" end,
     set = function(v)
       if v == "any" then v = nil end
-      pick({ key = sel.key, time = sel.time, io = v }, true)
+      pick({ key = sel.key, time = sel.time, io = v }, picked and "list" or "row")
     end })
   tip(row("Inside", ioSeg), "wins", "Inside", "Only indoors, only outdoors, or both. The game decides what " ..
     "counts as indoors; inside dungeons it never does.")
@@ -375,14 +384,45 @@ function SP.Create(parent, hooks)
     sliders[#sliders + 1] = s
   end
 
-  -- Reset, Mini panel and the hint in a rounded box at the bottom (Kim)
+  -- Values clipboard, shared with the Look editor and the Your places menu (ns.valueClip)
+  local function copyValues(look)
+    ns.valueClip = { absolute = look.absolute and true or false, values = UI.DeepCopy(look.values or {}) }
+  end
+  -- The copied values, made fit for a Look that is (not) absolute. nil when none apply.
+  local function clipFor(absolute)
+    local clip = ns.valueClip
+    if not clip then return nil end
+    local base, out = ns.db.baseline or {}, {}
+    for k, x in pairs(clip.values) do
+      x = tonumber(x)
+      if x ~= nil and C.byKey[k] and base[k] then
+        if clip.absolute == (absolute and true or false) then out[k] = x
+        elseif absolute then out[k] = tonumber(C.Format(k, C.Clamp(k, base[k] + x)))
+        else out[k] = tonumber(C.Format(k, x - base[k])) end
+      end
+    end
+    return next(out) and out or nil
+  end
+  -- Paste into a Look, or (look nil) into the setting the pickers show, made if it is missing:
+  -- set it up for Any time by mistake, Copy, pick Night, Paste (Kim)
+  local function pasteValues(look)
+    local vals = clipFor(look and look.absolute)
+    if not vals then return end
+    look = look or newLook(sel)
+    look.values = vals
+    stopPreview()
+    show()
+    refresh(true)
+  end
+
+  -- Reset, Mini panel, Copy and Paste in a rounded box at the bottom, the hint just above (Kim)
   local actions = CreateFrame("Frame", nil, left)
   actions:SetPoint("BOTTOMLEFT", left, "BOTTOMLEFT", 12, 8)
   actions:SetPoint("BOTTOMRIGHT", left, "BOTTOMRIGHT", -12, 8)
   actions:SetHeight(46)
   UI.RoundBox(actions, { radius = 10, bottom = { 0, 0, 0, 0.5 }, top = { 0.22, 0.17, 0.1, 0.4 },
     border = { 1, 0.82, 0, 0.25 } })
-  local reset = UI.Button(actions, "Reset", 90, function()
+  local reset = UI.Button(actions, "Reset", 76, function()
     local look = current()
     if not look then return end
     UI.Confirm("Remove the setting \"" .. lookLabel(look) .. "\"?", function()
@@ -459,7 +499,7 @@ function SP.Create(parent, hooks)
     m:Hide()
     mini = m
   end
-  local miniBtn = UI.Button(actions, "Mini panel", 110, function()
+  local miniBtn = UI.Button(actions, "Mini panel", 104, function()
     if not mini then buildMini() end
     if ns.Window.frame then ns.Window.frame:Hide() end
     mini:Show()
@@ -470,12 +510,24 @@ function SP.Create(parent, hooks)
     "whole screen while you adjust. Back brings the window back.")
   ns.Listen("EVALUATED", function() refreshMini() end)
 
-  local hint = UI.Label(actions, "")
-  hint:SetPoint("LEFT", miniBtn, "RIGHT", 12, 0)
-  hint:SetPoint("RIGHT", actions, "RIGHT", -12, 0)
-  hint:SetWordWrap(true)
-  hint:SetJustifyV("MIDDLE")
-  hint:SetHeight(30)
+  local pasteBtn
+  local copyBtn = UI.Button(actions, "Copy", 76, function()
+    local look = current()
+    if not look then return end
+    copyValues(look)
+    if pasteBtn then pasteBtn:SetEnabled(true) end
+  end)
+  copyBtn:SetPoint("LEFT", miniBtn, "RIGHT", 8, 0)
+  UI.Tooltip(copyBtn, "Copy values", "Remember these values, to paste them into another setting.")
+  pasteBtn = UI.Button(actions, "Paste", 76, function() pasteValues(current()) end)
+  pasteBtn:SetPoint("LEFT", copyBtn, "RIGHT", 8, 0)
+  UI.Tooltip(pasteBtn, "Paste values", "Put the copied values here: this place, time and inside / outside. " ..
+    "Replaces what is set here.")
+
+  local hint = UI.Label(left, "")
+  hint:SetPoint("BOTTOMLEFT", actions, "TOPLEFT", 4, 6)
+  hint:SetPoint("RIGHT", actions, "RIGHT", -4, 0)
+  hint:SetWordWrap(false)
 
   -- Right: Your places -------------------------------------------------------------------------
   local right = CreateFrame("Frame", nil, f)
@@ -528,28 +580,8 @@ function SP.Create(parent, hooks)
     MenuUtil.CreateContextMenu(owner, function(_, root)
       root:CreateTitle(lookLabel(look))
       -- The same clipboard as the Look editor's Copy / Paste values (ns.valueClip)
-      root:CreateButton("Copy values", function()
-        ns.valueClip = { absolute = look.absolute and true or false, values = UI.DeepCopy(look.values or {}) }
-      end)
-      local paste = root:CreateButton("Paste values", function()
-        local clip = ns.valueClip
-        if not clip then return end
-        local base, out = ns.db.baseline or {}, {}
-        for k, x in pairs(clip.values) do
-          x = tonumber(x)
-          if x ~= nil and C.byKey[k] and base[k] then
-            local same = clip.absolute == (look.absolute and true or false)
-            if same then out[k] = x
-            elseif look.absolute then out[k] = tonumber(C.Format(k, C.Clamp(k, base[k] + x)))
-            else out[k] = tonumber(C.Format(k, x - base[k])) end
-          end
-        end
-        if next(out) == nil then return end
-        look.values = out
-        stopPreview()
-        evaluate()
-        refresh(true)
-      end)
+      root:CreateButton("Copy values", function() copyValues(look) end)
+      local paste = root:CreateButton("Paste values", function() pasteValues(look) end)
       if not ns.valueClip and paste and paste.SetEnabled then pcall(paste.SetEnabled, paste, false) end
       root:CreateButton("Export", function()
         UI.Copy(lookLabel(look), ns.Share.ExportLook(look), owner)
@@ -627,7 +659,7 @@ function SP.Create(parent, hooks)
       r.sel:SetShown(sel.key == e.place and not sel.time and not sel.io)
       r.name:SetTextColor(0.85, 0.85, 0.85)
       r:SetScript("OnClick", function(_, button)
-        if button == "LeftButton" then pick({ key = e.place }, true) end
+        if button == "LeftButton" then pick({ key = e.place }, "list") end
       end)
       return
     end
@@ -641,7 +673,7 @@ function SP.Create(parent, hooks)
       if button == "RightButton" then
         removeMenu(self, e.look)
       elseif e.shape then
-        pick({ key = e.shape.key, time = e.shape.time, io = e.shape.io }, true)
+        pick({ key = e.shape.key, time = e.shape.time, io = e.shape.io }, "list")
       elseif hooks.openAdvanced then
         ns.Safe(hooks.openAdvanced, "open advanced", e.look)
       end
@@ -744,6 +776,8 @@ function SP.Create(parent, hooks)
       for _, s in ipairs(sliders) do s:Refresh() end
     end
     reset:SetEnabled(current() ~= nil)
+    copyBtn:SetEnabled(current() ~= nil)
+    pasteBtn:SetEnabled(ns.valueClip ~= nil)
     refreshHint(env)
     refreshList()
   end

@@ -1,7 +1,7 @@
 -- Duskfall UI/Widgets.lua: the building blocks of the settings window.
 -- Patterns from BigNoteBox (UI/Widgets.lua, UI/Chrome.lua) and Kahoof (UI/Theme.lua):
---   * every slider is UI.Slider, on MinimalSliderWithSteppersTemplate (the modern settings
---     slider; never OptionsSliderTemplate), label + default above, value right, Reset button
+--   * every slider is our own (UI.LightSlider: gradient track, gold diamond; Kim 2026-11-26);
+--     UI.Slider puts a label + default above it, the value right and a Reset button
 --   * dropdowns are WowStyle1DropdownTemplate + SetupMenu (SetupMenu runs its function at once)
 --   * the Forever look: wood background tiled on the window's Bg, soft glow on panels
 -- Public: UI.ART, UI.Wood(f), UI.Glow(host, region), UI.Header(parent, text), UI.Label(...),
@@ -85,35 +85,246 @@ function UI.Button(parent, text, w, onClick, h)
   return b
 end
 
--- Checkbox -------------------------------------------------------------------------------------
--- o = { label, tip, get = fn() -> bool, set = fn(bool) }. Returns the button; :Refresh().
-function UI.Check(parent, o)
-  local cb = CreateFrame("CheckButton", nil, parent, "UICheckButtonTemplate")
-  cb:SetSize(26, 26)
-  local text = cb.Text or cb.text
-  if not text then
-    text = cb:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    text:SetPoint("LEFT", cb, "RIGHT", 2, 0)
+-- Glow ring ------------------------------------------------------------------------------------
+-- The moon's glow (Kim): a sun glare (Interface/Glues/Models/UI_Tauren/UI_Goblin_Sunglare, file
+-- 1063590, from the login screen) turning slowly and breathing slowly, fading in and out over
+-- GLOW_FADE seconds. A soft gold disc (Assets/dot) where the image is missing. Its animation runs
+-- only while it shows. Used by the moon badge, the minimap button (UI/Moon.lua M.AddRing) and the
+-- big on / off switch. host: the frame it lives on (it draws under host's children); anchor:
+-- the region it centres on; size: its width and height; o = { turn, breath } (radians a second).
+-- Returns { Set(on) }.
+local GLOW_FILE = 1063590
+local GLOW_PATH = "Interface\\Glues\\Models\\UI_Tauren\\UI_Goblin_Sunglare"
+local GLOW_TURN = 2 * math.pi / 60   -- one turn a minute
+local GLOW_BREATH = 0.7              -- about 9 s a breath
+local GLOW_FADE = 0.8
+
+function UI.GlowRing(host, anchor, size, o)
+  o = o or {}
+  local glow = host:CreateTexture(nil, "ARTWORK", nil, -1)
+  glow:SetSize(size, size)
+  glow:SetPoint("CENTER", anchor, "CENTER")
+  glow:SetBlendMode("ADD")
+  glow:Hide()
+  local ok = pcall(glow.SetTexture, glow, GLOW_FILE) and glow:GetTexture()
+  if not ok then ok = pcall(glow.SetTexture, glow, GLOW_PATH) and glow:GetTexture() end
+  if not ok then
+    glow:SetTexture(UI.ART .. "dot")
+    glow:SetVertexColor(1, 0.8, 0.35)
   end
-  text:SetText(o.label or "")
-  cb:SetScript("OnClick", function(self) ns.Safe(o.set, "check", self:GetChecked() and true or false) end)
-  tooltip(cb, o.label, o.tip)
-  function cb:Refresh() self:SetChecked(o.get() and true or false) end
-  cb:Refresh()
-  return cb
+  local turn, breath = o.turn or GLOW_TURN, o.breath or GLOW_BREATH
+  local anim = CreateFrame("Frame", nil, host)
+  local clock, level, want = 0, 0, 0
+  anim:SetScript("OnUpdate", function(self, dt)
+    clock = clock + dt
+    if level < want then level = math.min(want, level + dt / GLOW_FADE)
+    elseif level > want then level = math.max(want, level - dt / GLOW_FADE) end
+    if level <= 0 and want == 0 then
+      glow:Hide()
+      self:Hide()
+      return
+    end
+    glow:SetAlpha(level * (0.65 + 0.35 * math.sin(clock * breath)))
+    pcall(glow.SetRotation, glow, clock * turn)
+  end)
+  anim:Hide()
+  local r = {}
+  function r.Set(on)
+    want = on and 1 or 0
+    if on then
+      glow:SetAlpha(level * 0.65)
+      glow:Show()
+      anim:Show()
+    elseif level > 0 then
+      anim:Show()   -- fades out, then hides itself
+    end
+  end
+  return r
 end
+
+-- Switch ---------------------------------------------------------------------------------------
+-- An iOS-style on / off switch in place of every checkbox (Kim, 2026-11-26). A pill, a gold
+-- gradient when on and Duskfall blue to dark blue when off, with a white knob that slides across
+-- while the colours crossfade. o.big: larger, "On" / "Off" under the label and the moon's glow
+-- behind it while on (only the main Duskfall on / off). The label is part of the button.
+-- o = { label, tip, get = fn() -> bool, set = fn(bool), onClick = fn(self, on), big }.
+-- Returns the button: :Refresh(), :SetChecked(on, instant), :GetChecked(), :SetEnabled(on),
+-- :SetLabel(text), .Text, .onToggle = fn(self, on) (for list rows that are reused; never set
+-- OnClick, it does the toggling).
+local SWITCH_TIME = 0.2
+local GOLD_LO, GOLD_HI = { 0.6, 0.4, 0.04, 1 }, { 1, 0.86, 0.36, 1 }
+local BLUE_LO, BLUE_HI = { 0.03, 0.05, 0.2, 1 }, { 0.2, 0.33, 0.8, 1 }   -- 0x3355cc: the D in the title
+
+function UI.Switch(parent, o)
+  local big = o.big
+  local W, H = big and 54 or 34, big and 28 or 18
+  local R = H / 2
+  local b = CreateFrame("Button", nil, parent)
+  b:SetSize(W, big and 34 or 26)
+  b:RegisterForClicks("LeftButtonUp")
+  local track = CreateFrame("Frame", nil, b)
+  track:SetSize(W, H)
+  track:SetPoint("LEFT", b, "LEFT", 0, 0)
+  local L = b:GetFrameLevel()
+  local layers = {}
+  local function layer(n, inset)
+    local f = CreateFrame("Frame", nil, track)
+    f:SetPoint("TOPLEFT", track, "TOPLEFT", -inset, inset)
+    f:SetPoint("BOTTOMRIGHT", track, "BOTTOMRIGHT", inset, -inset)
+    f:SetFrameLevel(L + n)
+    layers[#layers + 1] = { f, n }
+    return f
+  end
+  UI.RoundBox(layer(1, 1), { radius = R + 1, bottom = { 0, 0, 0, 0.75 }, top = { 0, 0, 0, 0.55 } })
+  local off = layer(2, 0)
+  UI.RoundBox(off, { radius = R, bottom = BLUE_LO, top = BLUE_HI })
+  local on = layer(3, 0)
+  UI.RoundBox(on, { radius = R, bottom = GOLD_LO, top = GOLD_HI })
+  -- A soft shine over the top half
+  local shine = CreateFrame("Frame", nil, track)
+  shine:SetPoint("TOPLEFT", track, "TOPLEFT", 2, -1)
+  shine:SetPoint("TOPRIGHT", track, "TOPRIGHT", -2, -1)
+  shine:SetHeight(math.floor(H / 2))
+  layers[#layers + 1] = { shine, 4 }
+  UI.RoundBox(shine, { radius = math.floor(H / 2) - 1, bottom = { 1, 1, 1, 0 }, top = { 1, 1, 1, 0.22 } })
+  -- The knob, with a soft shadow
+  local K = H - 4
+  local knob = CreateFrame("Frame", nil, track)
+  knob:SetSize(K, K)
+  layers[#layers + 1] = { knob, 5 }
+  local shadow = knob:CreateTexture(nil, "BACKGROUND")
+  shadow:SetTexture(UI.ART .. "dot")
+  shadow:SetVertexColor(0, 0, 0, 0.45)
+  shadow:SetSize(K + 2, K + 2)
+  shadow:SetPoint("CENTER", knob, "CENTER", 0.5, -1)
+  local disc = knob:CreateTexture(nil, "ARTWORK")
+  disc:SetAllPoints()
+  UI.Gradient(disc, "VERTICAL", { 0.8, 0.8, 0.84, 1 }, { 1, 1, 1, 1 }, UI.ART .. "dot")
+  local hover = knob:CreateTexture(nil, "OVERLAY")
+  hover:SetAllPoints()
+  hover:SetTexture(UI.ART .. "dot")
+  hover:SetBlendMode("ADD")
+  hover:SetVertexColor(1, 0.9, 0.6, 0.3)
+  hover:Hide()
+  -- Frame levels follow the button's (it may be raised after it is made)
+  local function levels()
+    local base = b:GetFrameLevel()
+    track:SetFrameLevel(base)
+    for _, l in ipairs(layers) do l[1]:SetFrameLevel(base + l[2]) end
+  end
+  levels()
+  hooksecurefunc(b, "SetFrameLevel", levels)
+
+  local text = b:CreateFontString(nil, "OVERLAY", big and "GameFontNormalLarge" or "GameFontHighlight")
+  b.Text = text
+  local state
+  if big then
+    text:SetPoint("TOPLEFT", track, "TOPRIGHT", 10, 5)
+    state = b:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    state:SetPoint("TOPLEFT", text, "BOTTOMLEFT", 0, -2)
+  else
+    text:SetPoint("LEFT", track, "RIGHT", 8, 0)
+  end
+  local glow = big and UI.GlowRing(b, track, W * 2.2, { breath = 1.2 }) or nil
+
+  local checked, pos, enabled = false, 0, true
+  local function place()
+    local e = pos * pos * (3 - 2 * pos)
+    knob:ClearAllPoints()
+    knob:SetPoint("LEFT", track, "LEFT", 2 + e * (W - H), 0)
+    on:SetAlpha(e)
+    off:SetAlpha(1 - e)
+  end
+  local function look()
+    if state then state:SetText(checked and "|cff40ff40On|r" or "|cff9d9d9dOff|r") end
+    if glow then glow.Set(checked and enabled) end
+  end
+  local function step(self, dt)
+    local want = checked and 1 or 0
+    if pos < want then pos = math.min(want, pos + dt / SWITCH_TIME)
+    elseif pos > want then pos = math.max(want, pos - dt / SWITCH_TIME) end
+    place()
+    if pos == want then self:SetScript("OnUpdate", nil) end
+  end
+  local function animate()
+    if not b:IsVisible() then
+      pos = checked and 1 or 0
+      place()
+      return
+    end
+    b:SetScript("OnUpdate", step)
+  end
+
+  local function fit()
+    local w = text:GetStringWidth() or 0
+    if state then w = math.max(w, state:GetStringWidth() or 0, 24) end
+    b:SetWidth(W + (w > 0 and (big and 10 or 8) + w or 0))
+  end
+  function b:SetLabel(t)
+    text:SetText(t or "")
+    fit()
+  end
+  function b:SetChecked(v, instant)
+    v = v and true or false
+    if v == checked then return end
+    checked = v
+    look()
+    if instant then
+      self:SetScript("OnUpdate", nil)
+      pos = checked and 1 or 0
+      place()
+    else
+      animate()
+    end
+  end
+  function b:GetChecked() return checked end
+  function b:SetEnabled(v)
+    enabled = v and true or false
+    if enabled then self:Enable() else self:Disable() end
+    self:SetAlpha(enabled and 1 or 0.45)
+    look()
+  end
+  function b:Refresh()
+    if o.get then self:SetChecked(o.get()) end
+  end
+  b:SetScript("OnClick", function(self)
+    if not enabled then return end
+    self:SetChecked(not checked)
+    if PlaySound and SOUNDKIT then
+      pcall(PlaySound, checked and SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON or SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_OFF)
+    end
+    if o.set then ns.Safe(o.set, "switch", checked) end
+    if o.onClick then ns.Safe(o.onClick, "switch", self, checked) end
+    if self.onToggle then ns.Safe(self.onToggle, "switch", self, checked) end
+  end)
+  b:SetScript("OnEnter", function() if enabled then hover:Show() end end)
+  b:SetScript("OnLeave", function() hover:Hide() end)
+  b:HookScript("OnShow", function()
+    levels()
+    pos = checked and 1 or 0
+    place()
+    look()
+  end)
+  tooltip(b, o.label, o.tip)
+
+  b:SetLabel(o.label)
+  if o.get then checked = o.get() and true or false end
+  pos = checked and 1 or 0
+  place()
+  look()
+  return b
+end
+
+-- The old checkbox name: every checkbox is a switch now (Kim)
+function UI.Check(parent, o) return UI.Switch(parent, o) end
 
 -- Slider ---------------------------------------------------------------------------------------
 --   Label  Default: 0.5 s                          0.5 s
 --   <----------------|---------------->  [ Reset ]
 -- o = { label, min, max, step, value | get, default, fmt = fn(v) -> text, onChange(v), tip }
--- No mouse wheel (it scrolls the page, as in BNB). Returns a holder: :SetValue(v, silent),
+-- Drawn with UI.LightSlider (steppers on, the mark at the default; right-click = default). No
+-- mouse wheel (it scrolls the page, as in BNB). Returns a holder: :SetValue(v, silent),
 -- :GetValue(), :SetEnabled(on), :Refresh() (reads o.get).
-local function noWheel(frame)
-  pcall(frame.EnableMouseWheel, frame, false)
-  if frame.HasScript and frame:HasScript("OnMouseWheel") then pcall(frame.SetScript, frame, "OnMouseWheel", nil) end
-  for _, child in ipairs({ frame:GetChildren() }) do noWheel(child) end
-end
 
 function UI.Slider(parent, width, o)
   local step = o.step or 1
@@ -147,34 +358,39 @@ function UI.Slider(parent, width, o)
   local reset = UI.Button(h, "Reset", 52, nil, 20)
   reset:SetPoint("TOPRIGHT", h, "TOPRIGHT", 0, -16)
 
-  local sl = CreateFrame("Slider", nil, h, "MinimalSliderWithSteppersTemplate")
-  sl:SetPoint("TOPLEFT", h, "TOPLEFT", 0, -16)
-  sl:SetPoint("RIGHT", reset, "LEFT", -6, 0)
-  sl:SetHeight(20)
+  -- Our own slider (Kim): gold track, the diamond, < > steppers; the mark is the default
+  local enabled = true
+  local sync
   local cur = snap(o.get and o.get() or o.value)
-  sl:Init(cur, o.min, o.max, math.floor((o.max - o.min) / step + 0.5))
-  noWheel(sl)
+  local light = UI.LightSlider(h, 10, { labelW = 0, valueW = 0, min = o.min, max = o.max, step = step,
+    mid = o.default or o.min, lineH = 14, steppers = true,
+    from = { 0.32, 0.25, 0.12 }, to = { 1, 0.85, 0.45 },
+    get = function() return cur end,
+    set = function(v)
+      local n = snap(v)
+      if same(n, cur) then return end
+      cur = n
+      sync()
+      if o.onChange then ns.Safe(o.onChange, "slider", n) end
+    end })
+  light:SetPoint("TOPLEFT", h, "TOPLEFT", 0, -12)
+  light:SetPoint("RIGHT", reset, "LEFT", -6, 0)
 
-  local enabled, muted = true, false
-  local function sync()
+  sync = function()
     val:SetText(fmt(cur))
     local atDef = o.default == nil or same(cur, o.default)
     reset:SetEnabled(enabled and not atDef)
   end
-  sl:RegisterCallback(MinimalSliderWithSteppersMixin.Event.OnValueChanged, function(_, v)
-    local n = snap(v)
-    if same(n, cur) then return end
-    cur = n
-    sync()
-    if o.onChange and not muted then ns.Safe(o.onChange, "slider", n) end
-  end)
 
+  -- silent: no onChange. Otherwise the slider's own set updates cur and calls onChange.
   local function setValue(v, silent)
-    muted = silent and true or false
-    sl:SetValue(snap(v))
-    muted = false
-    cur = snap(v)
-    sync()
+    if silent then
+      cur = snap(v)
+      light:SetValue(cur, true)
+      sync()
+    else
+      light:SetValue(snap(v))
+    end
   end
   reset:SetScript("OnClick", function() if o.default ~= nil then setValue(o.default) end end)
   if o.tip then
@@ -185,16 +401,15 @@ function UI.Slider(parent, width, o)
     tooltip(hot, o.label, o.tip)
   end
 
-  h._slider = sl
   function h:SetValue(v, silent) setValue(v, silent) end
   function h:GetValue() return cur end
   function h:SetEnabled(on)
     enabled = on and true or false
-    pcall(sl.SetEnabled, sl, enabled)
+    light:SetEnabled(enabled)
     sync()
   end
   function h:Refresh() if o.get then setValue(o.get(), true) end end
-  sync()
+  setValue(cur, true)
   return h
 end
 
@@ -650,7 +865,9 @@ UI.CHANNEL_GRADIENT = {
 -- o = { label, min, max, step, from = { r, g, b }, to = { r, g, b }, get = fn() -> v,
 --       mid = the mark's value (default 0), labelW / valueW = column widths (0 = none),
 --       set = fn(v), fmt = fn(v) -> text, tip, lineH = height of the middle mark (the row
---       spacing joins stacked sliders' marks into one line) }. :Refresh(), :SetEnabled(on).
+--       spacing joins stacked sliders' marks into one line), steppers = true for < > buttons at
+--       the ends (one step each; Advanced and Settings, Kim) }. :Refresh(), :SetEnabled(on),
+--       :SetRange(min, max, mid), :SetValue(v, silent), :GetValue().
 function UI.LightSlider(parent, width, o)
   local LABEL_W, VALUE_W, H = o.labelW or 84, o.valueW or 96, 30
   local MID = o.mid or 0      -- the mark: "no change" (0) or, for fixed values, the game default
@@ -673,9 +890,10 @@ function UI.LightSlider(parent, width, o)
     tooltip(hot, o.label, o.tip .. "\n\nRight-click the slider: back to the middle mark.")
   end
 
+  local STEP_W = o.steppers and 16 or 0
   local sl = CreateFrame("Slider", nil, h)
-  sl:SetPoint("LEFT", h, "LEFT", LABEL_W > 0 and LABEL_W - 6 or 0, 0)
-  sl:SetPoint("RIGHT", h, "RIGHT", -VALUE_W + 2, 0)
+  sl:SetPoint("LEFT", h, "LEFT", (LABEL_W > 0 and LABEL_W - 6 or 0) + STEP_W, 0)
+  sl:SetPoint("RIGHT", h, "RIGHT", -VALUE_W + 2 - STEP_W, 0)
   sl:SetHeight(H)
   sl:SetOrientation("HORIZONTAL")
   sl:SetMinMaxValues(o.min, o.max)
@@ -749,17 +967,64 @@ function UI.LightSlider(parent, width, o)
   end)
   sl:SetScript("OnSizeChanged", show)
 
-  function h:Refresh()
-    local v = tonumber(o.get()) or 0
-    muted = true
+  -- Steppers: the game's own slider arrows (atlas), "<" ">" where the atlas is missing
+  local steppers = {}
+  if o.steppers then
+    local function stepper(dir)
+      local b = CreateFrame("Button", nil, h)
+      b:SetSize(STEP_W, 18)
+      if dir < 0 then b:SetPoint("RIGHT", sl, "LEFT", 1, 0) else b:SetPoint("LEFT", sl, "RIGHT", -1, 0) end
+      local atlas = dir < 0 and "Minimal_SliderBar_Button_Left" or "Minimal_SliderBar_Button_Right"
+      local has = C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo(atlas)
+      local t = b:CreateTexture(nil, "ARTWORK")
+      t:SetPoint("CENTER")
+      if has then
+        t:SetAtlas(atlas, true)
+      else
+        t:Hide()
+        local fs = b:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        fs:SetPoint("CENTER")
+        fs:SetText(dir < 0 and "<" or ">")
+      end
+      local hl = b:CreateTexture(nil, "HIGHLIGHT")
+      hl:SetAllPoints(t)
+      if has then hl:SetAtlas(atlas) hl:SetBlendMode("ADD") hl:SetAlpha(0.4) end
+      b:SetScript("OnMouseDown", function() t:SetPoint("CENTER", 1, -1) end)
+      b:SetScript("OnMouseUp", function() t:SetPoint("CENTER", 0, 0) end)
+      b:SetScript("OnClick", function()
+        if not sl:IsEnabled() then return end
+        local lo, hi = sl:GetMinMaxValues()
+        sl:SetValue(math.max(lo, math.min(hi, cur + dir * o.step)))
+      end)
+      steppers[#steppers + 1] = b
+    end
+    stepper(-1)
+    stepper(1)
+  end
+
+  local function setValue(v, silent)
+    v = tonumber(v) or 0
+    muted = silent and true or false
     sl:SetValue(v)
     muted = false
     cur = v
     show()
   end
+  function h:Refresh() setValue(o.get(), true) end
+  function h:SetValue(v, silent) setValue(v, silent) end
+  function h:GetValue() return cur end
+  function h:SetRange(lo, hi, mid)
+    o.min, o.max = lo, hi
+    if mid ~= nil then MID = mid end
+    muted = true
+    sl:SetMinMaxValues(lo, hi)
+    muted = false
+    show()
+  end
   function h:SetEnabled(on)
     pcall(sl.SetEnabled, sl, on and true or false)
     sl:EnableMouse(on and true or false)
+    for _, b in ipairs(steppers) do b:SetEnabled(on and true or false) end
     h:SetAlpha(on and 1 or 0.45)
   end
   h:Refresh()

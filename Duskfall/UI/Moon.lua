@@ -113,17 +113,10 @@ function M.Report()
   end)
 end
 
--- The glow (Kim): while a setting is in effect where you stand, a sun glare behind the icon
--- (Interface/Glues/Models/UI_Tauren/UI_Goblin_Sunglare, file 1063590, from the login screen),
--- turning slowly and breathing slowly. It fades in and out over GLOW_FADE seconds. A soft gold
--- disc (Assets/dot) where the image is missing. settings.ringGlow = false switches it off.
--- Used on the moon badge and on the minimap button (UI/Broker.lua).
+-- The glow (Kim): while a setting is in effect where you stand, the sun glare (UI.GlowRing)
+-- behind the icon. settings.ringGlow = false switches it off. Used on the moon badge and on the
+-- minimap button (UI/Broker.lua).
 local rings = {}
-local GLOW_FILE = 1063590
-local GLOW_PATH = "Interface\\Glues\\Models\\UI_Tauren\\UI_Goblin_Sunglare"
-local GLOW_TURN = 2 * math.pi / 60   -- one turn a minute
-local GLOW_BREATH = 0.7              -- radians a second: about 9 s a breath
-local GLOW_FADE = 0.8
 
 local function ringWanted()
   return ns.cfg and ns.cfg.enabled and ns.cfg.ringGlow ~= false and ns.Detect.state.source
@@ -132,43 +125,7 @@ end
 
 -- host: the frame it lives on; anchor: the region it centres on; size: its width and height.
 function M.AddRing(host, anchor, size)
-  local glow = host:CreateTexture(nil, "ARTWORK", nil, -1)
-  glow:SetSize(size, size)
-  glow:SetPoint("CENTER", anchor, "CENTER")
-  glow:SetBlendMode("ADD")
-  glow:Hide()
-  local ok = pcall(glow.SetTexture, glow, GLOW_FILE) and glow:GetTexture()
-  if not ok then ok = pcall(glow.SetTexture, glow, GLOW_PATH) and glow:GetTexture() end
-  if not ok then
-    glow:SetTexture(UI.ART .. "dot")
-    glow:SetVertexColor(1, 0.8, 0.35)
-  end
-  local anim = CreateFrame("Frame", nil, host)
-  local clock, level, want = 0, 0, 0
-  anim:SetScript("OnUpdate", function(self, dt)
-    clock = clock + dt
-    if level < want then level = math.min(want, level + dt / GLOW_FADE)
-    elseif level > want then level = math.max(want, level - dt / GLOW_FADE) end
-    if level <= 0 and want == 0 then
-      glow:Hide()
-      self:Hide()
-      return
-    end
-    glow:SetAlpha(level * (0.65 + 0.35 * math.sin(clock * GLOW_BREATH)))
-    pcall(glow.SetRotation, glow, clock * GLOW_TURN)
-  end)
-  anim:Hide()
-  local r = {}
-  function r.Set(on)
-    want = on and 1 or 0
-    if on then
-      glow:SetAlpha(level * 0.65)
-      glow:Show()
-      anim:Show()
-    elseif level > 0 then
-      anim:Show()   -- fades out, then hides itself
-    end
-  end
+  local r = UI.GlowRing(host, anchor, size)
   rings[#rings + 1] = r
   r.Set(ringWanted())
   return r

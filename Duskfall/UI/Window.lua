@@ -95,6 +95,7 @@ local function build()
   frame = f
   W.frame = f
   f:SetSize(WIDTH, HEIGHT)
+  f:SetAlpha(0.95)   -- as see-through as BigNoteBox's main window (Kim)
   f:SetFrameStrata("HIGH")
   f:SetToplevel(true)
   f:SetClampedToScreen(true)
@@ -129,15 +130,9 @@ local function build()
   icon:SetAllPoints()
   icon:SetTexture(UI.ART .. "icon")
   -- Advanced mode, left of the close button (Kim): Places shows the full list and Look editor
-  local adv = CreateFrame("CheckButton", nil, f, "UICheckButtonTemplate")
-  adv:SetSize(22, 22)
-  local advText = adv.Text or adv.text
-  if not advText then
-    advText = adv:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    advText:SetPoint("LEFT", adv, "RIGHT", 0, 0)
-  end
-  advText:SetFontObject("GameFontNormalSmall")
-  advText:SetText("Advanced")
+  local adv = UI.Switch(f, {})
+  adv.Text:SetFontObject("GameFontNormalSmall")
+  adv:SetLabel("Advanced")
   local close = f.CloseButton or _G.DuskfallWindowCloseButton
   -- Help, between Advanced and the close button (BigNoteBox's help art)
   local help = CreateFrame("Button", nil, f)
@@ -150,9 +145,9 @@ local function build()
   help:SetScript("OnClick", function() if ns.Help then ns.Help.Toggle() end end)
   UI.Tooltip(help, "Help", "How Duskfall works.")
   f.helpBtn = help
-  adv:SetPoint("RIGHT", help, "LEFT", -(advText:GetStringWidth() + 8), 0)
-  adv:SetChecked(ns.cfg.advanced and true or false)
-  adv:SetScript("OnClick", function(self) W.SetAdvanced(self:GetChecked()) end)
+  adv:SetPoint("RIGHT", help, "LEFT", -8, 0)
+  adv:SetChecked(ns.cfg.advanced and true or false, true)
+  adv.onToggle = function(self) W.SetAdvanced(self:GetChecked()) end
   UI.Tooltip(adv, "Advanced mode", "Places shows every place you have been and the full Look editor, " ..
     "with every condition and option. Off: the simple page.")
   f.advCheck = adv

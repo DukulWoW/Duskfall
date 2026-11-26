@@ -26,6 +26,9 @@ local function place(f)
   local pos = ns.cfg.statusPos
   if type(pos) == "table" and pos.point then
     f:SetPoint(pos.point, UIParent, pos.rel or pos.point, pos.x or 0, pos.y or 0)
+  elseif Minimap and Minimap.GetLeft and Minimap:GetLeft() then
+    -- Default (Kim): just outside the minimap's bottom-left, level with its bottom edge
+    f:SetPoint("BOTTOMRIGHT", Minimap, "BOTTOMLEFT", -12, 0)
   else
     f:SetPoint("TOP", UIParent, "TOP", 0, -150)
   end
@@ -53,10 +56,9 @@ local function build()
     local point, _, rel, x, y = self:GetPoint(1)
     ns.cfg.statusPos = { point = point, rel = rel, x = x, y = y }
   end)
-  local bg = f:CreateTexture(nil, "BACKGROUND", nil, 0)
-  bg:SetAllPoints()
-  bg:SetColorTexture(0, 0, 0, 0.45)
-  UI.Glow(f, nil, 0.5)
+  -- Rounded with a gold edge, as the mini panel (Kim)
+  UI.RoundBox(f, { radius = 10, bottom = { 0.02, 0.02, 0.01, 0.72 }, top = { 0.14, 0.11, 0.07, 0.72 },
+    border = { 1, 0.82, 0, 0.45 } })
   local icon = f:CreateTexture(nil, "ARTWORK")
   icon:SetSize(34, 34)
   icon:SetPoint("LEFT", f, "LEFT", 6, 0)

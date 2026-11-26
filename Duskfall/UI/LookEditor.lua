@@ -325,13 +325,12 @@ function E.Create(parent, hooks)
     local row = CreateFrame("Frame", nil, col1)
     row:SetPoint("TOPLEFT", col1, "TOPLEFT", 0, y)
     row:SetSize(COL_W, 28)
-    local set = CreateFrame("CheckButton", nil, row, "UICheckButtonTemplate")
-    set:SetSize(24, 24)
+    local set = UI.Switch(row, {})
     set:SetPoint("LEFT", row, "LEFT", 0, 0)
-    UI.Tooltip(set, ch.label, "Ticked: this Look sets " .. ch.label .. ". Unticked: it falls through to the next Look, or your baseline.")
+    UI.Tooltip(set, ch.label, "On: this Look sets " .. ch.label .. ". Off: it falls through to the next Look, or your baseline.")
     local lbl = UI.Label(row, ch.label, "GameFontHighlightSmall")
-    lbl:SetPoint("LEFT", set, "RIGHT", 2, 0)
-    lbl:SetWidth(64)
+    lbl:SetPoint("LEFT", set, "RIGHT", 6, 0)
+    lbl:SetWidth(60)
     local cur = UI.Button(row, "Current", 60, nil, 20)
     cur:SetPoint("RIGHT", row, "RIGHT", 0, 0)
     UI.Tooltip(cur, "Use current", "Take the " .. ch.label .. " on screen now (for example after moving the game's own slider).")
@@ -340,14 +339,26 @@ function E.Create(parent, hooks)
     box:SetPoint("RIGHT", cur, "LEFT", -8, 0)
     box:SetAutoFocus(false)
     box:SetJustifyH("CENTER")
-    local sl = CreateFrame("Slider", nil, row, "MinimalSliderWithSteppersTemplate")
-    sl:SetPoint("LEFT", lbl, "RIGHT", 4, 0)
-    sl:SetPoint("RIGHT", box, "LEFT", -10, 0)
-    sl:SetHeight(20)
-    pcall(sl.EnableMouseWheel, sl, false)
-
     local muted = false
     local lo, hi = 0, 1
+    local slVal = 0
+    local setValue
+    -- Our own slider (Kim): the channel's gradient, < > steppers, the mark at "no change"
+    -- (0 for offsets, your baseline for fixed values)
+    local g = UI.CHANNEL_GRADIENT[k]
+    local sl = UI.LightSlider(row, 10, { labelW = 0, valueW = 0, min = lo, max = hi, step = STEP[k],
+      from = g.from, to = g.to, steppers = true, lineH = 12,
+      get = function() return slVal end,
+      set = function(v)
+        slVal = v
+        if muted or loading then return end
+        if look.values == nil or look.values[k] == nil then return end
+        local n = round(k, lo + math.floor((v - lo) / STEP[k] + 0.5) * STEP[k])
+        if n == look.values[k] then return end
+        setValue(n)
+      end })
+    sl:SetPoint("LEFT", lbl, "RIGHT", 0, 0)
+    sl:SetPoint("RIGHT", box, "LEFT", -8, 0)
     local function show(v)
       if v == nil then
         box:SetText("-")
@@ -357,21 +368,14 @@ function E.Create(parent, hooks)
       if not look.absolute and v >= 0 then s = "+" .. s end
       box:SetText(s)
     end
-    local function setValue(v)
+    setValue = function(v)
       look.values = look.values or {}
       if v ~= nil then v = round(k, math.max(lo, math.min(hi, v))) end
       look.values[k] = v
       show(v)
       apply()
     end
-    sl:RegisterCallback(MinimalSliderWithSteppersMixin.Event.OnValueChanged, function(_, v)
-      if muted or loading then return end
-      if look.values == nil or look.values[k] == nil then return end
-      local n = round(k, lo + math.floor((v - lo) / STEP[k] + 0.5) * STEP[k])
-      if n == look.values[k] then return end
-      setValue(n)
-    end)
-    set:SetScript("OnClick", function(self)
+    set.onToggle = function(self)
       if self:GetChecked() then
         local start = 0
         if look.absolute then start = round(k, baseOf(k)) end
@@ -380,7 +384,7 @@ function E.Create(parent, hooks)
         setValue(nil)
       end
       row:Refresh()
-    end)
+    end
     cur:SetScript("OnClick", function()
       local v = C.Read(k)
       if v == nil then return end
@@ -402,15 +406,17 @@ function E.Create(parent, hooks)
       lo, hi = range(k, look.absolute)
       local v = look.values and tonumber(look.values[k])
       local on = v ~= nil
-      set:SetChecked(on)
+      set:SetChecked(on, true)
       muted = true
       local start = v
       if start == nil then
         if look.absolute then start = baseOf(k) else start = 0 end
       end
       start = math.max(lo, math.min(hi, start))
-      sl:Init(start, lo, hi, math.floor((hi - lo) / STEP[k] + 0.5))
-      pcall(sl.SetEnabled, sl, on)
+      sl:SetRange(lo, hi, look.absolute and baseOf(k) or 0)
+      slVal = start
+      sl:SetValue(start, true)
+      sl:SetEnabled(on)
       muted = false
       pcall(box.SetEnabled, box, on)
       show(v)
@@ -531,9 +537,7 @@ function E.Create(parent, hooks)
   wArea:SetPoint("TOPLEFT", col1, "TOPLEFT", 0, whereY - 18)
   wArea:SetPoint("RIGHT", col1, "RIGHT", -14, 0)
   wArea:SetHeight(22 * 4)
-  local wShade = wArea:CreateTexture(nil, "BACKGROUND", nil, 1)
-  wShade:SetAllPoints()
-  wShade:SetColorTexture(0, 0, 0, 0.3)
+  UI.RoundBox(wArea, { radius = 8, bottom = { 0, 0, 0, 0.32 }, top = { 0, 0, 0, 0.22 } })
   local wBox = CreateFrame("Frame", nil, wArea, "WowScrollBoxList")
   wBox:SetAllPoints()
   local wScroll = CreateFrame("EventFrame", nil, col1, "MinimalScrollBar")
@@ -548,15 +552,14 @@ function E.Create(parent, hooks)
   wView:SetElementExtent(22)
   wView:SetElementInitializer("Frame", function(row, e)
     if not row.name then
-      row.on = CreateFrame("CheckButton", nil, row, "UICheckButtonTemplate")
-      row.on:SetSize(20, 20)
+      row.on = UI.Switch(row, {})
       row.on:SetPoint("LEFT", row, "LEFT", 2, 0)
-      UI.Tooltip(row.on, "On / off", "An unticked place is kept in the list but not used.")
+      UI.Tooltip(row.on, "On / off", "A place switched off is kept in the list but not used.")
       row.x = UI.Button(row, "X", 22, nil, 18)
       row.x:SetPoint("RIGHT", row, "RIGHT", -4, 0)
       UI.Tooltip(row.x, "Remove", "Take this place out of the Look.")
       row.name = UI.Label(row, "", "GameFontHighlightSmall")
-      row.name:SetPoint("LEFT", row.on, "RIGHT", 2, 0)
+      row.name:SetPoint("LEFT", row.on, "RIGHT", 6, 0)
       row.name:SetPoint("RIGHT", row.x, "LEFT", -6, 0)
       row.name:SetWordWrap(false)
     end
@@ -564,12 +567,12 @@ function E.Create(parent, hooks)
     if key:sub(1, 1) == "~" then key, off = key:sub(2), true end
     row.name:SetText(whereLabel(key))
     row.name:SetAlpha(off and 0.5 or 1)
-    row.on:SetChecked(not off)
-    row.on:SetScript("OnClick", function(self)
+    row.on:SetChecked(not off, true)
+    row.on.onToggle = function(self)
       look.where[e.index] = (self:GetChecked() and "" or "~") .. key
       refreshWhere()
       apply()
-    end)
+    end
     row.x:SetScript("OnClick", function()
       table.remove(look.where, e.index)
       refreshWhere()

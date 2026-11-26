@@ -435,10 +435,12 @@ W.AddTab("settings", "Settings", function(page)
   -- The whole tile opens the page.
   local title = UI.Label(overview, "Settings", "GameFontNormalHuge")
   title:SetPoint("TOPLEFT", overview, "TOPLEFT", 14, -14)
-  local quick = UI.Check(overview, { label = "Duskfall on", tip = "Off puts your baseline back and leaves the sliders to you.",
+  -- The main on / off: the big switch with the moon's glow while on (Kim)
+  local quick = UI.Switch(overview, { label = "Duskfall", big = true,
+    tip = "Off puts your baseline back and leaves the sliders to you.",
     get = function() return ns.cfg.enabled end,
     set = function(v) D.SetEnabled(v) W.UpdateStatus() end })
-  quick:SetPoint("TOPRIGHT", overview, "TOPRIGHT", -110, -16)
+  quick:SetPoint("TOPRIGHT", overview, "TOPRIGHT", -24, -12)
   local tiles = {}
   -- Layout (Kim): General across the top, then Time of day | Baseline, then Display | Characters,
   -- tall enough to fill the page. TILE_SPOT = key -> { column (0, 1 or "full"), row }.

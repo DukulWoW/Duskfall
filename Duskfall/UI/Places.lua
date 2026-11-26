@@ -197,11 +197,9 @@ local function changed(why)
   D.Evaluate(why)
 end
 
+-- A list's background: a rounded dark well, as Your places in simple mode (Kim)
 local function shade(parent)
-  local t = parent:CreateTexture(nil, "BACKGROUND", nil, 1)
-  t:SetAllPoints()
-  t:SetColorTexture(0, 0, 0, 0.3)
-  return t
+  return UI.RoundBox(parent, { radius = 8, bottom = { 0, 0, 0, 0.32 }, top = { 0, 0, 0, 0.22 } })
 end
 
 -- The tab --------------------------------------------------------------------------------------
@@ -225,7 +223,7 @@ W.AddTab("places", "Places", function(tab)
   left:SetWidth(LEFT_W)
 
   local search = CreateFrame("EditBox", nil, left, "SearchBoxTemplate")
-  search:SetSize(160, 20)
+  search:SetSize(150, 20)
   search:SetPoint("TOPLEFT", left, "TOPLEFT", 14, -10)
   search:SetAutoFocus(false)
 
@@ -543,9 +541,8 @@ W.AddTab("places", "Places", function(tab)
       local hl = row:CreateTexture(nil, "HIGHLIGHT")
       hl:SetAllPoints()
       hl:SetColorTexture(1, 1, 1, 0.08)
-      row.on = CreateFrame("CheckButton", nil, row, "UICheckButtonTemplate")
-      row.on:SetSize(24, 24)
-      row.on:SetPoint("LEFT", row, "LEFT", 4, 0)
+      row.on = UI.Switch(row, {})
+      row.on:SetPoint("LEFT", row, "LEFT", 6, 0)
       UI.Tooltip(row.on, "On / off", "An off Look is kept but never used.")
       row.del = UI.Button(row, "Delete", 64, nil, 20)
       row.del:SetPoint("RIGHT", row, "RIGHT", -6, 0)
@@ -553,7 +550,7 @@ W.AddTab("places", "Places", function(tab)
       row.tag:SetPoint("TOPRIGHT", row, "TOPRIGHT", -78, -4)
       row.tag:SetJustifyH("RIGHT")
       row.name = UI.Label(row, "", "GameFontHighlight")
-      row.name:SetPoint("TOPLEFT", row, "TOPLEFT", 32, -3)
+      row.name:SetPoint("TOPLEFT", row, "TOPLEFT", 48, -3)
       row.name:SetPoint("RIGHT", row.tag, "LEFT", -6, 0)
       row.name:SetWordWrap(false)
       row.info = UI.Label(row, "", "GameFontHighlightSmall")
@@ -574,11 +571,11 @@ W.AddTab("places", "Places", function(tab)
     elseif e.matching then tag = GREY .. "matches, outranked|r" end
     row.tag:SetText(tag)
     row.sel:SetShown(look == selLook)
-    row.on:SetChecked(look.on ~= false)
-    row.on:SetScript("OnClick", function(self)
+    row.on:SetChecked(look.on ~= false, true)
+    row.on.onToggle = function(self)
       look.on = self:GetChecked() and true or false
       changed("places")
-    end)
+    end
     row.del:SetScript("OnClick", function()
       UI.Confirm("Delete the Look \"" .. (look.name or "?") .. "\"?", function()
         local style = R.ActiveStyle()
@@ -773,6 +770,18 @@ W.AddTab("places", "Places", function(tab)
     if page:IsShown() and page.Back then return page.Back() end
     return false
   end
-  ns.Listen("MODE", showMode)
+  -- Switching to Advanced while a setting is open in simple mode opens that setting (Kim)
+  local opening = false
+  ns.Listen("MODE", function(adv)
+    if adv and not opening and simple:IsShown() and simple.CurrentLook then
+      local look = simple.CurrentLook()
+      if look then
+        opening = true
+        ns.Safe(openLook, "open advanced", look)
+        opening = false
+      end
+    end
+    showMode()
+  end)
   showMode()
 end, "left")
