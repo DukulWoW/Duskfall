@@ -234,7 +234,33 @@ local function buildDisplay(p)
   add(move, 22, 8)
   local reset = UI.Button(p, "Reset position", 120, function() ns.StatusDisplay.ResetPosition() end)
   reset:SetPoint("LEFT", move, "RIGHT", 8, 0)
-  return refresh
+
+  -- Right column: the game's own colorblind filter (Options > Accessibility), here for quick
+  -- switching (Kim). colorblindSimulator 0-3 and colorblindWeaknessFactor 0-1 exist on Forever
+  -- (Kim, 2026-11-26: "0 0.5"). Read from the game each time, never stored by Duskfall.
+  local function cvarNum(name, d) return tonumber(GetCVar(name)) or d end
+  local cbHead = UI.Header(p, "Colorblind filter")
+  cbHead:SetPoint("TOPLEFT", p, "TOPLEFT", 400, -48)
+  local cbHelp = UI.Label(p, "The game's own filter (Options > Accessibility), here for quick switching. It is a game setting: Duskfall only changes it when you do.")
+  cbHelp:SetPoint("TOPLEFT", cbHead, "BOTTOMLEFT", 0, -6)
+  cbHelp:SetWidth(320)
+  cbHelp:SetTextColor(0.7, 0.7, 0.7)
+  local cbFilter = UI.Dropdown(p, DD_W, { label = "Filter",
+    items = { { 0, "Off" }, { 1, "Protanopia (red weak)" }, { 2, "Deuteranopia (green weak)" }, { 3, "Tritanopia (blue weak)" } },
+    get = function() return cvarNum("colorblindSimulator", 0) end,
+    set = function(v) SetCVar("colorblindSimulator", v) end })
+  cbFilter:SetPoint("TOPLEFT", cbHelp, "BOTTOMLEFT", 0, -12)
+  local cbStrength = UI.Slider(p, 320, { label = "Strength", min = 0, max = 1, step = 0.05, default = 0.5,
+    fmt = function(v) return string.format("%d%%", math.floor(v * 100 + 0.5)) end,
+    tip = "How strongly the filter adjusts the colours.",
+    get = function() return cvarNum("colorblindWeaknessFactor", 0.5) end,
+    onChange = function(v) SetCVar("colorblindWeaknessFactor", v) end })
+  cbStrength:SetPoint("TOPLEFT", cbFilter, "BOTTOMLEFT", 0, -10)
+  return function()
+    refresh()
+    cbFilter:Refresh()
+    cbStrength:Refresh()
+  end
 end
 
 local SUBPAGES = {
@@ -243,7 +269,7 @@ local SUBPAGES = {
   { key = "time", title = "Time of day", build = buildTime,
     desc = "Server or local clock, 12 or 24 hour, and when dawn, day, dusk and night start." },
   { key = "display", title = "Display", build = buildDisplay,
-    desc = "Minimap button and moon, broker text, and the floating status display." },
+    desc = "Minimap button and moon, broker text, the floating status display, and the colorblind filter." },
   { key = "baseline", title = "Baseline", build = buildBaseline,
     desc = "Your own look: what Duskfall starts from and puts back when you log out." },
   { key = "chars", title = "Characters", build = buildCharacters,
