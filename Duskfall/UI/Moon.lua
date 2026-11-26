@@ -165,10 +165,20 @@ local function hook()
   local STEP = 0.18
   local anim = CreateFrame("Frame", nil, catcher)
   local clock, step = 0, 0
-  anim:SetScript("OnUpdate", function(_, dt)
+  -- It fades in and out over FADE seconds when you walk into or out of a set place (Kim)
+  local FADE = 0.8
+  local level, want = 0, 0
+  anim:SetScript("OnUpdate", function(self, dt)
     clock = clock + dt
-    -- gentle pulse, about 3 s a breath
-    ring:SetAlpha(0.55 + 0.25 * math.sin(clock * 2.1))
+    if level < want then level = math.min(want, level + dt / FADE)
+    elseif level > want then level = math.max(want, level - dt / FADE) end
+    if level <= 0 and want == 0 then
+      ring:Hide()
+      self:Hide()
+      return
+    end
+    -- gentle pulse, about 3 s a breath, times the fade
+    ring:SetAlpha(level * (0.55 + 0.25 * math.sin(clock * 2.1)))
     if frameAt and clock - step >= STEP then
       step = clock
       frameAt(SEQ[math.floor(clock / STEP) % #SEQ + 1])
@@ -177,8 +187,14 @@ local function hook()
   anim:Hide()
   local function lit()
     local on = ns.cfg.enabled and ns.Detect.state.source and next(ns.Detect.state.source) ~= nil
-    ring:SetShown(on and true or false)
-    anim:SetShown(on and true or false)
+    want = on and 1 or 0
+    if on then
+      ring:SetAlpha(level * 0.55)
+      ring:Show()
+      anim:Show()
+    elseif level > 0 then
+      anim:Show()   -- fades out, then hides itself
+    end
   end
   ns.Listen("EVALUATED", function() ns.Safe(lit, "moon glow") end)
   ns.Listen("ONOFF", function() ns.Safe(lit, "moon glow") end)
