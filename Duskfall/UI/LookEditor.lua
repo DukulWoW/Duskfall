@@ -523,6 +523,7 @@ function E.Create(parent, hooks)
       ed:Close()
     end)
   end)
+  del:SetKind("danger")
   del:SetPoint("TOPLEFT", dup, "BOTTOMLEFT", 0, -8)
 
   -- Where (left column, bottom) --------------------------------------------------------------

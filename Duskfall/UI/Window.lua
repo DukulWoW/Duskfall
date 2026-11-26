@@ -158,6 +158,7 @@ local function build()
   UI.Tooltip(help, "Help", "How Duskfall works.")
   f.helpBtn = help
   adv:SetPoint("RIGHT", help, "LEFT", -8, 0)
+  adv:Refresh()   -- the picker makes its buttons in Refresh
   f.advCheck = adv
   pcall(ButtonFrameTemplate_HideButtonBar, f)
   if ns.CursorLight then ns.CursorLight.Attach(f) end
@@ -249,6 +250,7 @@ local function build()
   -- The tab template sets its own look when it is first shown (every tab gold): select again
   -- after that, on the next frame
   f:SetScript("OnShow", function(self)
+    if self.advCheck then self.advCheck:Refresh() end
     badge.Lift()
     if ns.Moon then ns.Safe(ns.Moon.Check, "moon check") end
     W.UpdateStatus()

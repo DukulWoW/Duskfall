@@ -273,6 +273,7 @@ local function buildCharacters(p)
       row.info:SetPoint("LEFT", row, "LEFT", 250, 0)
       row.info:SetTextColor(0.7, 0.7, 0.7)
       row.remove = UI.Button(row, "Remove", 80, nil, 20)
+      row.remove:SetKind("danger")
       row.remove:SetPoint("RIGHT", row, "RIGHT", -6, 0)
     end
     local c = e.c
@@ -316,7 +317,7 @@ local function buildDisplay(p)
   local HALF = math.floor((FULL_W - 12) / 2)
   local DD_W = HALF - 32
 
-  local _, mm = card(p, 12, -50, HALF, 236, "Minimap and broker", nil, controls)
+  local _, mm = card(p, 12, -50, HALF, 262, "Minimap and broker", nil, controls)
   mm(UI.Check(p, { label = "Minimap moon opens Duskfall",
     tip = "The day / night moon on the minimap gets the same clicks and tooltip as the minimap button. With this on you may not need the button at all.",
     get = function() return ns.cfg.moon ~= false end,
@@ -347,7 +348,7 @@ local function buildDisplay(p)
   -- colorblindSimulator 0-3 and colorblindWeaknessFactor 0-1 exist on Forever (Kim, 2026-11-26:
   -- "0 0.5"). Read from the game each time, never stored by Duskfall.
   local function cvarNum(name, d) return tonumber(GetCVar(name)) or d end
-  local _, cb = card(p, 12 + HALF + 12, -50, HALF, 236, "Colorblind filter and light",
+  local _, cb = card(p, 12 + HALF + 12, -50, HALF, 262, "Colorblind filter and light",
     "The game's own filter (Options > Accessibility). Duskfall only changes it when you do.", controls)
   cb(UI.Dropdown(p, DD_W, { label = "Filter",
     items = { { 0, "Off" }, { 1, "Protanopia (red weak)" }, { 2, "Deuteranopia (green weak)" }, { 3, "Tritanopia (blue weak)" } },
@@ -362,8 +363,13 @@ local function buildDisplay(p)
     tip = "A soft warm light follows the mouse over Duskfall's windows, and lifts them when your screen is dark.",
     get = function() return ns.cfg.cursorLight ~= false end,
     set = function(v) ns.cfg.cursorLight = v end }), 26, 4)
+  cb(UI.Slider(p, DD_W, { label = "Light strength", min = 0.25, max = 3, step = 0.05, default = 1,
+    fmt = function(v) return string.format("%d%%", math.floor(v * 100 + 0.5)) end,
+    tip = "How bright the cursor light is. Move the mouse over this window to see it.",
+    get = function() return tonumber(ns.cfg.cursorLightStrength) or 1 end,
+    onChange = function(v) ns.cfg.cursorLightStrength = v end }), UI.SLIDER_H, 8)
 
-  local _, sd = card(p, 12, -298, FULL_W, 150, "Status display",
+  local _, sd = card(p, 12, -324, FULL_W, 150, "Status display",
     "A small floating display of the setting in effect and the values on screen.", controls)
   local show = sd(UI.Dropdown(p, DD_W, { label = "Show it",
     items = { { "off", "Never" }, { "change", "When the setting changes" }, { "always", "Always" } },

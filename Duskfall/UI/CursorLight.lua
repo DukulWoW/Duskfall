@@ -4,7 +4,7 @@
 -- Assets/cursor-light (our own radial falloff): a wide faint glow and a small brighter core, kept
 -- inside the window (a clipping frame), breathing a little. Fades in when the mouse comes over the
 -- window and out when it leaves. Its OnUpdate runs only while the window is shown.
--- settings.cursorLight = false switches it off (Settings > Display).
+-- settings.cursorLight = false switches it off, settings.cursorLightStrength scales it (Settings > Display).
 -- Public: ns.CursorLight.Attach(window)
 local ADDON, ns = ...
 local UI = ns.UI
@@ -60,8 +60,9 @@ function CL.Attach(win)
     core:ClearAllPoints()
     core:SetPoint("CENTER", win, "BOTTOMLEFT", x, y)
     local breath = 0.92 + 0.08 * math.sin(clock * BREATH)
-    wide:SetAlpha(level * WIDE_A * breath)
-    core:SetAlpha(level * CORE_A * breath)
+    local k = level * breath * (tonumber(ns.cfg and ns.cfg.cursorLightStrength) or 1)
+    wide:SetAlpha(math.min(1, WIDE_A * k))
+    core:SetAlpha(math.min(1, CORE_A * k))
     if not wide:IsShown() then wide:Show() core:Show() end
   end)
 end

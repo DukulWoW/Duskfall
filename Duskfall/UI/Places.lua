@@ -222,10 +222,10 @@ W.AddTab("places", "Places", function(tab)
   left:SetPoint("BOTTOMLEFT", page, "BOTTOMLEFT", 0, 0)
   left:SetWidth(LEFT_W)
 
-  local search = CreateFrame("EditBox", nil, left, "SearchBoxTemplate")
-  search:SetSize(150, 20)
-  search:SetPoint("TOPLEFT", left, "TOPLEFT", 14, -10)
-  search:SetAutoFocus(false)
+  -- The same search box as simple mode (own rounded box, round clear X; Kim)
+  local search = UI.SearchBox(left, 160, { placeholder = "Search", height = 24,
+    onChange = function() if refreshAll then refreshAll() end end })
+  search:SetPoint("TOPLEFT", left, "TOPLEFT", 10, -8)
 
   local active = UI.Check(left, { label = "Active",
     tip = "Only places with Looks.",
@@ -303,8 +303,17 @@ W.AddTab("places", "Places", function(tab)
       row.bar:SetPoint("LEFT", row, "LEFT", 1, 0)
       row.arrow = CreateFrame("Button", nil, row)
       row.arrow:SetSize(14, 14)
+      -- Our own gold disclosure chevron (Assets/chevron): right = closed, down = open (Kim)
       row.arrowTex = row.arrow:CreateTexture(nil, "ARTWORK")
       row.arrowTex:SetAllPoints()
+      row.arrowTex:SetTexture(UI.ART .. "chevron")
+      row.arrowTex:SetVertexColor(1, 0.82, 0)
+      local arrowHL = row.arrow:CreateTexture(nil, "HIGHLIGHT")
+      arrowHL:SetAllPoints()
+      arrowHL:SetTexture(UI.ART .. "chevron")
+      arrowHL:SetBlendMode("ADD")
+      arrowHL:SetVertexColor(1, 0.9, 0.5, 0.6)
+      row.arrowHL = arrowHL
       row.count = UI.Label(row, "", "GameFontHighlightSmall")
       row.count:SetPoint("RIGHT", row, "RIGHT", -6, 0)
       row.count:SetJustifyH("RIGHT")
@@ -328,9 +337,9 @@ W.AddTab("places", "Places", function(tab)
     row.arrow:SetPoint("LEFT", row, "LEFT", x, 0)
     row.arrow:SetShown(e.open ~= nil)
     if e.open ~= nil then
-      local tex = "Interface\\Buttons\\UI-PlusButton-Up"
-      if e.open then tex = "Interface\\Buttons\\UI-MinusButton-Up" end
-      row.arrowTex:SetTexture(tex)
+      local turn = e.open and -math.pi / 2 or 0
+      row.arrowTex:SetRotation(turn)
+      row.arrowHL:SetRotation(turn)
     end
     row.arrow:SetScript("OnClick", function()
       if e.row == "group" then collapsed[e.key] = (not collapsed[e.key]) or nil
@@ -545,6 +554,7 @@ W.AddTab("places", "Places", function(tab)
       row.on:SetPoint("LEFT", row, "LEFT", 6, 0)
       UI.Tooltip(row.on, "On / off", "An off Look is kept but never used.")
       row.del = UI.Button(row, "Delete", 64, nil, 20)
+      row.del:SetKind("danger")
       row.del:SetPoint("RIGHT", row, "RIGHT", -6, 0)
       row.tag = UI.Label(row, "", "GameFontHighlightSmall")
       row.tag:SetPoint("TOPRIGHT", row, "TOPRIGHT", -78, -4)
@@ -734,7 +744,6 @@ W.AddTab("places", "Places", function(tab)
   end
 
   here:SetScript("OnClick", function() jump(false) end)
-  search:HookScript("OnTextChanged", function() refreshAll() end)
 
   page:SetScript("OnShow", function()
     if wantJump then

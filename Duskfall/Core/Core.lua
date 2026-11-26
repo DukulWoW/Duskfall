@@ -31,6 +31,7 @@ ns.DEFAULTS = {
   advanced = false,             -- Places in Advanced mode (full list and Look editor), else simple
   ringGlow = true,              -- the glow ring on the moon badge and minimap button where a setting is in effect
   cursorLight = true,           -- a soft light follows the mouse over Duskfall's windows (UI/CursorLight.lua)
+  cursorLightStrength = 1,      -- its brightness, 0.25 - 3 (1 = the built-in WIDE_A / CORE_A)
 }
 
 -- Output ---------------------------------------------------------------------------------------

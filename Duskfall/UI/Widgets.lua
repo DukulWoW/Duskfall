@@ -70,17 +70,57 @@ end
 UI.Tooltip = tooltip
 
 -- Button ---------------------------------------------------------------------------------------
--- SharedButtonTemplate is the current Blizzard button: red with bronze edges on Forever and sharp
--- at any size; UIPanelButtonTemplate (the old low-res grey-edged one) only where it is missing (BNB).
-local buttonTemplate
+-- Our own button (Kim, 2026-11-26: the red Blizzard ones looked borrowed): a rounded box like the
+-- cards, dark and warm with a gold edge and gold text. Kinds (b:SetKind):
+--   "normal"  as above
+--   "main"    gold filled, dark text: the one main action on a page (Open Duskfall, Try it, Paste)
+--   "danger"  dark with a faint red edge: Reset, Delete, Remove
+-- Hover brightens it, pressing moves the text 1 px down-right, disabled greys it. :SetText,
+-- :SetEnabled, :GetFontString work as on any button.
+local BUTTON_LOOK = {
+  normal = { bottom = { 0.09, 0.06, 0.03, 0.92 }, top = { 0.26, 0.19, 0.1, 0.92 }, border = { 1, 0.82, 0, 0.55 },
+             text = { 1, 0.82, 0 }, shadow = true },
+  main   = { bottom = { 0.5, 0.33, 0.05, 1 }, top = { 0.95, 0.75, 0.26, 1 }, border = { 1, 0.92, 0.55, 0.95 },
+             text = { 0.14, 0.08, 0 }, shadow = false },
+  danger = { bottom = { 0.1, 0.03, 0.02, 0.92 }, top = { 0.27, 0.09, 0.06, 0.92 }, border = { 0.95, 0.35, 0.22, 0.6 },
+             text = { 1, 0.72, 0.55 }, shadow = true },
+}
+
 function UI.Button(parent, text, w, onClick, h)
-  if not buttonTemplate then
-    buttonTemplate = (C_XMLUtil and C_XMLUtil.GetTemplateInfo and C_XMLUtil.GetTemplateInfo("SharedButtonTemplate"))
-      and "SharedButtonTemplate" or "UIPanelButtonTemplate"
-  end
-  local b = CreateFrame("Button", nil, parent, buttonTemplate)
+  local b = CreateFrame("Button", nil, parent)
   b:SetSize(w or 120, h or 22)
+  -- Drawn on the button itself (textures, not child frames), so the text is always on top
+  local boxes = {}
+  for k, L in pairs(BUTTON_LOOK) do
+    boxes[k] = UI.RoundBox(b, { radius = 7, bottom = L.bottom, top = L.top, border = L.border })
+    boxes[k]:SetShown(false)
+  end
+  local hover = UI.RoundBox(b, { radius = 7, layer = "ARTWORK", bottom = { 1, 1, 1, 0.03 }, top = { 1, 1, 1, 0.13 } })
+  hover:SetShown(false)
+  local fs = b:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+  fs:SetPoint("CENTER", b, "CENTER", 0, 0)
+  fs:SetWordWrap(false)
+  b:SetFontString(fs)
+  b:SetPushedTextOffset(1, -1)
+  local kind = "normal"
+  local function look()
+    local L = BUTTON_LOOK[kind]
+    for k, box in pairs(boxes) do box:SetShown(k == kind) end
+    local on = b:IsEnabled()
+    if on then fs:SetTextColor(L.text[1], L.text[2], L.text[3]) else fs:SetTextColor(0.55, 0.55, 0.55) end
+    fs:SetShadowOffset(L.shadow and 1 or 0, L.shadow and -1 or 0)
+    b:SetAlpha(on and 1 or 0.6)
+  end
+  function b:SetKind(k)
+    kind = BUTTON_LOOK[k] and k or "normal"
+    look()
+  end
+  b:SetScript("OnEnter", function(self) if self:IsEnabled() then hover:SetShown(true) end end)
+  b:SetScript("OnLeave", function() hover:SetShown(false) end)
+  b:SetScript("OnEnable", look)
+  b:SetScript("OnDisable", function() hover:SetShown(false) look() end)
   b:SetText(text)
+  look()
   if onClick then b:SetScript("OnClick", function(self) ns.Safe(onClick, "button", self) end) end
   return b
 end

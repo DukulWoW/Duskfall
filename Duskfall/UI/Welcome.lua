@@ -47,6 +47,7 @@ local function build()
     f:Hide()
     if ns.OpenWindow then ns.OpenWindow("places", true) end
   end, 26)
+  open:SetKind("main")
   open:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -16, 14)
   local later = UI.Button(f, "Later", 90, function() f:Hide() end, 26)
   later:SetPoint("RIGHT", open, "LEFT", -8, 0)
