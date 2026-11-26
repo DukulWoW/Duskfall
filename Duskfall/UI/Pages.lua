@@ -414,6 +414,7 @@ local SUBPAGES = {
       return table.concat(parts, "  ")
     end },
   { key = "chars", title = "Characters", build = buildCharacters, icon = "Interface\\Icons\\INV_Misc_Head_Human_01",
+    portrait = true,   -- the character you play (race and gender), as on the unit frame (Kim)
     desc = "Characters Duskfall knows. Remove the ones you deleted.",
     summary = function()
       local n = 0
@@ -498,6 +499,10 @@ W.AddTab("settings", "Settings", function(page)
     tile:SetScript("OnClick", function() open(def.key) end)
     tile.Refresh = function()
       if def.iconFn then icon:SetTexture(def.iconFn()) icon:SetTexCoord(0, 1, 0, 1) end
+      if def.portrait and SetPortraitTexture then
+        SetPortraitTexture(icon, "player")
+        icon:SetTexCoord(0, 1, 0, 1)
+      end
       sum:SetText(def.summary and def.summary() or "")
     end
     tiles[#tiles + 1] = tile

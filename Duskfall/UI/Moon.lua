@@ -113,16 +113,17 @@ function M.Report()
   end)
 end
 
--- The glow ring (Kim): while a setting is in effect where you stand, the bright rings of
--- Blizzard's proc flipbook (atlas OneButton_ProcStart_Flipbook_2x, 5 frames a row), frames 3 to 6
--- stepped slowly back and forth with a slow pulse, behind the icon. It fades in and out over
--- FADE seconds. A soft gold disc (Assets/dot) where the atlas is missing. settings.ringGlow =
--- false switches every ring off. Used on the moon badge and on the minimap button (UI/Broker.lua).
+-- The glow (Kim): while a setting is in effect where you stand, a sun glare behind the icon
+-- (Interface/Glues/Models/UI_Tauren/UI_Goblin_Sunglare, file 1063590, from the login screen),
+-- turning slowly and breathing slowly. It fades in and out over GLOW_FADE seconds. A soft gold
+-- disc (Assets/dot) where the image is missing. settings.ringGlow = false switches it off.
+-- Used on the moon badge and on the minimap button (UI/Broker.lua).
 local rings = {}
-local RING_SEQ = { 3, 4, 5, 6, 5, 4 }
-local RING_STEP = 0.5      -- seconds a frame
-local RING_BREATH = 0.8    -- radians a second: about 8 s a breath
-local RING_FADE = 0.8
+local GLOW_FILE = 1063590
+local GLOW_PATH = "Interface\\Glues\\Models\\UI_Tauren\\UI_Goblin_Sunglare"
+local GLOW_TURN = 2 * math.pi / 60   -- one turn a minute
+local GLOW_BREATH = 0.7              -- radians a second: about 9 s a breath
+local GLOW_FADE = 0.8
 
 local function ringWanted()
   return ns.cfg and ns.cfg.enabled and ns.cfg.ringGlow ~= false and ns.Detect.state.source
@@ -131,52 +132,38 @@ end
 
 -- host: the frame it lives on; anchor: the region it centres on; size: its width and height.
 function M.AddRing(host, anchor, size)
-  local ring = host:CreateTexture(nil, "ARTWORK", nil, -1)
-  ring:SetSize(size, size)
-  ring:SetPoint("CENTER", anchor, "CENTER")
-  ring:SetBlendMode("ADD")
-  ring:Hide()
-  local info = C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo("OneButton_ProcStart_Flipbook_2x")
-  local frameAt
-  if info and (info.file or info.filename) and info.width and info.width > 0 then
-    local COLS = 5
-    local l, r, t, b = info.leftTexCoord, info.rightTexCoord, info.topTexCoord, info.bottomTexCoord
-    local rows = math.max(1, math.floor(info.height / (info.width / COLS) + 0.5))
-    local fw, fh = (r - l) / COLS, (b - t) / rows
-    ring:SetTexture(info.file or info.filename)
-    frameAt = function(n)
-      local c, row = (n - 1) % COLS, math.floor((n - 1) / COLS)
-      ring:SetTexCoord(l + c * fw, l + (c + 1) * fw, t + row * fh, t + (row + 1) * fh)
-    end
-    frameAt(RING_SEQ[1])
-  else
-    ring:SetTexture(UI.ART .. "dot")
-    ring:SetVertexColor(1, 0.8, 0.35)
+  local glow = host:CreateTexture(nil, "ARTWORK", nil, -1)
+  glow:SetSize(size, size)
+  glow:SetPoint("CENTER", anchor, "CENTER")
+  glow:SetBlendMode("ADD")
+  glow:Hide()
+  local ok = pcall(glow.SetTexture, glow, GLOW_FILE) and glow:GetTexture()
+  if not ok then ok = pcall(glow.SetTexture, glow, GLOW_PATH) and glow:GetTexture() end
+  if not ok then
+    glow:SetTexture(UI.ART .. "dot")
+    glow:SetVertexColor(1, 0.8, 0.35)
   end
   local anim = CreateFrame("Frame", nil, host)
-  local clock, step, level, want = 0, 0, 0, 0
+  local clock, level, want = 0, 0, 0
   anim:SetScript("OnUpdate", function(self, dt)
     clock = clock + dt
-    if level < want then level = math.min(want, level + dt / RING_FADE)
-    elseif level > want then level = math.max(want, level - dt / RING_FADE) end
+    if level < want then level = math.min(want, level + dt / GLOW_FADE)
+    elseif level > want then level = math.max(want, level - dt / GLOW_FADE) end
     if level <= 0 and want == 0 then
-      ring:Hide()
+      glow:Hide()
       self:Hide()
       return
     end
-    ring:SetAlpha(level * (0.7 + 0.3 * math.sin(clock * RING_BREATH)))
-    if frameAt and clock - step >= RING_STEP then
-      step = clock
-      frameAt(RING_SEQ[math.floor(clock / RING_STEP) % #RING_SEQ + 1])
-    end
+    glow:SetAlpha(level * (0.65 + 0.35 * math.sin(clock * GLOW_BREATH)))
+    pcall(glow.SetRotation, glow, clock * GLOW_TURN)
   end)
   anim:Hide()
   local r = {}
   function r.Set(on)
     want = on and 1 or 0
     if on then
-      ring:SetAlpha(level * 0.7)
-      ring:Show()
+      glow:SetAlpha(level * 0.65)
+      glow:Show()
       anim:Show()
     elseif level > 0 then
       anim:Show()   -- fades out, then hides itself
