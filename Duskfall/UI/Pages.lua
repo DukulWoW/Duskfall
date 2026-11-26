@@ -383,16 +383,43 @@ local function buildDisplay(p)
 end
 
 local SUBPAGES = {
-  { key = "general", title = "General", build = buildGeneral,
-    desc = "Switch Duskfall on or off, doorway delay, transition timing, debug output." },
+  { key = "general", title = "General", build = buildGeneral, icon = "Interface\\Icons\\Trade_Engineering",
+    desc = "On or off, doorway delay and timing.",
+    summary = function()
+      if not ns.cfg.enabled then return "|cffff6060Switched off|r" end
+      return string.format("On, doorway delay %.1f s", ns.cfg.debounce or 0.5)
+    end },
   { key = "time", title = "Time of day", build = buildTime,
-    desc = "Server or local clock, 12 or 24 hour, and when dawn, day, dusk and night start." },
-  { key = "display", title = "Display", build = buildDisplay,
-    desc = "Minimap button and moon, broker text, the floating status display, and the colorblind filter." },
-  { key = "baseline", title = "Baseline", build = buildBaseline,
-    desc = "Your own look: what Duskfall starts from and puts back when you log out." },
-  { key = "chars", title = "Characters", build = buildCharacters,
-    desc = "Characters Duskfall knows. Remove the ones you deleted." },
+    desc = "The clock, and when dawn, day, dusk and night start.",
+    iconFn = function() return UI.ART .. "ui-" .. ns.Situations.Snapshot().period end,
+    summary = function()
+      local env = ns.Situations.Snapshot()
+      local name = { dawn = "Dawn", day = "Day", dusk = "Dusk", night = "Night" }
+      return string.format("Now %s, %s (%s clock)", ns.FormatHour(env.hour, env.min), name[env.period] or "?",
+        ns.cfg.clock == "local" and "your" or "server")
+    end },
+  { key = "display", title = "Display", build = buildDisplay, icon = "Interface\\Icons\\INV_Misc_Spyglass_03",
+    desc = "Minimap moon and button, broker, status display, colorblind filter.",
+    summary = function()
+      local btn = { auto = "button automatic", always = "button always", never = "no button" }
+      return (ns.cfg.moon ~= false and "Moon on, " or "Moon off, ") .. (btn[ns.cfg.minimapButton or "auto"] or "")
+    end },
+  { key = "baseline", title = "Baseline", build = buildBaseline, icon = "Interface\\Icons\\Spell_Holy_HolyBolt",
+    desc = "Your own look, which every setting changes from.",
+    summary = function()
+      local b, parts = ns.db.baseline or {}, {}
+      for _, ch in ipairs(C.list) do
+        if b[ch.key] then parts[#parts + 1] = ch.short .. " " .. C.Format(ch.key, b[ch.key]) end
+      end
+      return table.concat(parts, "  ")
+    end },
+  { key = "chars", title = "Characters", build = buildCharacters, icon = "Interface\\Icons\\INV_Misc_Head_Human_01",
+    desc = "Characters Duskfall knows. Remove the ones you deleted.",
+    summary = function()
+      local n = 0
+      for _ in pairs(ns.db.chars) do n = n + 1 end
+      return string.format("%d character%s", n, n == 1 and "" or "s")
+    end },
 }
 
 -- Settings tab ------------------------------------------------------------------------------------
@@ -402,10 +429,18 @@ W.AddTab("settings", "Settings", function(page)
   overview:SetAllPoints()
   local open
 
-  local title = UI.Header(overview, "Settings")
-  title:SetFontObject("GameFontNormalLarge")
-  title:SetPoint("TOPLEFT", overview, "TOPLEFT", 12, -12)
-  local y = -48
+  -- The overview (Kim: less boring): a header with a quick on / off switch, then one rounded tile
+  -- per page in two columns, each with a round icon, its name, what is in it and a live summary.
+  -- The whole tile opens the page.
+  local title = UI.Label(overview, "Settings", "GameFontNormalHuge")
+  title:SetPoint("TOPLEFT", overview, "TOPLEFT", 14, -14)
+  local quick = UI.Check(overview, { label = "Duskfall on", tip = "Off puts your baseline back and leaves the sliders to you.",
+    get = function() return ns.cfg.enabled end,
+    set = function(v) D.SetEnabled(v) W.UpdateStatus() end })
+  quick:SetPoint("TOPRIGHT", overview, "TOPRIGHT", -110, -16)
+  local tiles = {}
+  local TILE_GAP, TILE_H = 12, 96
+  local tileW = math.floor((FULL_W - TILE_GAP) / 2)
   local subs = {}
   for _, def in ipairs(SUBPAGES) do
     local sub = CreateFrame("Frame", nil, page)
@@ -424,19 +459,48 @@ W.AddTab("settings", "Settings", function(page)
     sub.def = def
     subs[def.key] = sub
 
-    local row = CreateFrame("Frame", nil, overview)
-    row:SetPoint("TOPLEFT", overview, "TOPLEFT", 12, y)
-    row:SetPoint("RIGHT", overview, "RIGHT", -12, 0)
-    row:SetHeight(44)
-    local btn = UI.Button(row, "Settings", 100, function() open(def.key) end)
-    btn:SetPoint("TOPRIGHT", row, "TOPRIGHT", 0, -2)
-    local rt = UI.Label(row, def.title, "GameFontNormal")
-    rt:SetPoint("TOPLEFT", row, "TOPLEFT", 0, -4)
-    local rd = UI.Label(row, def.desc)
-    rd:SetTextColor(0.65, 0.65, 0.65)
-    rd:SetPoint("TOPLEFT", rt, "BOTTOMLEFT", 0, -4)
-    rd:SetPoint("RIGHT", btn, "LEFT", -12, 0)
-    y = y - 54
+    local n = #tiles
+    local tile = CreateFrame("Button", nil, overview)
+    tile:SetSize(tileW, TILE_H)
+    tile:SetPoint("TOPLEFT", overview, "TOPLEFT", 12 + (n % 2) * (tileW + TILE_GAP), -62 - math.floor(n / 2) * (TILE_H + TILE_GAP))
+    UI.RoundBox(tile, { radius = 12, bottom = { 0, 0, 0, 0.45 }, top = { 0.2, 0.15, 0.09, 0.42 },
+      border = { 1, 0.82, 0, 0.22 } })
+    local hl = tile:CreateTexture(nil, "HIGHLIGHT")
+    hl:SetPoint("TOPLEFT", tile, "TOPLEFT", 3, -3)
+    hl:SetPoint("BOTTOMRIGHT", tile, "BOTTOMRIGHT", -3, 3)
+    hl:SetColorTexture(1, 0.85, 0.4, 0.07)
+    -- A round icon (cropped and masked)
+    local icon = tile:CreateTexture(nil, "ARTWORK")
+    icon:SetSize(46, 46)
+    icon:SetPoint("LEFT", tile, "LEFT", 16, 0)
+    if def.icon then icon:SetTexture(def.icon) icon:SetTexCoord(0.08, 0.92, 0.08, 0.92) end
+    if tile.CreateMaskTexture then
+      local mask = tile:CreateMaskTexture()
+      mask:SetAllPoints(icon)
+      if pcall(mask.SetTexture, mask, "Interface\\CharacterFrame\\TempPortraitAlphaMask", "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE") then
+        icon:AddMaskTexture(mask)
+      end
+    end
+    local name = UI.Label(tile, def.title, "GameFontNormalLarge")
+    name:SetPoint("TOPLEFT", icon, "TOPRIGHT", 14, 2)
+    local desc = UI.Label(tile, def.desc)
+    desc:SetPoint("TOPLEFT", name, "BOTTOMLEFT", 0, -4)
+    desc:SetPoint("RIGHT", tile, "RIGHT", -30, 0)
+    desc:SetTextColor(0.72, 0.72, 0.72)
+    local sum = UI.Label(tile, "", "GameFontHighlightSmall")
+    sum:SetPoint("TOPLEFT", desc, "BOTTOMLEFT", 0, -6)
+    sum:SetPoint("RIGHT", tile, "RIGHT", -30, 0)
+    sum:SetWordWrap(false)
+    sum:SetTextColor(0.85, 0.75, 0.5)
+    local arrow = UI.Label(tile, ">", "GameFontNormalLarge")
+    arrow:SetPoint("RIGHT", tile, "RIGHT", -14, 0)
+    arrow:SetTextColor(1, 0.82, 0, 0.6)
+    tile:SetScript("OnClick", function() open(def.key) end)
+    tile.Refresh = function()
+      if def.iconFn then icon:SetTexture(def.iconFn()) icon:SetTexCoord(0, 1, 0, 1) end
+      sum:SetText(def.summary and def.summary() or "")
+    end
+    tiles[#tiles + 1] = tile
   end
 
   open = function(key)
@@ -457,6 +521,13 @@ W.AddTab("settings", "Settings", function(page)
   end
   -- Leaving the tab (or closing the window) goes back to the overview: coming back starts there (Kim)
   page:SetScript("OnHide", function() page.Back() end)
+  local function refreshTiles()
+    quick:Refresh()
+    for _, t in ipairs(tiles) do ns.Safe(t.Refresh, "settings tile") end
+  end
+  overview:SetScript("OnShow", refreshTiles)
+  ns.Listen("ONOFF", function() if overview:IsVisible() then refreshTiles() end end)
+  refreshTiles()
   ns.OpenSettingsPage = function(key)
     ns.OpenWindow("settings", true)
     open(key)
