@@ -93,43 +93,85 @@ local BUTTON_LOOK = {
              text = { 0.14, 0.08, 0 }, shadow = false },
   danger = { bottom = { 0.1, 0.03, 0.02, 0.92 }, top = { 0.27, 0.09, 0.06, 0.92 }, border = { 0.95, 0.35, 0.22, 0.6 },
              text = { 1, 0.72, 0.55 }, shadow = true },
+  -- Disabled, whatever the kind: grey (Kim: the beige disabled Paste didn't read as "not now")
+  off    = { bottom = { 0.08, 0.08, 0.08, 0.85 }, top = { 0.18, 0.18, 0.18, 0.85 }, border = { 0.55, 0.55, 0.55, 0.4 },
+             text = { 0.5, 0.5, 0.5 }, shadow = true },
 }
+-- Hover (Kim): the button fills, fading in over HOVER_FADE seconds, so it shows even under the cursor
+-- light: normal fills gold, main gets brighter, danger fills red; the text turns to match.
+local BUTTON_HOT = {
+  normal = { bottom = { 0.55, 0.37, 0.06, 1 }, top = { 0.98, 0.79, 0.3, 1 }, border = { 1, 0.92, 0.55, 0.95 },
+             text = { 0.14, 0.08, 0 } },
+  main   = { bottom = { 0.72, 0.52, 0.12, 1 }, top = { 1, 0.9, 0.5, 1 }, border = { 1, 0.97, 0.75, 1 },
+             text = { 0.14, 0.08, 0 } },
+  danger = { bottom = { 0.4, 0.06, 0.03, 1 }, top = { 0.85, 0.24, 0.14, 1 }, border = { 1, 0.55, 0.4, 0.95 },
+             text = { 1, 0.94, 0.88 } },
+}
+local HOVER_FADE = 0.15
 
 function UI.Button(parent, text, w, onClick, h)
   local b = CreateFrame("Button", nil, parent)
   b:SetSize(w or 120, h or 22)
   -- Drawn on the button itself (textures, not child frames), so the text is always on top
-  local boxes = {}
+  local boxes, hots = {}, {}
   for k, L in pairs(BUTTON_LOOK) do
     boxes[k] = UI.RoundBox(b, { radius = 7, bottom = L.bottom, top = L.top, border = L.border })
     boxes[k]:SetShown(false)
   end
-  local hover = UI.RoundBox(b, { radius = 7, layer = "ARTWORK", unlit = true, bottom = { 1, 1, 1, 0.03 }, top = { 1, 1, 1, 0.13 } })
-  hover:SetShown(false)
+  for k, L in pairs(BUTTON_HOT) do
+    hots[k] = UI.RoundBox(b, { radius = 7, sub = 3, unlit = true, bottom = L.bottom, top = L.top, border = L.border })
+    hots[k]:SetShown(false)
+  end
   local fs = b:CreateFontString(nil, "OVERLAY", "GameFontNormal")
   fs:SetPoint("CENTER", b, "CENTER", 0, 0)
   fs:SetWordWrap(false)
   b:SetFontString(fs)
   b:SetPushedTextOffset(1, -1)
-  local kind = "normal"
-  local function look()
-    local L = BUTTON_LOOK[kind]
-    for k, box in pairs(boxes) do box:SetShown(k == kind) end
+  local kind, heat, want = "normal", 0, 0
+  local function paint()
     local on = b:IsEnabled()
-    if on then fs:SetTextColor(L.text[1], L.text[2], L.text[3]) else fs:SetTextColor(0.55, 0.55, 0.55) end
-    fs:SetShadowOffset(L.shadow and 1 or 0, L.shadow and -1 or 0)
-    b:SetAlpha(on and 1 or 0.6)
+    local L = BUTTON_LOOK[on and kind or "off"]
+    local H = BUTTON_HOT[kind]
+    for k, box in pairs(boxes) do box:SetShown(k == (on and kind or "off")) end
+    for k, box in pairs(hots) do
+      box:SetShown(on and k == kind and heat > 0)
+      box:SetAlpha(heat)
+    end
+    local e = on and heat or 0
+    local t1, t2 = L.text, H.text
+    fs:SetTextColor(t1[1] + (t2[1] - t1[1]) * e, t1[2] + (t2[2] - t1[2]) * e, t1[3] + (t2[3] - t1[3]) * e)
+    local shadow = L.shadow and e < 0.5
+    fs:SetShadowOffset(shadow and 1 or 0, shadow and -1 or 0)
+  end
+  local function step(self, dt)
+    if heat < want then heat = math.min(want, heat + dt / HOVER_FADE)
+    elseif heat > want then heat = math.max(want, heat - dt / HOVER_FADE) end
+    paint()
+    if heat == want then self:SetScript("OnUpdate", nil) end
+  end
+  local function hover(on)
+    want = (on and b:IsEnabled()) and 1 or 0
+    if heat ~= want then b:SetScript("OnUpdate", step) end
   end
   function b:SetKind(k)
-    kind = BUTTON_LOOK[k] and k or "normal"
-    look()
+    kind = BUTTON_HOT[k] and k or "normal"
+    paint()
   end
-  b:SetScript("OnEnter", function(self) if self:IsEnabled() then hover:SetShown(true) end end)
-  b:SetScript("OnLeave", function() hover:SetShown(false) end)
-  b:SetScript("OnEnable", look)
-  b:SetScript("OnDisable", function() hover:SetShown(false) look() end)
+  b:SetScript("OnEnter", function() hover(true) end)
+  b:SetScript("OnLeave", function() hover(false) end)
+  b:SetScript("OnEnable", paint)
+  b:SetScript("OnDisable", function(self)
+    want, heat = 0, 0
+    self:SetScript("OnUpdate", nil)
+    paint()
+  end)
+  b:HookScript("OnHide", function(self)
+    want, heat = 0, 0
+    self:SetScript("OnUpdate", nil)
+    paint()
+  end)
   b:SetText(text)
-  look()
+  paint()
   if onClick then b:SetScript("OnClick", function(self) ns.Safe(onClick, "button", self) end) end
   return b
 end
@@ -814,6 +856,9 @@ function UI.RoundBox(f, o)
   function box:SetCorners(tl, tr, bl, br)
     box.round = { tl = tl and true or false, tr = tr and true or false, bl = bl and true or false, br = br and true or false }
     box:Layout()
+  end
+  function box:SetAlpha(v)
+    for _, t in ipairs(all) do t:SetAlpha(v) end
   end
   function box:SetShown(on)
     for _, t in ipairs(all) do t:SetShown(on) end

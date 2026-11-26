@@ -267,7 +267,7 @@ function SS.Create(parent)
   speedBox:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -12, 42)
   speedBox:SetHeight(SPEED_H)
   UI.RoundBox(speedBox, { radius = 10, bottom = { 0, 0, 0, 0.5 }, top = { 0.22, 0.17, 0.1, 0.4 },
-    border = { 1, 0.82, 0, 0.25 } })
+    border = { 1, 0.82, 0, 0.12 } })   -- soft: strong gold is for controls (Kim)
   local speed = UI.LightSlider(speedBox, 550, { label = "Speed", min = -1, max = 1, step = 0.1,
     from = { 1, 0.84, 0.45 }, to = { 0.2, 0.24, 0.5 },
     tip = "Left: quicker. Right: slower. The middle is the default pace.",

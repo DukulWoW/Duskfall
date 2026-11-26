@@ -255,7 +255,7 @@ function SP.Create(parent, hooks)
   card:SetPoint("TOPRIGHT", left, "TOPRIGHT", -12, -10)
   card:SetHeight(82)
   UI.RoundBox(card, { radius = 10, bottom = { 0, 0, 0, 0.5 }, top = { 0.22, 0.17, 0.1, 0.4 },
-    border = { 1, 0.82, 0, 0.25 } })
+    border = { 1, 0.82, 0, 0.12 } })   -- soft: strong gold is for controls (Kim)
   local placeText = UI.Label(card, "", "GameFontNormalHuge")
   placeText:SetPoint("TOPLEFT", card, "TOPLEFT", 14, -12)
   placeText:SetPoint("RIGHT", card, "RIGHT", -14, 0)
@@ -421,7 +421,7 @@ function SP.Create(parent, hooks)
   actions:SetPoint("BOTTOMRIGHT", left, "BOTTOMRIGHT", -12, 8)
   actions:SetHeight(46)
   UI.RoundBox(actions, { radius = 10, bottom = { 0, 0, 0, 0.5 }, top = { 0.22, 0.17, 0.1, 0.4 },
-    border = { 1, 0.82, 0, 0.25 } })
+    border = { 1, 0.82, 0, 0.12 } })   -- soft: strong gold is for controls (Kim)
   local reset = UI.Button(actions, "Reset", 76, function()
     local look = current()
     if not look then return end
