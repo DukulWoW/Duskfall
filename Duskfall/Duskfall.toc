@@ -2,7 +2,7 @@
 ## Title: |cff3355ccD|cff506ac5u|cff6d7fbes|cff8a94b7k|cffa8a9aff|cffc5bea8a|cffe2d3a1l|cffffe89al|r
 ## Notes: Sets gamma, brightness, contrast and bloom for where you are, with smooth transitions.
 ## Author: Dukul
-## Version: 0.1.0
+## Version: 1.0.0
 ## IconTexture: Interface\AddOns\Duskfall\Assets\icon
 ## SavedVariables: DuskfallDB
 ## X-Curse-Project-ID: 1831500

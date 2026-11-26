@@ -9,7 +9,7 @@ Gamma, brightness and contrast that follow you through the world. Duskfall sets 
 Gamma, Brightness, Contrast and Bloom for where you are and what you are doing, and moves
 between them smoothly, the way your eyes adjust when you walk from sunlight into a cave.
 
-For WoW Forever. Early development: not released yet.
+For WoW Forever. Download on [CurseForge](https://www.curseforge.com/wow/addons/duskfall) or [Wago](https://addons.wago.io/addons/duskfall).
 
 ## What it does
 
@@ -17,8 +17,9 @@ For WoW Forever. Early development: not released yet.
   changes until you set something, so the game looks the way you had it until you want otherwise.
 - **Simple to start.** Open Duskfall where you stand, pick the place (this part of the zone, the
   whole zone or everywhere), a time of day and indoors or outdoors if you like, and move a slider
-  for Gamma, Brightness, Contrast or Bloom. The change shows at once. The mini panel swaps the
-  window for just the sliders, so you see the whole screen while you adjust.
+  for Gamma, Brightness, Contrast or Bloom. The change shows at once. Copy and Paste move values
+  from one setting to another, and the mini panel swaps the window for just the sliders, so you
+  see the whole screen while you adjust.
 - **Looks, when you want more.** Advanced mode shows every place and a full editor. A Look is a
   set of values (as offsets from your own settings, or fixed values) for one or more places,
   optionally only indoors or outdoors, at dawn, day, dusk or night (or your own hours), in
@@ -26,8 +27,8 @@ For WoW Forever. Early development: not released yet.
   each value it leaves unset falls through to the next one. Preview shows a Look anywhere, and
   Revert undoes what you changed.
 - **Styles: how changes feel.** Instant, Smooth, or Like your eyes: slowly into the dark with a
-  short dip, quickly out into the light with a short glare, as real eyes adjust. One slider sets
-  the speed, and Try it shows you. A Style is a named set of Looks with its own feel; every
+  short dip, quickly out into the light with a short glare, as real eyes adjust, gliding in fine
+  steps. One slider sets the speed, and Try it shows you. A Style is a named set of Looks with its own feel; every
   character uses one, and all of them can share one.
 - **Time of day.** Dawn, day, dusk and night follow the server clock, the one the sky uses. Drag
   the edges of the day bar to change when each part starts, or use your computer's clock. A new
@@ -42,6 +43,8 @@ For WoW Forever. Early development: not released yet.
   also in the addon compartment and on broker bars, there is a key binding to switch it on and
   off, and an optional floating display shows what is in effect when it changes. The game's
   colorblind filter is close at hand on Settings > Display.
+- **A window of its own.** The game's frame in the icon's gold and blue, and a soft light that
+  follows your mouse and lights everything under it in its own colour.
 - **Help built in.** A short welcome on your first login, and a help button in the window that
   explains everything in a few plain topics.
 
