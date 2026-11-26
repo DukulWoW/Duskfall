@@ -124,39 +124,61 @@ local function hook()
   local badge = catcher:CreateTexture(nil, "OVERLAY")
   badge:SetSize(15, 15)
   badge:SetTexture(UI.ART .. "icon")
-  -- It goes round the moon's rim with the time of day, like a sun (Kim): noon at the top, 6:00
-  -- on the left, 18:00 on the right, midnight at the bottom. Same clock as Duskfall's own.
+  -- It goes round the moon's rim like the hour hand of a clock (Kim): 12 at the top, 3 on the
+  -- right, 6 at the bottom, 9 on the left; 3 at night sits where 3 in the afternoon does. Same
+  -- clock as Duskfall's own (server or local).
   local disc = moon.Background or catcher
   local function place()
     local env = ns.Situations.Snapshot()
-    local a = ((env.hour + env.min / 60) - 12) / 24 * 2 * math.pi
+    local a = ((env.hour % 12) + env.min / 60) / 12 * 2 * math.pi
     local r = math.max(8, (disc:GetWidth() or 30) / 2 + 1)   -- centred just outside the rim (Kim)
     badge:ClearAllPoints()
     badge:SetPoint("CENTER", disc, "CENTER", r * math.sin(a), r * math.cos(a))
   end
-  -- A soft gold glow behind it, breathing slowly, while a setting is in effect where you stand (Kim)
-  local glow = catcher:CreateTexture(nil, "ARTWORK")
-  glow:SetSize(30, 30)
-  glow:SetPoint("CENTER", badge, "CENTER")
-  glow:SetTexture(UI.ART .. "dot")
-  glow:SetVertexColor(1, 0.8, 0.35)
-  glow:SetBlendMode("ADD")
-  glow:Hide()
-  local ag = glow:CreateAnimationGroup()
-  ag:SetLooping("BOUNCE")
-  local fade = ag:CreateAnimation("Alpha")
-  fade:SetFromAlpha(0.25)
-  fade:SetToAlpha(0.75)
-  fade:SetDuration(1.6)
-  fade:SetSmoothing("IN_OUT")
+  -- Behind it while a setting is in effect where you stand (Kim): the bright rings of Blizzard's
+  -- proc flipbook (atlas OneButton_ProcStart_Flipbook_2x, 5 frames a row), frames 3 to 6 stepped
+  -- back and forth with a gentle pulse, only a little bigger than the icon. A soft gold disc
+  -- (Assets/dot) where the atlas is missing.
+  local ring = catcher:CreateTexture(nil, "ARTWORK")
+  ring:SetSize(25, 25)
+  ring:SetPoint("CENTER", badge, "CENTER")
+  ring:SetBlendMode("ADD")
+  ring:Hide()
+  local info = C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo("OneButton_ProcStart_Flipbook_2x")
+  local frameAt
+  if info and (info.file or info.filename) and info.width and info.width > 0 then
+    local COLS = 5
+    local l, r, t, b = info.leftTexCoord, info.rightTexCoord, info.topTexCoord, info.bottomTexCoord
+    local rows = math.max(1, math.floor(info.height / (info.width / COLS) + 0.5))
+    local fw, fh = (r - l) / COLS, (b - t) / rows
+    ring:SetTexture(info.file or info.filename)
+    frameAt = function(n)
+      local c, row = (n - 1) % COLS, math.floor((n - 1) / COLS)
+      ring:SetTexCoord(l + c * fw, l + (c + 1) * fw, t + row * fh, t + (row + 1) * fh)
+    end
+    frameAt(3)
+  else
+    ring:SetTexture(UI.ART .. "dot")
+    ring:SetVertexColor(1, 0.8, 0.35)
+  end
+  local SEQ = { 3, 4, 5, 6, 5, 4 }
+  local STEP = 0.18
+  local anim = CreateFrame("Frame", nil, catcher)
+  local clock, step = 0, 0
+  anim:SetScript("OnUpdate", function(_, dt)
+    clock = clock + dt
+    -- gentle pulse, about 3 s a breath
+    ring:SetAlpha(0.55 + 0.25 * math.sin(clock * 2.1))
+    if frameAt and clock - step >= STEP then
+      step = clock
+      frameAt(SEQ[math.floor(clock / STEP) % #SEQ + 1])
+    end
+  end)
+  anim:Hide()
   local function lit()
     local on = ns.cfg.enabled and ns.Detect.state.source and next(ns.Detect.state.source) ~= nil
-    glow:SetShown(on and true or false)
-    if on then
-      if not ag:IsPlaying() then ag:Play() end
-    else
-      ag:Stop()
-    end
+    ring:SetShown(on and true or false)
+    anim:SetShown(on and true or false)
   end
   ns.Listen("EVALUATED", function() ns.Safe(lit, "moon glow") end)
   ns.Listen("ONOFF", function() ns.Safe(lit, "moon glow") end)
