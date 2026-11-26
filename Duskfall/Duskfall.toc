@@ -5,6 +5,8 @@
 ## Version: 0.1.0-dev
 ## IconTexture: Interface\AddOns\Duskfall\Assets\icon
 ## SavedVariables: DuskfallDB
+## X-Curse-Project-ID: 1831500
+## X-Wago-ID: qGYBljNg
 ## AddonCompartmentFunc: Duskfall_OnAddonCompartmentClick
 ## AddonCompartmentFuncOnEnter: Duskfall_OnAddonCompartmentEnter
 ## AddonCompartmentFuncOnLeave: Duskfall_OnAddonCompartmentLeave

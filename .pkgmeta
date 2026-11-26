@@ -1,0 +1,29 @@
+# BigWigs packager layout contract for Duskfall.
+# The addon lives in Duskfall/ inside the repo (same layout as BigChatBox):
+# move-folders lifts it to the top level of the zip. The result must list
+# exactly one folder, Duskfall\, and nothing else. Repo-root files
+# (CHANGELOG.md, README.md, LICENSE, ...) are not in the zip; the addon
+# folder carries its own LICENSE copy.
+
+package-as: Duskfall
+
+enable-nolib-creation: no
+
+move-folders:
+  Duskfall/Duskfall: Duskfall
+
+manual-changelog:
+  filename: CHANGELOG.md
+  markup-type: markdown
+
+ignore:
+  - .github
+  - .pkgmeta
+  - _work
+  - _docs
+  - _filearchive
+  - _reference
+  - CLAUDE.md
+  - FILEMAP.md
+  - HANDOVER.md
+  - README.md

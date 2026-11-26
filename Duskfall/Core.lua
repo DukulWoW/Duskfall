@@ -7,7 +7,9 @@
 --           ONOFF (Duskfall switched on or off)
 local ADDON, ns = ...
 ns.name = ADDON
-ns.VERSION = "0.1.0-dev"
+-- The TOC's Version line is the one place the version lives
+local getMeta = C_AddOns and C_AddOns.GetAddOnMetadata
+ns.VERSION = (getMeta and getMeta(ADDON, "Version")) or "?"
 
 local DB_VERSION = 2
 
