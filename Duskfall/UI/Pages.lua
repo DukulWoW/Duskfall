@@ -197,7 +197,15 @@ local function buildDisplay(p)
   add(UI.Check(p, { label = "Minimap button",
     tip = "Left-click opens Duskfall, right-click switches it on or off, shift-right-click opens Settings. The same clicks work in the addon compartment and on broker bars.",
     get = function() return not ns.cfg.minimap.hide end,
-    set = function(v) ns.SetMinimapShown(v) end }), 26, 12)
+    set = function(v) ns.SetMinimapShown(v) end }), 26, 6)
+  add(UI.Check(p, { label = "Minimap moon opens Duskfall",
+    tip = "The day / night moon on the minimap gets the same clicks and tooltip as the minimap button. With this on you may not need the button at all.",
+    get = function() return ns.cfg.moon ~= false end,
+    set = function(v)
+      ns.cfg.moon = v
+      ns.Moon.Apply()
+      if v and not ns.Moon.Found() then ns.Print("can't find the minimap moon on this client.") end
+    end }), 26, 12)
   add(UI.Dropdown(p, DD_W, { label = "Broker text",
     tip = "What broker bars (Titan Panel, ChocolateBar, ElvUI datatexts...) show next to the icon.",
     items = { { "look", "The Look in effect" }, { "values", "The values on screen" }, { "both", "Look and values" }, { "none", "Nothing (icon only)" } },
@@ -233,7 +241,7 @@ local SUBPAGES = {
   { key = "time", title = "Time of day", build = buildTime,
     desc = "Server or local clock, 12 or 24 hour, and when dawn, day, dusk and night start." },
   { key = "display", title = "Display", build = buildDisplay,
-    desc = "Minimap button, broker text, and the floating status display." },
+    desc = "Minimap button and moon, broker text, and the floating status display." },
   { key = "baseline", title = "Baseline", build = buildBaseline,
     desc = "Your own look: what Duskfall starts from and puts back when you log out." },
   { key = "chars", title = "Characters", build = buildCharacters,

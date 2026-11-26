@@ -21,6 +21,7 @@ ns.DEFAULTS = {
   adaptGap = 2,       -- seconds after an Adapt overshoot before the next one may overshoot
   debug = false,
   minimap = { hide = false },   -- LibDBIcon keeps its position here too
+  moon = true,                  -- the minimap's day / night moon opens Duskfall (C-06)
   brokerText = "look",          -- broker bars: "look", "values", "both", "none"
   statusDisplay = "change",     -- floating display: "off", "change", "always"
   statusSeconds = 4,            -- "change": seconds it stays after the change is done

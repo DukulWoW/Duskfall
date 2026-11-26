@@ -26,5 +26,6 @@ UI\Places.lua
 UI\Styles.lua
 UI\Broker.lua
 UI\StatusDisplay.lua
+UI\Moon.lua
 UI\Pages.lua
 OptionsPanel.lua
