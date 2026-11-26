@@ -10,14 +10,16 @@
 -- A change caused only by the clock always fades over settings.timeFade seconds. why "edit"
 -- (Look editor, Preview) is always instant.
 -- A new target mid-transition starts again from the values on screen, so nothing jumps.
--- The driver frame runs only while a transition is active, writing about RATE times a second.
+-- The driver frame runs only while a transition is active, writing about RATE times a second,
+-- with fine decimals (C.Write fine) so no whole-number steps show; the last step lands exactly on
+-- the target (the 0.6 eps skip of a plain write would leave it a hair short).
 -- Public: T.Apply(target, held, why, timeOnly, style), T.Cancel(), T.Drop(key), T.IsRunning()
 local ADDON, ns = ...
 local T = {}
 ns.Transition = T
 local C = ns.Channels
 
-local RATE = 25
+local RATE = 60   -- was 25 (C9); fine steps want every frame. Lower it here if it ever stutters
 local PEAK = { toDark = 0.25, toLight = 0.15 }   -- share of the time spent reaching the overshoot
 
 local driver = CreateFrame("Frame")
@@ -47,13 +49,14 @@ local function step()
   local now = GetTime()
   local p = (now - r.t0) / r.dur
   if p >= 1 then p = 1 end
-  if p < 1 and now - r.last < 1 / RATE then return end
+  -- 0.9: a 60 fps frame is not always a full 1/60 s, and must not skip every other frame
+  if p < 1 and now - r.last < 0.9 / RATE then return end
   r.last = now
   for k in pairs(r.keys) do
     local s = 0
     local o = C.byKey[k].overshoot
     if o == true or (o == "light" and r.dir == "toLight") then s = r.strength end
-    C.Write(k, r.from[k] + (r.to[k] - r.from[k]) * shape(p, s, r.peak))
+    C.Write(k, r.from[k] + (r.to[k] - r.from[k]) * shape(p, s, r.peak), true)
   end
   if p >= 1 then
     run = nil

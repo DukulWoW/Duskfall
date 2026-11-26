@@ -5,16 +5,18 @@
 -- bloomUserMult = Graphics "Bloom Intensity" (slider 0-1, step 0.2; A14c). ffxGlow and bloomEnable
 -- also exist on Forever but do nothing visible (A14b), so they are left alone.
 -- Public: C.list, C.byKey, C.Read(key), C.ReadAll(), C.Clamp(key, v), C.Same(key, a, b),
---         C.SameAll(a, b), C.Write(key, v), C.WriteAll(values), C.IsOurs(cvar, value), C.Format(key, v)
+--         C.SameAll(a, b), C.Write(key, v, fine), C.WriteAll(values), C.IsOurs(cvar, value), C.Format(key, v)
+-- fine = a transition step: written with `fine` decimals and no eps skip. The game keeps fractions
+-- (Brightness 48.5, Gamma 1.1234 read back, Kim 2026-11-26), and whole steps showed in fades.
 local ADDON, ns = ...
 local C = {}
 ns.Channels = C
 
 C.list = {
-  { key = "gamma",      cvar = "Gamma",         label = "Gamma",      short = "G",  min = 0.3, max = 2.8, eps = 0.011, decimals = 2, fade = true, overshoot = true },
-  { key = "brightness", cvar = "Brightness",    label = "Brightness", short = "B",  min = 0,   max = 100, eps = 0.6,   decimals = 0, fade = true, overshoot = true },
-  { key = "contrast",   cvar = "Contrast",      label = "Contrast",   short = "C",  min = 0,   max = 100, eps = 0.6,   decimals = 0, fade = true },
-  { key = "bloom",      cvar = "bloomUserMult", label = "Bloom",      short = "Bl", min = 0,   max = 1,   eps = 0.011, decimals = 2, fade = true, overshoot = "light" },
+  { key = "gamma",      cvar = "Gamma",         label = "Gamma",      short = "G",  min = 0.3, max = 2.8, eps = 0.011, decimals = 2, fine = 3, fade = true, overshoot = true },
+  { key = "brightness", cvar = "Brightness",    label = "Brightness", short = "B",  min = 0,   max = 100, eps = 0.6,   decimals = 0, fine = 2, fade = true, overshoot = true },
+  { key = "contrast",   cvar = "Contrast",      label = "Contrast",   short = "C",  min = 0,   max = 100, eps = 0.6,   decimals = 0, fine = 2, fade = true },
+  { key = "bloom",      cvar = "bloomUserMult", label = "Bloom",      short = "Bl", min = 0,   max = 1,   eps = 0.011, decimals = 2, fine = 3, fade = true, overshoot = "light" },
 }
 C.byKey, C.byCVar = {}, {}
 for _, ch in ipairs(C.list) do
@@ -25,7 +27,7 @@ end
 local writing = false   -- true while our own SetCVar runs (CVAR_UPDATE fires for our writes too)
 local written = {}      -- key -> the value we last wrote
 local recent = {}       -- key -> the last RECENT values we wrote (a late CVAR_UPDATE during a fade)
-local RECENT = 8
+local RECENT = 16
 
 local function remember(key, v)
   written[key] = v
@@ -86,18 +88,29 @@ function C.ReadAll()
   return out
 end
 
-function C.Write(key, v)
+function C.Write(key, v, fine)
   v = C.Clamp(key, v)
   if v == nil then return false end
+  local ch = C.byKey[key]
+  local text
   local cur = C.Read(key)
-  if C.Same(key, cur, v) then
-    written[key] = cur
-    return true
+  if fine and ch.fine then
+    text = string.format("%." .. ch.fine .. "f", v)
+    if cur and math.abs(cur - tonumber(text)) < 0.5 * 10 ^ -ch.fine then
+      written[key] = cur
+      return true
+    end
+  else
+    if C.Same(key, cur, v) then
+      written[key] = cur
+      return true
+    end
+    text = C.Format(key, v)
   end
   writing = true
-  local ok = pcall(SetCVar, C.byKey[key].cvar, C.Format(key, v))
+  local ok = pcall(SetCVar, ch.cvar, text)
   writing = false
-  remember(key, tonumber(C.Format(key, v)))
+  remember(key, tonumber(text))
   if ns.db then ns.db.lastApplied[key] = written[key] end
   if not ok then ns.Debug("SetCVar %s failed", key) end
   return ok
