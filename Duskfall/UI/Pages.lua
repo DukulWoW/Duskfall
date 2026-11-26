@@ -28,6 +28,7 @@ end
 -- Settings: sub-page builders ----------------------------------------------------------------------
 local CONTENT_W = 700
 local FULL_W = 728        -- the whole width of a sub-page (752) less its 12 px margins
+local GAME_DEFAULT = { gamma = 1.0, brightness = 50, contrast = 50, bloom = 1.0 }
 
 -- Stacks widgets from the top of a frame; every widget with :Refresh() is refreshed on show.
 local function stacker(parent, y)
@@ -114,6 +115,85 @@ local function buildGeneral(p)
     tip = "Two Adapt dips or glares never come closer than this. Riding along a zone border dips once.",
     get = function() return ns.cfg.adaptGap end,
     onChange = function(v) ns.cfg.adaptGap = v end }), UI.SLIDER_H, 10)
+
+  -- Factory reset (Kim, 2026-11-26): a red box at the bottom, one button per kind of reset, each
+  -- asks first. None of them can be undone.
+  local danger = CreateFrame("Frame", nil, p)
+  danger:SetPoint("TOPLEFT", p, "TOPLEFT", 12, -386)
+  danger:SetSize(FULL_W, 98)
+  danger:SetFrameLevel(p:GetFrameLevel())
+  UI.RoundBox(danger, { radius = 10, bottom = { 0.12, 0.02, 0.01, 0.55 }, top = { 0.3, 0.06, 0.04, 0.45 },
+    border = { 0.95, 0.35, 0.22, 0.5 } })
+  local dTitle = UI.Label(danger, "Factory reset", "GameFontNormalLarge")
+  dTitle:SetPoint("TOPLEFT", danger, "TOPLEFT", 16, -14)
+  dTitle:SetTextColor(1, 0.55, 0.4)
+  local dDesc = UI.Label(danger, "Each one asks first. None of them can be undone.")
+  dDesc:SetPoint("LEFT", dTitle, "RIGHT", 12, -1)
+  dDesc:SetTextColor(0.75, 0.65, 0.6)
+
+  local function after()
+    D.ClearHolds()
+    D.state.target = nil
+    D.Evaluate("edit")
+    W.UpdateStatus()
+  end
+  local RESETS = {
+    { "Settings", "Every option on the Settings pages back to its default. Your places, Styles and baseline stay.",
+      "Put every Settings option back to its default?", function()
+        local mm = ns.cfg.minimap   -- the minimap button library keeps this very table
+        wipe(ns.cfg)
+        for k, v in pairs(ns.DEFAULTS) do ns.cfg[k] = UI.DeepCopy(v) end
+        if type(mm) == "table" then
+          wipe(mm)
+          for k, v in pairs(ns.cfg.minimap) do mm[k] = v end
+          ns.cfg.minimap = mm
+        end
+        D.SetEnabled(ns.cfg.enabled)
+        W.SetAdvanced(false)
+        if ns.Moon then ns.Moon.Apply() ns.Moon.UpdateRings() end
+        if ns.UpdateMinimapButton then ns.UpdateMinimapButton() end
+        if ns.UpdateBroker then ns.UpdateBroker() end
+        if ns.StatusDisplay then ns.StatusDisplay.ResetPosition() ns.StatusDisplay.Refresh() end
+        if ns.CursorLight then ns.CursorLight.Refresh() end
+        after()
+      end },
+    { "Place settings", "Remove every setting in the Style you use now: every place goes back to your baseline. " ..
+      "Other Styles, the places found and your options stay.",
+      "Remove every setting in this Style?", function()
+        wipe(ns.Resolver.ActiveStyle().looks)
+        after()
+      end },
+    { "Places found", "Forget the list of places you have been. Settings that use a place keep it.",
+      "Forget every place Duskfall has found?", function()
+        wipe(ns.db.places)
+        after()
+      end },
+    { "Screen defaults", "Gamma, Brightness, Contrast and Bloom to the game's defaults (1.00, 50, 50, 1.00), " ..
+      "and those become your baseline.",
+      "Set the screen to the game's defaults and make them your baseline?", function()
+        ns.Transition.Cancel()
+        C.WriteAll(GAME_DEFAULT)
+        D.SaveBaseline()
+        after()
+      end },
+    { "Everything", "Delete all of Duskfall's saved data and reload the interface, as a new install. " ..
+      "Your own screen values are put back first.",
+      "Delete ALL of Duskfall's data and reload the interface?", function()
+        ns.Transition.Cancel()
+        if ns.db and ns.db.baseline then C.WriteAll(ns.db.baseline) end
+        DuskfallDB = nil
+        ReloadUI()
+      end },
+  }
+  local BW = math.floor((FULL_W - 32 - (#RESETS - 1) * 8) / #RESETS)
+  for i, r in ipairs(RESETS) do
+    local b = UI.Button(danger, r[1], BW, function()
+      UI.Confirm(r[3] .. "\n\nThis can't be undone.", function() ns.Safe(r[4], "reset " .. r[1]) end)
+    end, 24)
+    b:SetKind("danger")
+    b:SetPoint("TOPLEFT", danger, "TOPLEFT", 16 + (i - 1) * (BW + 8), -54)
+    UI.Tooltip(b, "Reset: " .. r[1], r[2])
+  end
   return refresher(controls)
 end
 
@@ -150,7 +230,6 @@ end
 -- Baseline: the four values as cards in 2 x 2 (as Time of day), each with its value large and a
 -- slider on the game's own range, the mark at the game's default. Moving one changes the
 -- baseline at once, and the screen with it (settings are changes from it) (Kim, 2026-11-26).
-local GAME_DEFAULT = { gamma = 1.0, brightness = 50, contrast = 50, bloom = 1.0 }
 local BASE_STEP = { gamma = 0.01, brightness = 1, contrast = 1, bloom = 0.05 }
 
 local function buildBaseline(p)
