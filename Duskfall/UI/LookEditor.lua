@@ -555,7 +555,7 @@ function E.Create(parent, hooks)
       row.on = UI.Switch(row, {})
       row.on:SetPoint("LEFT", row, "LEFT", 2, 0)
       UI.Tooltip(row.on, "On / off", "A place switched off is kept in the list but not used.")
-      row.x = UI.Button(row, "X", 22, nil, 18)
+      row.x = UI.ClearX(row, 16)   -- the search box's round X (Kim)
       row.x:SetPoint("RIGHT", row, "RIGHT", -4, 0)
       UI.Tooltip(row.x, "Remove", "Take this place out of the Look.")
       row.name = UI.Label(row, "", "GameFontHighlightSmall")
@@ -635,6 +635,15 @@ function E.Create(parent, hooks)
     end)
   end)
   addType:SetPoint("LEFT", addHere, "RIGHT", 8, 0)
+
+  -- Rounded cards behind the sections (Kim): Values + actions, Where (left), When (right). On
+  -- ed, under the columns; the cards replace the rule under the name line.
+  rule:Hide()
+  -- (the columns start 78 px down: Values rows and actions end at col1 -224, Where at -374)
+  UI.Card(ed, 4, -74, COL_W + 16, 234)
+  UI.Card(ed, 4, -312, COL_W + 16, 146)
+  local whenCard = UI.Card(ed, COL2_X - 8, -74, 10, 384)
+  whenCard:SetPoint("RIGHT", ed, "RIGHT", -4, 0)
 
   -- When (right column) ----------------------------------------------------------------------
   local col2 = CreateFrame("Frame", nil, ed)

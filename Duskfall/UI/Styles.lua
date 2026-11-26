@@ -325,6 +325,13 @@ W.AddTab("styles", "Styles", function(tab)
     get = function() return sel and trOf(sel).adapt.toLight.strength or 0.3 end,
     onChange = function(v) if sel then trOf(sel).adapt.toLight.strength = v end end }, COL, -294)
 
+  -- Rounded cards (Kim): the Style itself, then its transition; they replace the rule
+  rule:Hide()
+  local c1 = UI.Card(page, LEFT_W + 8, -4, 10, 134)
+  c1:SetPoint("RIGHT", page, "RIGHT", -2, 0)
+  local c2 = UI.Card(page, LEFT_W + 8, -144, 10, 236)
+  c2:SetPoint("RIGHT", page, "RIGHT", -2, 0)
+
   local tryBtn
   local function tryIt()
     if not sel then return end

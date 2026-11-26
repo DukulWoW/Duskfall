@@ -741,6 +741,19 @@ function UI.RoundBox(f, o)
   return box
 end
 
+-- Card: a rounded, softly shaded box with a faint gold edge (the Settings pages' look), placed on
+-- host at host's own frame level, so everything in host's child frames draws over it.
+-- Returns the card frame.
+function UI.Card(host, x, y, w, h)
+  local c = CreateFrame("Frame", nil, host)
+  c:SetPoint("TOPLEFT", host, "TOPLEFT", x, y)
+  c:SetSize(w, h)
+  c:SetFrameLevel(host:GetFrameLevel())
+  UI.RoundBox(c, { radius = 10, bottom = { 0, 0, 0, 0.45 }, top = { 0.2, 0.15, 0.09, 0.4 },
+    border = { 1, 0.82, 0, 0.22 } })
+  return c
+end
+
 -- Segmented control ----------------------------------------------------------------------------
 --   [ Canals | Undercity | Everywhere ]
 -- A row of joined buttons, one of them picked (as macOS). Widths follow the texts.
