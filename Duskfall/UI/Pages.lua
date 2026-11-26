@@ -47,31 +47,74 @@ local function stacker(parent, y)
   return add, refresh
 end
 
+-- A card: a rounded, softly shaded box with a title and an optional line under it, as on Time of
+-- day and Baseline (Kim). Returns the card and add(widget, h, gap, x) that stacks widgets inside.
+local function card(p, x, y, w, h, title, desc, controls)
+  local c = CreateFrame("Frame", nil, p)
+  c:SetPoint("TOPLEFT", p, "TOPLEFT", x, y)
+  c:SetSize(w, h)
+  -- At the page's own level: the controls (children of the page) always draw over it
+  c:SetFrameLevel(p:GetFrameLevel())
+  UI.RoundBox(c, { radius = 10, bottom = { 0, 0, 0, 0.45 }, top = { 0.2, 0.15, 0.09, 0.4 },
+    border = { 1, 0.82, 0, 0.22 } })
+  local t = UI.Label(c, title, "GameFontNormalLarge")
+  t:SetPoint("TOPLEFT", c, "TOPLEFT", 16, -14)
+  local cy = -42
+  if desc then
+    local d = UI.Label(c, desc)
+    d:SetPoint("TOPLEFT", t, "BOTTOMLEFT", 0, -6)
+    d:SetWidth(w - 32)
+    d:SetTextColor(0.68, 0.68, 0.68)
+    cy = -42 - math.max(14, d:GetStringHeight()) - 4
+  end
+  local function add(widget, wh, gap, wx)
+    widget:SetPoint("TOPLEFT", c, "TOPLEFT", 16 + (wx or 0), cy)
+    cy = cy - (wh or 26) - (gap or 8)
+    controls[#controls + 1] = widget
+    return widget
+  end
+  return c, add
+end
+
+local function refresher(controls)
+  return function()
+    for _, c in ipairs(controls) do
+      if c.Refresh then c:Refresh() end
+    end
+  end
+end
+
 local function buildGeneral(p)
-  local add, refresh = stacker(p, -48)
-  local SL_W = 460
-  add(UI.Check(p, { label = "Duskfall on", tip = "Off puts your baseline back and leaves the sliders to you.",
+  local controls = {}
+  local _, top = card(p, 12, -50, FULL_W, 96, "Duskfall", nil, controls)
+  local on = top(UI.Check(p, { label = "Duskfall on", tip = "Off puts your baseline back and leaves the sliders to you.",
     get = function() return ns.cfg.enabled end,
-    set = function(v) D.SetEnabled(v) W.UpdateStatus() end }), 26, 12)
-  add(UI.Slider(p, SL_W, { label = "Doorway delay", min = 0, max = 2, step = 0.1, default = 0.5,
+    set = function(v) D.SetEnabled(v) W.UpdateStatus() end }), 26, 4)
+  local dbg = UI.Check(p, { label = "Debug output", tip = "Prints what Duskfall does in chat.",
+    get = function() return ns.cfg.debug end,
+    set = function(v) ns.cfg.debug = v end })
+  dbg:SetPoint("LEFT", on, "LEFT", 300, 0)
+  controls[#controls + 1] = dbg
+
+  local SL_W = FULL_W - 32
+  local _, timing = card(p, 12, -158, FULL_W, 216, "Timing",
+    "How quickly Duskfall reacts. The feel of the changes themselves is on the Styles tab.", controls)
+  timing(UI.Slider(p, SL_W, { label = "Doorway delay", min = 0, max = 2, step = 0.1, default = 0.5,
     fmt = function(v) return string.format("%.1f s", v) end,
     tip = "How long a new state (indoors, mounted...) must hold before Duskfall reacts. Stops flicker in doorways.",
     get = function() return ns.cfg.debounce end,
-    onChange = function(v) ns.cfg.debounce = v end }), UI.SLIDER_H, 12)
-  add(UI.Slider(p, SL_W, { label = "Time of day fade", min = 0, max = 120, step = 5, default = 45,
+    onChange = function(v) ns.cfg.debounce = v end }), UI.SLIDER_H, 10)
+  timing(UI.Slider(p, SL_W, { label = "Time of day fade", min = 0, max = 120, step = 5, default = 45,
     fmt = function(v) return v .. " s" end,
     tip = "How long a change caused only by the clock takes, in every mode, so dusk never snaps.",
     get = function() return ns.cfg.timeFade end,
-    onChange = function(v) ns.cfg.timeFade = v end }), UI.SLIDER_H, 12)
-  add(UI.Slider(p, SL_W, { label = "Adapt overshoot gap", min = 0, max = 10, step = 0.5, default = 2,
+    onChange = function(v) ns.cfg.timeFade = v end }), UI.SLIDER_H, 10)
+  timing(UI.Slider(p, SL_W, { label = "Adapt overshoot gap", min = 0, max = 10, step = 0.5, default = 2,
     fmt = function(v) return string.format("%.1f s", v) end,
     tip = "Two Adapt dips or glares never come closer than this. Riding along a zone border dips once.",
     get = function() return ns.cfg.adaptGap end,
-    onChange = function(v) ns.cfg.adaptGap = v end }), UI.SLIDER_H, 16)
-  add(UI.Check(p, { label = "Debug output", tip = "Prints what Duskfall does in chat.",
-    get = function() return ns.cfg.debug end,
-    set = function(v) ns.cfg.debug = v end }), 26, 8)
-  return refresh
+    onChange = function(v) ns.cfg.adaptGap = v end }), UI.SLIDER_H, 10)
+  return refresher(controls)
 end
 
 local function buildTime(p)
@@ -268,9 +311,12 @@ local function buildCharacters(p)
 end
 
 local function buildDisplay(p)
-  local add, refresh = stacker(p, -48)
-  local DD_W = 300
-  add(UI.Check(p, { label = "Minimap moon opens Duskfall",
+  local controls = {}
+  local HALF = math.floor((FULL_W - 12) / 2)
+  local DD_W = HALF - 32
+
+  local _, mm = card(p, 12, -50, HALF, 206, "Minimap and broker", nil, controls)
+  mm(UI.Check(p, { label = "Minimap moon opens Duskfall",
     tip = "The day / night moon on the minimap gets the same clicks and tooltip as the minimap button. With this on you may not need the button at all.",
     get = function() return ns.cfg.moon ~= false end,
     set = function(v)
@@ -278,64 +324,55 @@ local function buildDisplay(p)
       ns.Moon.Apply()
       if v and not ns.Moon.Found() then ns.Print("can't find the minimap moon on this client.") end
     end }), 26, 10)
-  add(UI.Dropdown(p, DD_W, { label = "Minimap button",
+  mm(UI.Dropdown(p, DD_W, { label = "Minimap button",
     tip = "Left-click opens Duskfall, right-click switches it on or off, shift-right-click opens Settings. The same clicks work on the moon, in the addon compartment and on broker bars. Automatic shows the button only when the moon can't be used (switched off above, or hidden by another addon).",
     items = { { "auto", "Automatic (when the moon can't be used)" }, { "always", "Always" }, { "never", "Never" } },
     get = function() return ns.cfg.minimapButton or "auto" end,
-    set = function(v) ns.cfg.minimapButton = v ns.UpdateMinimapButton() end }), UI.DROPDOWN_H, 12)
-  add(UI.Dropdown(p, DD_W, { label = "Broker text",
+    set = function(v) ns.cfg.minimapButton = v ns.UpdateMinimapButton() end }), UI.DROPDOWN_H, 10)
+  mm(UI.Dropdown(p, DD_W, { label = "Broker text",
     tip = "What broker bars (Titan Panel, ChocolateBar, ElvUI datatexts...) show next to the icon.",
-    items = { { "look", "The Look in effect" }, { "values", "The values on screen" }, { "both", "Look and values" }, { "none", "Nothing (icon only)" } },
+    items = { { "look", "The setting in effect" }, { "values", "The values on screen" }, { "both", "Setting and values" }, { "none", "Nothing (icon only)" } },
     get = function() return ns.cfg.brokerText end,
-    set = function(v) ns.cfg.brokerText = v ns.UpdateBroker() end }), UI.DROPDOWN_H, 18)
-  add(UI.Header(p, "Status display"), 14, 6)
-  local help = UI.Label(p, "A small floating display of the Look in effect and the values on screen.")
-  help:SetWidth(CONTENT_W - 24)
-  add(help, 14, 10)
-  add(UI.Dropdown(p, DD_W, { label = "Show it",
-    items = { { "off", "Never" }, { "change", "When the Look changes" }, { "always", "Always" } },
+    set = function(v) ns.cfg.brokerText = v ns.UpdateBroker() end }), UI.DROPDOWN_H, 8)
+
+  -- The game's own colorblind filter (Options > Accessibility), here for quick switching (Kim).
+  -- colorblindSimulator 0-3 and colorblindWeaknessFactor 0-1 exist on Forever (Kim, 2026-11-26:
+  -- "0 0.5"). Read from the game each time, never stored by Duskfall.
+  local function cvarNum(name, d) return tonumber(GetCVar(name)) or d end
+  local _, cb = card(p, 12 + HALF + 12, -50, HALF, 206, "Colorblind filter",
+    "The game's own filter (Options > Accessibility). Duskfall only changes it when you do.", controls)
+  cb(UI.Dropdown(p, DD_W, { label = "Filter",
+    items = { { 0, "Off" }, { 1, "Protanopia (red weak)" }, { 2, "Deuteranopia (green weak)" }, { 3, "Tritanopia (blue weak)" } },
+    get = function() return cvarNum("colorblindSimulator", 0) end,
+    set = function(v) SetCVar("colorblindSimulator", v) end }), UI.DROPDOWN_H, 10)
+  cb(UI.Slider(p, DD_W, { label = "Strength", min = 0, max = 1, step = 0.05, default = 0.5,
+    fmt = function(v) return string.format("%d%%", math.floor(v * 100 + 0.5)) end,
+    tip = "How strongly the filter adjusts the colours.",
+    get = function() return cvarNum("colorblindWeaknessFactor", 0.5) end,
+    onChange = function(v) SetCVar("colorblindWeaknessFactor", v) end }), UI.SLIDER_H, 8)
+
+  local _, sd = card(p, 12, -268, FULL_W, 150, "Status display",
+    "A small floating display of the setting in effect and the values on screen.", controls)
+  local show = sd(UI.Dropdown(p, DD_W, { label = "Show it",
+    items = { { "off", "Never" }, { "change", "When the setting changes" }, { "always", "Always" } },
     get = function() return ns.cfg.statusDisplay end,
     set = function(v)
       ns.cfg.statusDisplay = v
       ns.StatusDisplay.Refresh(v == "change")
-    end }), UI.DROPDOWN_H, 8)
-  add(UI.Slider(p, 460, { label = "Stays for", min = 1, max = 15, step = 1, default = 4,
+    end }), UI.DROPDOWN_H, 10)
+  local stays = UI.Slider(p, DD_W, { label = "Stays for", min = 1, max = 15, step = 1, default = 4,
     fmt = function(v) return v .. " s" end,
-    tip = "When the Look changes: how long the display stays once the change is done.",
+    tip = "When the setting changes: how long the display stays once the change is done.",
     get = function() return ns.cfg.statusSeconds end,
-    onChange = function(v) ns.cfg.statusSeconds = v end }), UI.SLIDER_H, 12)
+    onChange = function(v) ns.cfg.statusSeconds = v end })
+  stays:SetPoint("TOPLEFT", show, "TOPLEFT", HALF + 12, 0)
+  controls[#controls + 1] = stays
   local move = UI.Button(p, "Move it", 120, function() ns.StatusDisplay.Unlock(20) end)
   UI.Tooltip(move, "Move it", "Shows the display for 20 seconds so you can drag it where you want it.")
-  add(move, 22, 8)
+  sd(move, 22, 8)
   local reset = UI.Button(p, "Reset position", 120, function() ns.StatusDisplay.ResetPosition() end)
   reset:SetPoint("LEFT", move, "RIGHT", 8, 0)
-
-  -- Right column: the game's own colorblind filter (Options > Accessibility), here for quick
-  -- switching (Kim). colorblindSimulator 0-3 and colorblindWeaknessFactor 0-1 exist on Forever
-  -- (Kim, 2026-11-26: "0 0.5"). Read from the game each time, never stored by Duskfall.
-  local function cvarNum(name, d) return tonumber(GetCVar(name)) or d end
-  local cbHead = UI.Header(p, "Colorblind filter")
-  cbHead:SetPoint("TOPLEFT", p, "TOPLEFT", 400, -48)
-  local cbHelp = UI.Label(p, "The game's own filter (Options > Accessibility), here for quick switching. It is a game setting: Duskfall only changes it when you do.")
-  cbHelp:SetPoint("TOPLEFT", cbHead, "BOTTOMLEFT", 0, -6)
-  cbHelp:SetWidth(320)
-  cbHelp:SetTextColor(0.7, 0.7, 0.7)
-  local cbFilter = UI.Dropdown(p, DD_W, { label = "Filter",
-    items = { { 0, "Off" }, { 1, "Protanopia (red weak)" }, { 2, "Deuteranopia (green weak)" }, { 3, "Tritanopia (blue weak)" } },
-    get = function() return cvarNum("colorblindSimulator", 0) end,
-    set = function(v) SetCVar("colorblindSimulator", v) end })
-  cbFilter:SetPoint("TOPLEFT", cbHelp, "BOTTOMLEFT", 0, -12)
-  local cbStrength = UI.Slider(p, 320, { label = "Strength", min = 0, max = 1, step = 0.05, default = 0.5,
-    fmt = function(v) return string.format("%d%%", math.floor(v * 100 + 0.5)) end,
-    tip = "How strongly the filter adjusts the colours.",
-    get = function() return cvarNum("colorblindWeaknessFactor", 0.5) end,
-    onChange = function(v) SetCVar("colorblindWeaknessFactor", v) end })
-  cbStrength:SetPoint("TOPLEFT", cbFilter, "BOTTOMLEFT", 0, -10)
-  return function()
-    refresh()
-    cbFilter:Refresh()
-    cbStrength:Refresh()
-  end
+  return refresher(controls)
 end
 
 local SUBPAGES = {

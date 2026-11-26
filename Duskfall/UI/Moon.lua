@@ -122,8 +122,9 @@ local function hook()
   -- A tiny Duskfall icon on the moon's lower right: the moon opens Duskfall (Kim). On the catcher,
   -- so it shows and hides with the takeover.
   local badge = catcher:CreateTexture(nil, "OVERLAY")
-  badge:SetSize(13, 13)
-  badge:SetPoint("CENTER", catcher, "BOTTOMRIGHT", -3, 3)
+  badge:SetSize(15, 15)
+  -- On the visible disc (the frame is larger than the moon's art): its lower right edge (Kim)
+  badge:SetPoint("CENTER", moon.Background or catcher, "BOTTOMRIGHT", -6, 6)
   badge:SetTexture(UI.ART .. "icon")
   catcher:SetScript("OnClick", function(_, button)
     ns.Debug("moon click %s", tostring(button))

@@ -5,6 +5,9 @@
 -- the separate timings are Advanced mode (UI/Styles.lua).
 -- Speed: factor = 2 ^ (speed * 1.3), speed -1 .. 1 (0.4x .. 2.5x). Fade 1.5 s, Adapt 4.0 s darker and
 -- 1.0 s brighter at 1x (the defaults); all three are set together, so switching mode keeps the pace.
+-- The Style dropdown (Kim): every Style, and New / Duplicate / Rename / Delete, without Advanced mode.
+-- Picking a Style uses it: for every character while all Styles are Global or unused, else for
+-- this character only (ns.StyleClaim takes it out of the others, as the Advanced scope does).
 -- Public: ns.SimpleStyles.Create(parent) -> frame
 local ADDON, ns = ...
 local UI, R = ns.UI, ns.Resolver
@@ -40,6 +43,78 @@ local CURVES = {
 local function log2(x) return math.log(x) / math.log(2) end
 local function round1(x) return math.floor(x * 10 + 0.5) / 10 end
 
+-- Does any Style name characters (a per-character setup)?
+local function perCharacter()
+  for _, st in ipairs(ns.db.styles) do
+    if type(st.scope) == "table" and not st.scope.global and type(st.scope.chars) == "table" and next(st.scope.chars) then
+      return true
+    end
+  end
+  return false
+end
+
+local function changed()
+  ns.Detect.ClearHolds()
+  ns.Detect.state.target = nil
+  ns.Detect.Evaluate("style")
+end
+
+local function use(st)
+  local me = ns.charKey
+  if perCharacter() and me then
+    if UI.ScopeIsGlobal(st.scope, true) then
+      -- A Global Style: this character leaves the Style naming it, so the Global one applies
+      for _, o in ipairs(ns.db.styles) do
+        if o ~= st and type(o.scope) == "table" and type(o.scope.chars) == "table" then o.scope.chars[me] = nil end
+      end
+    else
+      local chars = (type(st.scope) == "table" and type(st.scope.chars) == "table") and st.scope.chars or {}
+      chars[me] = true
+      st.scope = { chars = chars }
+      ns.StyleClaim(st)
+    end
+  else
+    st.scope = { global = true }
+    ns.StyleClaim(st)
+  end
+  changed()
+end
+
+StaticPopupDialogs["DUSKFALL_RENAME_STYLE"] = {
+  text = "New name for the Style:",
+  button1 = OKAY,
+  button2 = CANCEL,
+  hasEditBox = true,
+  OnShow = function(self, data)
+    local eb = self.editBox or self.EditBox
+    if eb and data then
+      eb:SetText(data.st.name or "")
+      eb:HighlightText()
+      eb:SetFocus()
+    end
+  end,
+  OnAccept = function(self, data)
+    local eb = self.editBox or self.EditBox
+    local t = eb and (eb:GetText() or ""):gsub("^%s+", ""):gsub("%s+$", "")
+    if data and t and t ~= "" then
+      data.st.name = t
+      if data.done then data.done() end
+    end
+  end,
+  EditBoxOnEnterPressed = function(self)
+    local parent = self:GetParent()
+    local accept = StaticPopupDialogs["DUSKFALL_RENAME_STYLE"].OnAccept
+    accept(parent, parent.data)
+    parent:Hide()
+  end,
+  EditBoxOnEscapePressed = function(self) self:GetParent():Hide() end,
+  timeout = 0,
+  whileDead = true,
+  hideOnEscape = true,
+  noCancelOnEscape = true,
+  preferredIndex = 3,
+}
+
 function SS.Create(parent)
   local f = CreateFrame("Frame", nil, parent)
   f:SetAllPoints()
@@ -57,6 +132,62 @@ function SS.Create(parent)
   local sub = UI.Label(f, "When the screen changes, for example when you walk from the sun into a cave.", "GameFontHighlight")
   sub:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -8)
   sub:SetTextColor(0.7, 0.7, 0.7)
+
+  -- The Style dropdown, top right
+  local ddLabel = UI.Label(f, "Style", "GameFontNormal")
+  local dd = CreateFrame("DropdownButton", nil, f, "WowStyle1DropdownTemplate")
+  dd:SetWidth(220)
+  dd:SetPoint("TOPRIGHT", f, "TOPRIGHT", -14, -18)
+  ddLabel:SetPoint("RIGHT", dd, "LEFT", -8, 0)
+  UI.Tooltip(dd, "Style", "A Style is your places and how changes feel, under one name. Picking one uses it " ..
+    "(for every character, or only this one once characters have their own). New, Duplicate, Rename and " ..
+    "Delete are in the list too.")
+  local function ddText() pcall(dd.OverrideText, dd, style().name or "?") end
+  dd:SetupMenu(function(_, root)
+    for _, st in ipairs(ns.db.styles) do
+      root:CreateRadio(st.name or "?", function() return R.ActiveStyle() == st end, function()
+        use(st)
+        refresh()
+      end)
+    end
+    root:CreateDivider()
+    root:CreateButton("New Style", function()
+      local st = ns.NewStyle("Style " .. (#ns.db.styles + 1))
+      st.scope = { chars = {} }
+      table.insert(ns.db.styles, st)
+      use(st)
+      refresh()
+    end)
+    root:CreateButton("Duplicate this Style", function()
+      local c = ns.StyleCopy(style())
+      table.insert(ns.db.styles, c)
+      use(c)
+      refresh()
+    end)
+    root:CreateButton("Rename...", function()
+      StaticPopup_Show("DUSKFALL_RENAME_STYLE", nil, nil, { st = style(), done = function() refresh() end })
+    end)
+    local del = root:CreateButton("Delete this Style", function()
+      local st = style()
+      if #ns.db.styles <= 1 then return end
+      local n = #(st.looks or {})
+      UI.Confirm(string.format("Delete Style \"%s\" and its %d setting%s?", st.name or "?", n, n == 1 and "" or "s"), function()
+        local wasGlobal = UI.ScopeIsGlobal(st.scope, true)
+        for i, o in ipairs(ns.db.styles) do
+          if o == st then table.remove(ns.db.styles, i) break end
+        end
+        -- A Global Style gone: the first one left takes over, so nobody is without one
+        if wasGlobal then
+          local any = false
+          for _, o in ipairs(ns.db.styles) do if UI.ScopeIsGlobal(o.scope, true) then any = true end end
+          if not any then ns.db.styles[1].scope = { global = true } end
+        end
+        changed()
+        refresh()
+      end)
+    end)
+    if #ns.db.styles <= 1 and del and del.SetEnabled then pcall(del.SetEnabled, del, false) end
+  end)
 
   -- Cards ----------------------------------------------------------------------------------------
   local cards = {}
@@ -180,10 +311,9 @@ function SS.Create(parent)
     if mode == "instant" then speedNote:SetText("Instant has no speed.")
     elseif mode == "fade" then speedNote:SetText("How long a fade takes.")
     else speedNote:SetText("Into the dark / out into the light.") end
-    local n = #ns.db.styles
-    local t = "Style: |cffc0c0c0" .. (style().name or "?") .. "|r"
-    if n > 1 then t = t .. "   " .. GREY .. "(" .. n .. " Styles: Advanced mode picks who uses which)|r" end
-    foot:SetText(t)
+    ddText()
+    if perCharacter() then foot:SetText(GREY .. "Characters have their own Styles: picking one sets it for this character.|r")
+    else foot:SetText(GREY .. "Picking a Style uses it for every character.|r") end
   end
 
   f:SetScript("OnShow", function() refresh() end)

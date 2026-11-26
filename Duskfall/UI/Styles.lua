@@ -61,6 +61,8 @@ local function claim(st)
   return notes
 end
 
+ns.StyleClaim = claim
+
 -- Try it: darker, a short hold, and back, with st's own transition, wherever you are. Shared
 -- with simple mode (UI/SimpleStyles.lua). Returns the seconds it takes, nil when it can't run.
 function ns.TryStyle(st)
@@ -96,6 +98,8 @@ local function copyStyle(st)
   for _, l in ipairs(c.looks or {}) do l.id = ns.NewID("l") end
   return c
 end
+
+ns.StyleCopy = copyStyle
 
 -- The tab holds two pages: simple mode (UI/SimpleStyles.lua, the default) and this one, Advanced mode.
 W.AddTab("styles", "Styles", function(tab)
