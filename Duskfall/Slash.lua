@@ -375,6 +375,8 @@ local function handler(msg)
   elseif cmd == "transition" then showTransition()
   elseif cmd == "config" or cmd == "settings" or cmd == "options" then
     if ns.OpenWindow then ns.OpenWindow("settings") end
+  elseif cmd == "moon" then
+    if ns.Moon then ns.Moon.Report() end
   elseif cmd == "debug" then
     ns.cfg.debug = not ns.cfg.debug
     ns.Print("debug %s.", ns.cfg.debug and "on" or "off")

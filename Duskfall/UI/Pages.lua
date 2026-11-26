@@ -355,7 +355,7 @@ W.AddTab("about", "About", function(page)
   for i, l in ipairs(shown) do
     local b = UI.IconButton(col, SZ, l.key, {
       tip = l.name, tipSub = l.sub or ("Copy the " .. l.name .. " link"),
-      onClick = function() UI.Copy(l.name, l.url) end,
+      onClick = function(self) UI.Copy(l.name, l.url, self) end,
     })
     b:SetPoint("TOPLEFT", desc, "BOTTOM", -math.floor(rowW / 2) + (i - 1) * (SZ + GAP), -18)
   end

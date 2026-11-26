@@ -7,7 +7,7 @@
 -- Public: UI.ART, UI.Wood(f), UI.Glow(host, region), UI.Header(parent, text), UI.Label(...),
 --         UI.Button(parent, text, w, onClick), UI.Check(parent, o), UI.Slider(parent, width, o),
 --         UI.Dropdown(parent, width, o), UI.Confirm(text, onAccept), UI.SLIDER_H,
---         UI.IconButton(parent, size, symbol, o), UI.Copy(title, text),
+--         UI.IconButton(parent, size, symbol, o), UI.Copy(title, text, anchor),
 --         UI.ScopeDropdown(parent, width, o), UI.ScopeText(scope, style), UI.ScopeIsGlobal(scope, style),
 --         UI.DeepCopy(t), UI.CharColored(guid), UI.scopeClip, UI.Gradient(tex, orient, a, b),
 --         UI.Border(f, r, g, b, a), UI.RoundBox(f, o), UI.AutoHideScroll(box, bar), UI.Segmented(parent, width, o), UI.LightSlider(parent, width, o)
@@ -439,7 +439,7 @@ local function lerp(a, b, t)
 end
 
 function UI.RoundBox(f, o)
-  local R = o.radius or 6
+  local R = o.radius or 6     -- 6, 7, 8, 10 or 12 with a border (Assets/round-ring-<R>)
   local layer, sub = o.layer or "BACKGROUND", o.sub or 1
   local box = { round = { tl = true, tr = true, bl = true, br = true } }
   local all = {}
@@ -473,7 +473,7 @@ function UI.RoundBox(f, o)
       local t = tex(sub + 1)
       t:SetSize(R, R)
       t:SetPoint(point, f, point, 0, 0)
-      t:SetTexture(UI.ART .. "round-ring")
+      t:SetTexture(UI.ART .. "round-ring-" .. R)
       t:SetTexCoord(unpack(CORNERS[k]))
       t:SetVertexColor(col[1], col[2], col[3], col[4] or 1)
     end
@@ -554,9 +554,12 @@ function UI.Segmented(parent, width, o)
     b.sep:SetPoint("TOPLEFT", b, "TOPLEFT", 0, -3)
     b.sep:SetPoint("BOTTOMLEFT", b, "BOTTOMLEFT", 0, 3)
     b.sep:SetWidth(1)
-    b.text = b:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    local top = CreateFrame("Frame", nil, b)
+    top:SetAllPoints(b)
+    top:SetFrameLevel(inner:GetFrameLevel() + 2)
+    b.text = top:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     b.text:SetWordWrap(false)
-    b.icon = b:CreateTexture(nil, "OVERLAY")
+    b.icon = top:CreateTexture(nil, "OVERLAY")
     b.icon:SetSize(14, 14)
     b.icon:SetPoint("RIGHT", b.text, "LEFT", -3, 0)
     b:SetScript("OnClick", function(self)
@@ -607,7 +610,13 @@ function UI.Segmented(parent, width, o)
       local first, last = i == 1, i == #items
       b.pick:SetCorners(first, last, first, last)
       b.pick:SetShown(on)
-      if on then b.text:SetTextColor(1, 1, 1) else b.text:SetTextColor(1, 0.82, 0) end
+      if on then
+        b.text:SetTextColor(0.16, 0.09, 0)
+        b.text:SetShadowColor(1, 0.9, 0.6, 0.35)
+      else
+        b.text:SetTextColor(1, 0.82, 0)
+        b.text:SetShadowColor(0, 0, 0, 1)
+      end
       b:SetEnabled(enabled)
       b:Show()
     end
@@ -627,7 +636,8 @@ end
 -- the middle is 0 ("no change"), a gold line under the track runs from the mark to the thumb.
 -- Right-click puts it back to 0. The range should be symmetric around 0.
 -- o = { label, min, max, step, from = { r, g, b }, to = { r, g, b }, get = fn() -> v,
---       set = fn(v), fmt = fn(v) -> text, tip }. Returns a holder: :Refresh(), :SetEnabled(on).
+--       set = fn(v), fmt = fn(v) -> text, tip, lineH = height of the middle mark (the row
+--       spacing joins stacked sliders' marks into one line) }. :Refresh(), :SetEnabled(on).
 -- The diamond thumb of Blizzard's settings slider, read once from a throwaway template slider.
 local diamondLook
 local function diamond()
@@ -647,7 +657,7 @@ local function diamond()
 end
 
 function UI.LightSlider(parent, width, o)
-  local LABEL_W, VALUE_W, H = 90, 76, 30
+  local LABEL_W, VALUE_W, H = 90, 112, 30
   local INSET   -- half the thumb width, set once the thumb is known
   local h = CreateFrame("Frame", nil, parent)
   h:SetSize(width, H)
@@ -679,16 +689,17 @@ function UI.LightSlider(parent, width, o)
   local thumb = sl:CreateTexture(nil, "OVERLAY", nil, 2)
   local look = diamond()
   if look.atlas then
-    thumb:SetAtlas(look.atlas)
+    thumb:SetAtlas(look.atlas, true)
   elseif look.file then
     thumb:SetTexture(look.file)
   else
     thumb:SetTexture("Interface\\Buttons\\UI-SliderBar-Button-Horizontal")
   end
-  thumb:SetSize(look.w or 32, look.h or 32)
+  if not look.atlas then thumb:SetSize(look.w or 32, look.h or 32) end
   sl:SetThumbTexture(thumb)
   -- The thumb's centre travels from half its width to the other end minus that: the track too
-  INSET = math.floor((look.w or 32) / 2 + 0.5)
+  INSET = math.floor((thumb:GetWidth() or 32) / 2 + 0.5)
+  if INSET < 4 then INSET = 10 end
 
   local well = sl:CreateTexture(nil, "BACKGROUND")
   well:SetPoint("LEFT", sl, "LEFT", INSET - 2, 0)
@@ -706,8 +717,8 @@ function UI.LightSlider(parent, width, o)
   shine:SetHeight(4)
   UI.Gradient(shine, "VERTICAL", { 1, 1, 1, 0 }, { 1, 1, 1, 0.3 })
   local mark = sl:CreateTexture(nil, "OVERLAY", nil, 0)
-  mark:SetColorTexture(1, 1, 1, 0.9)
-  mark:SetSize(2, 16)
+  mark:SetColorTexture(1, 0.86, 0.55, 0.4)
+  mark:SetSize(2, o.lineH or 16)
   local fill = sl:CreateTexture(nil, "ARTWORK", nil, 3)
   fill:SetColorTexture(1, 0.82, 0, 0.95)
   fill:SetHeight(2)
@@ -719,7 +730,7 @@ function UI.LightSlider(parent, width, o)
     return INSET + (v - o.min) / (o.max - o.min) * w
   end
   local function show()
-    if math.abs(cur) < o.step / 2 then val:SetText("|cff9d9d9dNo change|r")
+    if math.abs(cur) < o.step / 2 then val:SetText(o.zero and o.zero() or "|cff9d9d9dNo change|r")
     else val:SetText(o.fmt and o.fmt(cur) or tostring(cur)) end
     local x0, x1 = xOf(0), xOf(cur)
     mark:ClearAllPoints()
@@ -771,31 +782,132 @@ function UI.AutoHideScroll(box, bar)
 end
 
 -- Copy box -------------------------------------------------------------------------------------
--- Addons cannot write the clipboard (C_System.SetClipboard is nil on Forever, BNB): show the text
--- selected in a popup so Ctrl+C copies it.
-StaticPopupDialogs["DUSKFALL_COPY"] = {
-  text = "%s\n\nPress Ctrl+C to copy.",
-  button1 = CLOSE or "Close",
-  hasEditBox = true,
-  editBoxWidth = 320,
-  OnShow = function(self, data)
-    local eb = self.editBox or self.EditBox
-    if eb then
-      eb:SetText(data or self.data or "")
-      eb:HighlightText()
-      eb:SetFocus()
-    end
-  end,
-  EditBoxOnEscapePressed = function(self) self:GetParent():Hide() end,
-  EditBoxOnEnterPressed = function(self) self:GetParent():Hide() end,
-  timeout = 0,
-  whileDead = true,
-  hideOnEscape = true,
-  preferredIndex = 3,
-}
+-- Addons cannot write the clipboard (C_System.SetClipboard is nil on Forever): BigNoteBox's way.
+-- The text sits selected in a hidden edit box with the keyboard focus, and a small box near the
+-- button (or the pointer) says "Press Ctrl+C to copy". Ctrl+C copies and closes it, Esc or a click
+-- closes it. The box is TOOLTIP strata and must never take the keyboard itself, or Ctrl+C would
+-- go to it instead of the edit box (BNB). It closes with the frame it is anchored to.
+-- UI.Copy(title, text, anchor): title is shown as the preview's label.
+local copyHelper, copyHint
 
-function UI.Copy(title, text)
-  StaticPopup_Show("DUSKFALL_COPY", title, nil, text)
+local function propagate(f, on)
+  if InCombatLockdown() then return end
+  pcall(f.SetPropagateKeyboardInput, f, on)
+end
+
+local function buildCopy()
+  copyHelper = CreateFrame("EditBox", nil, UIParent)
+  copyHelper:SetSize(1, 1)
+  copyHelper:SetAlpha(0)
+  copyHelper:SetPoint("CENTER")
+  copyHelper:SetAutoFocus(false)
+  copyHelper:SetMultiLine(true)
+  copyHelper:SetMaxLetters(0)
+  copyHelper:Hide()
+
+  local f = CreateFrame("Frame", nil, UIParent)
+  f:SetFrameStrata("TOOLTIP")
+  f:SetFrameLevel(200)
+  f:SetSize(260, 64)
+  f:Hide()
+  UI.RoundBox(f, { radius = 10, bottom = { 0.04, 0.03, 0.02, 0.97 }, top = { 0.14, 0.11, 0.07, 0.97 },
+    border = { 1, 0.82, 0, 0.45 } })
+  local icon = f:CreateTexture(nil, "ARTWORK")
+  icon:SetSize(24, 24)
+  icon:SetPoint("LEFT", f, "LEFT", 12, 8)
+  if not pcall(icon.SetAtlas, icon, "groupfinder-icon-keyboard", true) then icon:Hide() end
+  local lbl = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+  lbl:SetPoint("TOPLEFT", f, "TOPLEFT", 46, -10)
+  lbl:SetPoint("RIGHT", f, "RIGHT", -10, 0)
+  lbl:SetJustifyH("LEFT")
+  lbl:SetText("Press |cff66bb6aCtrl+C|r to copy")
+  local sub = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  sub:SetPoint("TOPLEFT", lbl, "BOTTOMLEFT", 0, -3)
+  sub:SetTextColor(0.55, 0.55, 0.55)
+  sub:SetText("Press Esc to cancel")
+  local prev = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  prev:SetPoint("TOPLEFT", sub, "BOTTOMLEFT", 0, -4)
+  prev:SetPoint("RIGHT", f, "RIGHT", -10, 0)
+  prev:SetJustifyH("LEFT")
+  prev:SetWordWrap(false)
+  prev:SetTextColor(0.78, 0.78, 0.78)
+  f.preview = prev
+
+  -- Breathes gently so it is seen
+  local ag = f:CreateAnimationGroup()
+  ag:SetLooping("REPEAT")
+  local a1 = ag:CreateAnimation("Alpha")
+  a1:SetFromAlpha(1)
+  a1:SetToAlpha(0.8)
+  a1:SetDuration(0.7)
+  a1:SetSmoothing("IN_OUT")
+  a1:SetOrder(1)
+  local a2 = ag:CreateAnimation("Alpha")
+  a2:SetFromAlpha(0.8)
+  a2:SetToAlpha(1)
+  a2:SetDuration(0.7)
+  a2:SetSmoothing("IN_OUT")
+  a2:SetOrder(2)
+  f.pulse = ag
+
+  function f.Dismiss()
+    f.pulse:Stop()
+    f:Hide()
+    copyHelper:ClearFocus()
+    copyHelper:Hide()
+  end
+  f:SetScript("OnUpdate", function(self)
+    if self.anchor and not self.anchor:IsVisible() then self.Dismiss() end
+  end)
+  f:EnableMouse(true)
+  f:SetScript("OnMouseDown", function(self) self.Dismiss() end)
+
+  copyHelper:SetScript("OnKeyDown", function(self, key)
+    if key == "C" and IsControlKeyDown() then
+      propagate(self, false)       -- the copy is done by the edit box; keep "C" from opening the character pane
+      copyHint.Dismiss()
+    elseif key == "ESCAPE" then
+      propagate(self, false)
+      copyHint.Dismiss()
+    else
+      propagate(self, true)
+    end
+  end)
+  copyHelper:SetScript("OnEditFocusLost", function()
+    if copyHint:IsShown() then copyHint.Dismiss() end
+  end)
+  copyHint = f
+end
+
+function UI.Copy(title, text, anchor)
+  if not copyHelper then buildCopy() end
+  copyHint.preview:SetText((title and (title .. ":  ") or "") .. "|cffffffff" .. tostring(text or ""):gsub("[\r\n]+", " ") .. "|r")
+  copyHint:ClearAllPoints()
+  copyHint.anchor = anchor
+  if anchor then
+    copyHint:SetPoint("TOP", anchor, "BOTTOM", 0, -6)
+  else
+    local scale = UIParent:GetEffectiveScale()
+    local cx, cy = GetCursorPosition()
+    cx, cy = cx / scale, cy / scale
+    local w, h = copyHint:GetSize()
+    local x, y = cx + 16, cy + 16
+    if x + w > GetScreenWidth() then x = cx - w - 4 end
+    if y + h > GetScreenHeight() then y = cy - h - 4 end
+    copyHint:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", x, y)
+  end
+  copyHelper:Show()
+  copyHelper:SetText(tostring(text or ""))
+  copyHint:Show()
+  copyHint:Raise()
+  copyHint.pulse:Play()
+  -- A tick later: the click that opened it must not take the focus back
+  C_Timer.After(0, function()
+    if copyHint:IsShown() then
+      copyHelper:SetFocus()
+      copyHelper:HighlightText()
+    end
+  end)
 end
 
 -- Confirm popup --------------------------------------------------------------------------------

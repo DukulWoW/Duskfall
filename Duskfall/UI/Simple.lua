@@ -341,11 +341,18 @@ function SP.Create(parent, hooks)
     local ch = C.byKey[def.key]
     local s = UI.LightSlider(left, LEFT_W, { label = ch.label, min = def.min, max = def.max, step = def.step,
       from = def.from, to = def.to, tip = def.tip,
+      -- What you get, as the game's own slider shows it, and the change from your baseline (Kim)
       fmt = function(v)
+        local base = ns.db.baseline and ns.db.baseline[def.key] or 0
         local t = C.Format(def.key, v)
         if v > 0 then t = "+" .. t end
-        return t
+        return C.Format(def.key, C.Clamp(def.key, base + v)) .. "  " .. GREY .. "(" .. t .. ")|r"
       end,
+      zero = function()
+        local base = ns.db.baseline and ns.db.baseline[def.key] or 0
+        return GREY .. C.Format(def.key, base) .. "|r"
+      end,
+      lineH = 36,
       get = function()
         local look = current()
         return look and look.values and tonumber(look.values[def.key]) or 0
