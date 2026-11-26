@@ -1,4 +1,5 @@
--- Duskfall UI/Places.lua: the Places tab (B-04b).
+-- Duskfall UI/Places.lua: the Places tab (B-04b). This file is Advanced mode; simple mode (the
+-- default) is UI/Simple.lua, and the switch is W.SetAdvanced (title bar).
 --   left:  search, "Active" filter, "Here" jump, and the place list: Instances (the five instance
 --          types first, then every instance visited) and Zones with their subzones. The number is
 --          how many Looks of the active Style use the place (green = one of them is in effect now),
@@ -204,8 +205,12 @@ local function shade(parent)
 end
 
 -- The tab --------------------------------------------------------------------------------------
-W.AddTab("places", "Places", function(page)
-  UI.Glow(page, nil, 0.8)
+-- The tab holds two pages: simple mode (UI/Simple.lua, the default) and this one, Advanced mode.
+W.AddTab("places", "Places", function(tab)
+  UI.Glow(tab, nil, 0.8)
+  local page = CreateFrame("Frame", nil, tab)
+  page:SetAllPoints()
+  page:Hide()
 
   local selKey, selLook          -- selected place key, selected Look (table)
   local expanded, collapsed = {}, {}   -- zones open, groups closed (this session only)
@@ -744,4 +749,28 @@ W.AddTab("places", "Places", function(page)
   W.frame:HookScript("OnHide", function() wantJump = true end)
   ns.Listen("EVALUATED", function() refreshAll() end)
   refreshRight()
+
+  -- Simple mode, and the switch between the two -------------------------------------------------
+  -- A Look simple mode can't show opens here, in the editor.
+  local function openLook(look)
+    W.SetAdvanced(true)
+    local key
+    for _, s in ipairs(look.where or {}) do
+      if s:sub(1, 1) ~= "~" then key = s break end
+    end
+    if key then reveal(key, look) end
+    openEditor(look)
+  end
+  local simple = ns.SimplePlaces.Create(tab, { openAdvanced = openLook })
+  local function showMode()
+    local adv = ns.cfg.advanced and true or false
+    simple:SetShown(not adv)
+    page:SetShown(adv)
+  end
+  tab.Back = function()
+    if page:IsShown() and page.Back then return page.Back() end
+    return false
+  end
+  ns.Listen("MODE", showMode)
+  showMode()
 end, "left")

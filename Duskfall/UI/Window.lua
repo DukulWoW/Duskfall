@@ -4,7 +4,8 @@
 -- and a status strip that shows what Duskfall is doing right now. Built on first open.
 -- Tabs register through W.AddTab(id, title, builder, side); builder(page) runs once.
 -- A tab with sub-pages sets page.Back = fn() -> true when it went back (ESC goes back first).
--- Public: ns.OpenWindow(), W.AddTab(id, title, builder, side), W.Select(id), W.UpdateStatus(), W.frame
+-- Public: ns.OpenWindow(), W.AddTab(id, title, builder, side), W.Select(id), W.UpdateStatus(),
+--         W.SetAdvanced(on) (fires MODE), W.frame
 local ADDON, ns = ...
 local W = {}
 ns.Window = W
@@ -107,14 +108,33 @@ local function build()
   local function liftBadge()
     local top = f:GetFrameLevel()
     for _, child in ipairs({ f:GetChildren() }) do
-      if child ~= badge and child:GetFrameLevel() > top then top = child:GetFrameLevel() end
+      if child ~= badge and child ~= f.advCheck and child:GetFrameLevel() > top then top = child:GetFrameLevel() end
     end
     badge:SetFrameLevel(top + 5)
+    if f.advCheck then f.advCheck:SetFrameLevel(top + 5) end
   end
   badge.Lift = liftBadge
   local icon = badge:CreateTexture(nil, "ARTWORK")
   icon:SetAllPoints()
   icon:SetTexture(UI.ART .. "icon")
+  -- Advanced mode, left of the close button (Kim): Places shows the full list and Look editor
+  local adv = CreateFrame("CheckButton", nil, f, "UICheckButtonTemplate")
+  adv:SetSize(22, 22)
+  local advText = adv.Text or adv.text
+  if not advText then
+    advText = adv:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    advText:SetPoint("LEFT", adv, "RIGHT", 0, 0)
+  end
+  advText:SetFontObject("GameFontNormalSmall")
+  advText:SetText("Advanced")
+  local close = f.CloseButton or _G.DuskfallWindowCloseButton
+  if close then adv:SetPoint("RIGHT", close, "LEFT", -(advText:GetStringWidth() + 6), 0)
+  else adv:SetPoint("TOPRIGHT", f, "TOPRIGHT", -100, 0) end
+  adv:SetChecked(ns.cfg.advanced and true or false)
+  adv:SetScript("OnClick", function(self) W.SetAdvanced(self:GetChecked()) end)
+  UI.Tooltip(adv, "Advanced mode", "Places shows every place you have been and the full Look editor, " ..
+    "with every condition and option. Off: the simple page.")
+  f.advCheck = adv
   pcall(ButtonFrameTemplate_HideButtonBar, f)
   if f.Inset then f.Inset:Hide() end
   UI.Wood(f)
@@ -216,6 +236,14 @@ local function build()
   W.Select(want)
   -- A new frame starts shown: hide it, or the first toggle below hides it again (two clicks to open)
   f:Hide()
+end
+
+-- Simple or Advanced mode (title bar switch). Shows Places, the tab it changes.
+function W.SetAdvanced(on)
+  ns.cfg.advanced = on and true or false
+  if frame and frame.advCheck then frame.advCheck:SetChecked(ns.cfg.advanced) end
+  if frame and frame.selected ~= "places" then W.Select("places") end
+  ns.Fire("MODE", ns.cfg.advanced)
 end
 
 -- tabID: open on that tab (closes it if it is already showing, unless keepOpen)

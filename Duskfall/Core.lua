@@ -4,7 +4,7 @@
 --         ns.Debug(fmt, ...), ns.NewID(prefix), ns.ScopeOf(scope, guid), ns.CharName(guid),
 --         ns.db (DuskfallDB), ns.cfg (DuskfallDB.settings), ns.charKey (player GUID)
 -- Messages: READY (saved variables loaded), ENABLE (after PLAYER_LOGIN), EVALUATED (new target),
---           ONOFF (Duskfall switched on or off)
+--           ONOFF (Duskfall switched on or off), MODE (simple / Advanced mode switched)
 local ADDON, ns = ...
 ns.name = ADDON
 -- The TOC's Version line is the one place the version lives
@@ -28,6 +28,7 @@ ns.DEFAULTS = {
   brokerText = "look",          -- broker bars: "look", "values", "both", "none"
   statusDisplay = "change",     -- floating display: "off", "change", "always"
   statusSeconds = 4,            -- "change": seconds it stays after the change is done
+  advanced = false,             -- Places in Advanced mode (full list and Look editor), else simple
 }
 
 -- Output ---------------------------------------------------------------------------------------

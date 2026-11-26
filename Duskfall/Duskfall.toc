@@ -24,6 +24,7 @@ UI\Widgets.lua
 UI\Window.lua
 UI\DayBar.lua
 UI\LookEditor.lua
+UI\Simple.lua
 UI\Places.lua
 UI\Styles.lua
 UI\Broker.lua

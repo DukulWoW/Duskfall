@@ -39,16 +39,36 @@ function UI.DayBar(parent, width)
   frameTex:SetPoint("BOTTOMRIGHT", 1, -1)
   frameTex:SetColorTexture(0, 0, 0, 0.8)
 
-  -- Five segments: night before dawn, dawn, day, dusk, night after.
+  -- Five segments: night before dawn, dawn, day, dusk, night after. Each is two halves shaded
+  -- from the halfway colour at its edge to its own colour in the middle, so the parts of the
+  -- day melt into each other (Kim: not flat).
+  local SEQ = { "night", "dawn", "day", "dusk", "night" }
+  local function mix(a, b) return { (a[1] + b[1]) / 2, (a[2] + b[2]) / 2, (a[3] + b[3]) / 2 } end
   local segs = {}
-  for i, key in ipairs({ "night", "dawn", "day", "dusk", "night" }) do
-    local t = bar:CreateTexture(nil, "ARTWORK")
-    t:SetColorTexture(COLOR[key][1], COLOR[key][2], COLOR[key][3], 1)
+  for i, key in ipairs(SEQ) do
+    local own = COLOR[key]
+    local before = mix(COLOR[SEQ[i - 1] or "night"], own)
+    local after = mix(own, COLOR[SEQ[i + 1] or "night"])
+    local l = bar:CreateTexture(nil, "ARTWORK")
+    UI.Gradient(l, "HORIZONTAL", before, own)
+    local r = bar:CreateTexture(nil, "ARTWORK")
+    UI.Gradient(r, "HORIZONTAL", own, after)
     local fs = bar:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     fs:SetTextColor(TEXT_COLOR[key][1], TEXT_COLOR[key][2], TEXT_COLOR[key][3])
     fs:SetShadowOffset(0, 0)
-    segs[i] = { key = key, tex = t, text = fs }
+    segs[i] = { key = key, l = l, r = r, text = fs }
   end
+  -- Light from above: a soft shine on the top half, a little shade on the bottom
+  local shine = bar:CreateTexture(nil, "ARTWORK", nil, 3)
+  shine:SetPoint("TOPLEFT", bar, "TOPLEFT", 0, 0)
+  shine:SetPoint("TOPRIGHT", bar, "TOPRIGHT", 0, 0)
+  shine:SetHeight(BAR_H / 2)
+  UI.Gradient(shine, "VERTICAL", { 1, 1, 1, 0 }, { 1, 1, 1, 0.28 })
+  local shade = bar:CreateTexture(nil, "ARTWORK", nil, 3)
+  shade:SetPoint("BOTTOMLEFT", bar, "BOTTOMLEFT", 0, 0)
+  shade:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", 0, 0)
+  shade:SetHeight(BAR_H / 2)
+  UI.Gradient(shade, "VERTICAL", { 0, 0, 0, 0.3 }, { 0, 0, 0, 0 })
 
   -- Hour ticks every 3 hours
   local ticks = {}
@@ -93,17 +113,23 @@ function UI.DayBar(parent, width)
     local edges = { 0, b.dawn, b.day, b.dusk, b.night, 24 }
     for i, s in ipairs(segs) do
       local a, z = edges[i], edges[i + 1]
-      s.tex:ClearAllPoints()
+      s.l:ClearAllPoints()
+      s.r:ClearAllPoints()
       s.text:ClearAllPoints()
       if z > a then
-        s.tex:SetPoint("TOPLEFT", bar, "TOPLEFT", x(a), 0)
-        s.tex:SetPoint("BOTTOMRIGHT", bar, "BOTTOMLEFT", x(z), 0)
-        s.tex:Show()
-        s.text:SetPoint("CENTER", s.tex, "CENTER")
+        local m = (a + z) / 2
+        s.l:SetPoint("TOPLEFT", bar, "TOPLEFT", x(a), 0)
+        s.l:SetPoint("BOTTOMRIGHT", bar, "BOTTOMLEFT", x(m), 0)
+        s.r:SetPoint("TOPLEFT", bar, "TOPLEFT", x(m), 0)
+        s.r:SetPoint("BOTTOMRIGHT", bar, "BOTTOMLEFT", x(z), 0)
+        s.l:Show()
+        s.r:Show()
+        s.text:SetPoint("CENTER", bar, "LEFT", x(m), 0)
         s.text:SetText(NAME[s.key])
         if x(z) - x(a) > s.text:GetStringWidth() + 6 then s.text:Show() else s.text:Hide() end
       else
-        s.tex:Hide()
+        s.l:Hide()
+        s.r:Hide()
         s.text:Hide()
       end
     end

@@ -9,7 +9,8 @@
 --         UI.Dropdown(parent, width, o), UI.Confirm(text, onAccept), UI.SLIDER_H,
 --         UI.IconButton(parent, size, symbol, o), UI.Copy(title, text),
 --         UI.ScopeDropdown(parent, width, o), UI.ScopeText(scope, style), UI.ScopeIsGlobal(scope, style),
---         UI.DeepCopy(t), UI.CharColored(guid), UI.scopeClip
+--         UI.DeepCopy(t), UI.CharColored(guid), UI.scopeClip, UI.Gradient(tex, orient, a, b),
+--         UI.Border(f, r, g, b, a), UI.Segmented(parent, width, o), UI.LightSlider(parent, width, o)
 local ADDON, ns = ...
 local UI = {}
 ns.UI = UI
@@ -380,6 +381,249 @@ function UI.IconButton(parent, size, symbol, o)
   btn:HookScript("OnHide", function() over, down = false, false refresh() end)
   refresh()
   return btn
+end
+
+-- Gradient and border --------------------------------------------------------------------------
+-- A plain texture shaded from colour a to colour b ({ r, g, b, a }). "HORIZONTAL": a = left,
+-- b = right; "VERTICAL": a = bottom, b = top. The modern form takes ColorMixins; older clients
+-- had SetGradientAlpha with numbers.
+function UI.Gradient(tex, orient, a, b)
+  tex:SetColorTexture(1, 1, 1, 1)
+  local ok = CreateColor and pcall(tex.SetGradient, tex, orient,
+    CreateColor(a[1], a[2], a[3], a[4] or 1), CreateColor(b[1], b[2], b[3], b[4] or 1))
+  if not ok and tex.SetGradientAlpha then
+    pcall(tex.SetGradientAlpha, tex, orient, a[1], a[2], a[3], a[4] or 1, b[1], b[2], b[3], b[4] or 1)
+  end
+end
+
+-- A 1 px frame around f, in its own colour.
+function UI.Border(f, r, g, b, a)
+  local function line()
+    local t = f:CreateTexture(nil, "BORDER", nil, 7)
+    t:SetColorTexture(r, g, b, a or 1)
+    return t
+  end
+  local top, bottom, left, right = line(), line(), line(), line()
+  top:SetPoint("TOPLEFT", f, "TOPLEFT", 0, 0)
+  top:SetPoint("TOPRIGHT", f, "TOPRIGHT", 0, 0)
+  top:SetHeight(1)
+  bottom:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", 0, 0)
+  bottom:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", 0, 0)
+  bottom:SetHeight(1)
+  left:SetPoint("TOPLEFT", f, "TOPLEFT", 0, 0)
+  left:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", 0, 0)
+  left:SetWidth(1)
+  right:SetPoint("TOPRIGHT", f, "TOPRIGHT", 0, 0)
+  right:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", 0, 0)
+  right:SetWidth(1)
+end
+
+-- Segmented control ----------------------------------------------------------------------------
+--   [ Canals | Undercity | Everywhere ]
+-- A row of joined buttons, one of them picked (as macOS). Widths follow the texts.
+-- o = { items = fn() -> { { value, text, icon, tip }, ... }, get = fn() -> value, set = fn(value),
+--       height }. Returns a frame with :Refresh() (reads items and value again), :SetEnabled(on).
+function UI.Segmented(parent, width, o)
+  local H = o.height or 24
+  local f = CreateFrame("Frame", nil, parent)
+  f:SetSize(width, H)
+  local bg = f:CreateTexture(nil, "BACKGROUND", nil, 2)
+  bg:SetAllPoints()
+  UI.Gradient(bg, "VERTICAL", { 0, 0, 0, 0.6 }, { 0.14, 0.11, 0.07, 0.6 })
+  UI.Border(f, 1, 0.82, 0, 0.35)
+  local buttons, items = {}, {}
+  local enabled = true
+
+  local function button(i)
+    local b = CreateFrame("Button", nil, f)
+    b.pick = b:CreateTexture(nil, "BACKGROUND", nil, 4)
+    b.pick:SetPoint("TOPLEFT", b, "TOPLEFT", 1, -1)
+    b.pick:SetPoint("BOTTOMRIGHT", b, "BOTTOMRIGHT", -1, 1)
+    UI.Gradient(b.pick, "VERTICAL", { 0.5, 0.33, 0.05, 0.95 }, { 0.93, 0.72, 0.24, 0.95 })
+    local hl = b:CreateTexture(nil, "HIGHLIGHT")
+    hl:SetAllPoints()
+    hl:SetColorTexture(1, 1, 1, 0.08)
+    b.sep = b:CreateTexture(nil, "BORDER")
+    b.sep:SetColorTexture(1, 0.82, 0, 0.3)
+    b.sep:SetPoint("TOPLEFT", b, "TOPLEFT", 0, -3)
+    b.sep:SetPoint("BOTTOMLEFT", b, "BOTTOMLEFT", 0, 3)
+    b.sep:SetWidth(1)
+    b.text = b:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    b.text:SetWordWrap(false)
+    b.icon = b:CreateTexture(nil, "OVERLAY")
+    b.icon:SetSize(14, 14)
+    b.icon:SetPoint("RIGHT", b.text, "LEFT", -3, 0)
+    b:SetScript("OnClick", function(self)
+      local it = items[self.index]
+      if it and it[1] ~= o.get() then ns.Safe(o.set, "segment", it[1]) end
+      f:Refresh()
+    end)
+    b:SetScript("OnEnter", function(self)
+      local it = items[self.index]
+      if not it or not it[4] then return end
+      GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
+      GameTooltip:AddLine(it[2], 1, 1, 1)
+      GameTooltip:AddLine(it[4], 0.8, 0.8, 0.8, true)
+      GameTooltip:Show()
+    end)
+    b:SetScript("OnLeave", function(self) if GameTooltip:IsOwned(self) then GameTooltip:Hide() end end)
+    buttons[i] = b
+    return b
+  end
+
+  function f:Refresh()
+    items = o.items() or {}
+    local cur = o.get()
+    local need, total = {}, 0
+    for i, it in ipairs(items) do
+      local b = buttons[i] or button(i)
+      b.index = i
+      b.text:SetText(it[2])
+      need[i] = b.text:GetStringWidth() + 22 + (it[3] and 17 or 0)
+      total = total + need[i]
+    end
+    local x = 0
+    for i, it in ipairs(items) do
+      local b = buttons[i]
+      local w = math.floor(need[i] * width / math.max(1, total) + 0.5)
+      if i == #items then w = width - x end
+      b:ClearAllPoints()
+      b:SetPoint("TOPLEFT", f, "TOPLEFT", x, 0)
+      b:SetSize(w, H)
+      x = x + w
+      b.sep:SetShown(i > 1)
+      b.icon:SetShown(it[3] ~= nil)
+      if it[3] then b.icon:SetTexture(it[3]) end
+      b.text:ClearAllPoints()
+      b.text:SetPoint("CENTER", b, "CENTER", it[3] and 8 or 0, 0)
+      b.text:SetWidth(math.max(10, w - 10 - (it[3] and 17 or 0)))
+      local on = it[1] == cur
+      b.pick:SetShown(on)
+      if on then b.text:SetTextColor(1, 1, 1) else b.text:SetTextColor(1, 0.82, 0) end
+      b:SetEnabled(enabled)
+      b:Show()
+    end
+    for i = #items + 1, #buttons do buttons[i]:Hide() end
+    f:SetAlpha(enabled and 1 or 0.4)
+  end
+  function f:SetEnabled(on)
+    enabled = on and true or false
+    f:Refresh()
+  end
+  return f
+end
+
+-- Light slider ---------------------------------------------------------------------------------
+--   Gamma      [ dark ======|=====O====== light ]    +0.10
+-- Simple mode's slider: the track is a gradient (what the value does to the picture), the mark in
+-- the middle is 0 ("no change"), a gold line under the track runs from the mark to the thumb.
+-- Right-click puts it back to 0. The range should be symmetric around 0.
+-- o = { label, min, max, step, from = { r, g, b }, to = { r, g, b }, get = fn() -> v,
+--       set = fn(v), fmt = fn(v) -> text, tip }. Returns a holder: :Refresh(), :SetEnabled(on).
+function UI.LightSlider(parent, width, o)
+  local LABEL_W, VALUE_W, H, INSET = 90, 76, 30, 16
+  local h = CreateFrame("Frame", nil, parent)
+  h:SetSize(width, H)
+  local lbl = UI.Label(h, o.label, "GameFontNormal")
+  lbl:SetPoint("LEFT", h, "LEFT", 0, 0)
+  lbl:SetWidth(LABEL_W)
+  local val = UI.Label(h, "", "GameFontHighlight")
+  val:SetPoint("RIGHT", h, "RIGHT", 0, 0)
+  val:SetWidth(VALUE_W)
+  val:SetJustifyH("RIGHT")
+  if o.tip then
+    local hot = CreateFrame("Frame", nil, h)
+    hot:SetPoint("LEFT", h, "LEFT", 0, 0)
+    hot:SetSize(LABEL_W, H)
+    hot:EnableMouse(true)
+    tooltip(hot, o.label, o.tip .. "\n\nRight-click the slider: back to no change.")
+  end
+
+  local sl = CreateFrame("Slider", nil, h)
+  sl:SetPoint("LEFT", h, "LEFT", LABEL_W - 6, 0)
+  sl:SetPoint("RIGHT", h, "RIGHT", -VALUE_W - 4, 0)
+  sl:SetHeight(H)
+  sl:SetOrientation("HORIZONTAL")
+  sl:SetMinMaxValues(o.min, o.max)
+  sl:SetValueStep(o.step)
+  pcall(sl.SetObeyStepOnDrag, sl, true)
+  sl:EnableMouse(true)
+  pcall(sl.EnableMouseWheel, sl, false)
+  local thumb = sl:CreateTexture(nil, "OVERLAY", nil, 2)
+  thumb:SetTexture("Interface\\Buttons\\UI-SliderBar-Button-Horizontal")
+  thumb:SetSize(32, 32)
+  sl:SetThumbTexture(thumb)
+
+  local well = sl:CreateTexture(nil, "BACKGROUND")
+  well:SetPoint("LEFT", sl, "LEFT", INSET - 2, 0)
+  well:SetPoint("RIGHT", sl, "RIGHT", -INSET + 2, 0)
+  well:SetHeight(12)
+  well:SetColorTexture(0, 0, 0, 0.85)
+  local track = sl:CreateTexture(nil, "ARTWORK")
+  track:SetPoint("LEFT", sl, "LEFT", INSET, 0)
+  track:SetPoint("RIGHT", sl, "RIGHT", -INSET, 0)
+  track:SetHeight(8)
+  UI.Gradient(track, "HORIZONTAL", o.from, o.to)
+  local shine = sl:CreateTexture(nil, "ARTWORK", nil, 2)
+  shine:SetPoint("TOPLEFT", track, "TOPLEFT", 0, 0)
+  shine:SetPoint("TOPRIGHT", track, "TOPRIGHT", 0, 0)
+  shine:SetHeight(4)
+  UI.Gradient(shine, "VERTICAL", { 1, 1, 1, 0 }, { 1, 1, 1, 0.3 })
+  local mark = sl:CreateTexture(nil, "OVERLAY", nil, 0)
+  mark:SetColorTexture(1, 1, 1, 0.9)
+  mark:SetSize(2, 16)
+  local fill = sl:CreateTexture(nil, "ARTWORK", nil, 3)
+  fill:SetColorTexture(1, 0.82, 0, 0.95)
+  fill:SetHeight(2)
+
+  local cur, muted = 0, false
+  local function snap(v) return math.floor(v / o.step + 0.5) * o.step end
+  local function xOf(v)
+    local w = sl:GetWidth() - 2 * INSET
+    return INSET + (v - o.min) / (o.max - o.min) * w
+  end
+  local function show()
+    if math.abs(cur) < o.step / 2 then val:SetText("|cff9d9d9dNo change|r")
+    else val:SetText(o.fmt and o.fmt(cur) or tostring(cur)) end
+    local x0, x1 = xOf(0), xOf(cur)
+    mark:ClearAllPoints()
+    mark:SetPoint("CENTER", sl, "LEFT", x0, 0)
+    fill:ClearAllPoints()
+    if math.abs(x1 - x0) < 1 then
+      fill:Hide()
+    else
+      fill:SetPoint("TOPLEFT", sl, "LEFT", math.min(x0, x1), -6)
+      fill:SetWidth(math.abs(x1 - x0))
+      fill:Show()
+    end
+  end
+  sl:SetScript("OnValueChanged", function(_, v)
+    v = snap(v)
+    if math.abs(v - cur) < o.step / 2 then return end
+    cur = v
+    show()
+    if not muted then ns.Safe(o.set, "slider", v) end
+  end)
+  sl:SetScript("OnMouseUp", function(self, button)
+    if button == "RightButton" and self:IsEnabled() then self:SetValue(0) end
+  end)
+  sl:SetScript("OnSizeChanged", show)
+
+  function h:Refresh()
+    local v = tonumber(o.get()) or 0
+    muted = true
+    sl:SetValue(v)
+    muted = false
+    cur = v
+    show()
+  end
+  function h:SetEnabled(on)
+    pcall(sl.SetEnabled, sl, on and true or false)
+    sl:EnableMouse(on and true or false)
+    h:SetAlpha(on and 1 or 0.45)
+  end
+  h:Refresh()
+  return h
 end
 
 -- Copy box -------------------------------------------------------------------------------------
