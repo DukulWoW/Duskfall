@@ -18,6 +18,8 @@ ns.SimplePlaces = SP
 local LEFT_W = 440
 local LABEL_W = 62
 local LIST_ROW_H = 40
+local ROW_GAP = 40       -- Place / Time / Inside rows
+local SLIDER_GAP = 44    -- the sliders (the mini panel keeps 36)
 local PREVIEW_SECONDS = 10
 local EVERYWHERE = "*"
 local GREY = "|cff9d9d9d"
@@ -265,13 +267,13 @@ function SP.Create(parent, hooks)
   nowText:SetWordWrap(false)
 
   -- Left: which setting ------------------------------------------------------------------------
-  local y = -110
+  local y = -112
   local SEG_W = LEFT_W - LABEL_W
   local function row(label, seg)
     local l = UI.Label(left, label, "GameFontNormal")
     l:SetPoint("TOPLEFT", left, "TOPLEFT", 12, y - 5)
     seg:SetPoint("TOPLEFT", left, "TOPLEFT", 12 + LABEL_W, y)
-    y = y - 34
+    y = y - ROW_GAP
     return l
   end
 
@@ -342,9 +344,9 @@ function SP.Create(parent, hooks)
     "counts as indoors; inside dungeons it never does.")
 
   -- Left: the sliders --------------------------------------------------------------------------
-  y = y - 10
+  y = y - 18
   local sliders = {}
-  local function sliderOpts(def)
+  local function sliderOpts(def, lineH)
     local ch = C.byKey[def.key]
     return { label = ch.label, min = def.min, max = def.max, step = def.step,
       from = UI.CHANNEL_GRADIENT[def.key].from, to = UI.CHANNEL_GRADIENT[def.key].to, tip = def.tip,
@@ -359,7 +361,7 @@ function SP.Create(parent, hooks)
         local base = ns.db.baseline and ns.db.baseline[def.key] or 0
         return GREY .. C.Format(def.key, base) .. "|r"
       end,
-      lineH = 36,
+      lineH = lineH or SLIDER_GAP,
       get = function()
         local look = current()
         return look and look.values and tonumber(look.values[def.key]) or 0
@@ -369,11 +371,18 @@ function SP.Create(parent, hooks)
   for _, def in ipairs(SLIDERS) do
     local s = UI.LightSlider(left, LEFT_W, sliderOpts(def))
     s:SetPoint("TOPLEFT", left, "TOPLEFT", 12, y)
-    y = y - 36
+    y = y - SLIDER_GAP
     sliders[#sliders + 1] = s
   end
 
-  local reset = UI.Button(left, "Reset", 90, function()
+  -- Reset, Mini panel and the hint in a rounded box at the bottom (Kim)
+  local actions = CreateFrame("Frame", nil, left)
+  actions:SetPoint("BOTTOMLEFT", left, "BOTTOMLEFT", 12, 8)
+  actions:SetPoint("BOTTOMRIGHT", left, "BOTTOMRIGHT", -12, 8)
+  actions:SetHeight(46)
+  UI.RoundBox(actions, { radius = 10, bottom = { 0, 0, 0, 0.5 }, top = { 0.22, 0.17, 0.1, 0.4 },
+    border = { 1, 0.82, 0, 0.25 } })
+  local reset = UI.Button(actions, "Reset", 90, function()
     local look = current()
     if not look then return end
     UI.Confirm("Remove the setting \"" .. lookLabel(look) .. "\"?", function()
@@ -383,7 +392,7 @@ function SP.Create(parent, hooks)
       refresh(true)
     end)
   end)
-  reset:SetPoint("TOPLEFT", left, "TOPLEFT", 12, y - 8)
+  reset:SetPoint("LEFT", actions, "LEFT", 10, 0)
   UI.Tooltip(reset, "Reset", "Remove this setting: the screen goes back to normal for it.")
   -- Mini panel (Kim): the window steps aside for a small panel with only the sliders, so the
   -- whole screen shows the change. Back (or closing it) brings the window back.
@@ -439,7 +448,7 @@ function SP.Create(parent, hooks)
     UI.Tooltip(back, "Back", "Back to the Duskfall window.")
     local yy = -48
     for _, def in ipairs(SLIDERS) do
-      local sl = UI.LightSlider(m, 446, sliderOpts(def))
+      local sl = UI.LightSlider(m, 446, sliderOpts(def, 36))
       sl:SetPoint("TOPLEFT", m, "TOPLEFT", 12, yy)
       yy = yy - 36
       miniSliders[#miniSliders + 1] = sl
@@ -450,7 +459,7 @@ function SP.Create(parent, hooks)
     m:Hide()
     mini = m
   end
-  local miniBtn = UI.Button(left, "Mini panel", 110, function()
+  local miniBtn = UI.Button(actions, "Mini panel", 110, function()
     if not mini then buildMini() end
     if ns.Window.frame then ns.Window.frame:Hide() end
     mini:Show()
@@ -461,9 +470,9 @@ function SP.Create(parent, hooks)
     "whole screen while you adjust. Back brings the window back.")
   ns.Listen("EVALUATED", function() refreshMini() end)
 
-  local hint = UI.Label(left, "")
+  local hint = UI.Label(actions, "")
   hint:SetPoint("LEFT", miniBtn, "RIGHT", 12, 0)
-  hint:SetPoint("RIGHT", left, "RIGHT", -12, 0)
+  hint:SetPoint("RIGHT", actions, "RIGHT", -12, 0)
   hint:SetWordWrap(true)
   hint:SetJustifyV("MIDDLE")
   hint:SetHeight(30)
@@ -490,16 +499,17 @@ function SP.Create(parent, hooks)
 
   -- Search: empty = your places; typed = your places and every place you have been that match
   local query = ""
-  local search = UI.SearchBox(right, 300, { placeholder = "Search all places",
+  -- 32 high: its bottom lines up with the Here card's on the left (Kim)
+  local search = UI.SearchBox(right, 300, { placeholder = "Search all places", height = 32,
     onChange = function(t)
       query = (t or ""):lower():gsub("^%s+", ""):gsub("%s+$", "")
       if refresh then refresh(false) end
     end })
-  search:SetPoint("TOPLEFT", right, "TOPLEFT", 6, -60)
+  search:SetPoint("TOPLEFT", right, "TOPLEFT", 0, -60)   -- own box: level with the list below
   search:SetPoint("RIGHT", right, "RIGHT", -16, 0)
 
   local area = CreateFrame("Frame", nil, right)
-  area:SetPoint("TOPLEFT", right, "TOPLEFT", 0, -90)
+  area:SetPoint("TOPLEFT", right, "TOPLEFT", 0, -100)
   area:SetPoint("BOTTOMRIGHT", right, "BOTTOMRIGHT", -16, 8)
   UI.RoundBox(area, { radius = 8, bottom = { 0, 0, 0, 0.32 }, top = { 0, 0, 0, 0.22 } })
   local box = CreateFrame("Frame", nil, area, "WowScrollBoxList")

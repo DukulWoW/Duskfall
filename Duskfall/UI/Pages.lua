@@ -440,8 +440,11 @@ W.AddTab("settings", "Settings", function(page)
     set = function(v) D.SetEnabled(v) W.UpdateStatus() end })
   quick:SetPoint("TOPRIGHT", overview, "TOPRIGHT", -110, -16)
   local tiles = {}
-  local TILE_GAP, TILE_H = 12, 96
+  -- Layout (Kim): General across the top, then Time of day | Baseline, then Display | Characters,
+  -- tall enough to fill the page. TILE_SPOT = key -> { column (0, 1 or "full"), row }.
+  local TILE_GAP, TILE_H = 12, 128
   local tileW = math.floor((FULL_W - TILE_GAP) / 2)
+  local TILE_SPOT = { general = { "full", 0 }, time = { 0, 1 }, baseline = { 1, 1 }, display = { 0, 2 }, chars = { 1, 2 } }
   local subs = {}
   for _, def in ipairs(SUBPAGES) do
     local sub = CreateFrame("Frame", nil, page)
@@ -461,9 +464,15 @@ W.AddTab("settings", "Settings", function(page)
     subs[def.key] = sub
 
     local n = #tiles
+    local spot = TILE_SPOT[def.key] or { n % 2, math.floor(n / 2) }
     local tile = CreateFrame("Button", nil, overview)
-    tile:SetSize(tileW, TILE_H)
-    tile:SetPoint("TOPLEFT", overview, "TOPLEFT", 12 + (n % 2) * (tileW + TILE_GAP), -62 - math.floor(n / 2) * (TILE_H + TILE_GAP))
+    if spot[1] == "full" then
+      tile:SetSize(FULL_W, TILE_H)
+      tile:SetPoint("TOPLEFT", overview, "TOPLEFT", 12, -62 - spot[2] * (TILE_H + TILE_GAP))
+    else
+      tile:SetSize(tileW, TILE_H)
+      tile:SetPoint("TOPLEFT", overview, "TOPLEFT", 12 + spot[1] * (tileW + TILE_GAP), -62 - spot[2] * (TILE_H + TILE_GAP))
+    end
     UI.RoundBox(tile, { radius = 12, bottom = { 0, 0, 0, 0.45 }, top = { 0.2, 0.15, 0.09, 0.42 },
       border = { 1, 0.82, 0, 0.22 } })
     local hl = tile:CreateTexture(nil, "HIGHLIGHT")
@@ -604,7 +613,7 @@ W.AddTab("about", "About", function(page)
     "|cffffd100/dusk status|r   where you are and what Duskfall shows, in chat",
     "|cffffd100/dusk save|r  /  |cffffd100clear|r  sub, zone or instance [conditions]   from chat",
     "|cffffd100/dusk on|r  /  |cffffd100off|r   switch Duskfall on or off (also a key binding)",
-    "|cffffd100/dusk help|r   every command",
+    "|cffffd100/dusk help|r   the help, with every command",
   }, "\n"), "GameFontHighlight")
   cmds:SetPoint("TOPLEFT", panel, "TOPLEFT", 18, -16)
   cmds:SetPoint("RIGHT", panel, "RIGHT", -18, 0)

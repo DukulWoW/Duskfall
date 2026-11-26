@@ -125,28 +125,15 @@ local function status()
   end
 end
 
+-- /dusk help opens the Help window on Getting started (Kim); its Commands topic lists the commands.
 local function help()
-  ns.Print("commands (%s/dusk|r, %s/duskfall|r, %s/df|r):", Y, Y, Y)
-  print("  " .. Y .. "/dusk|r open the Duskfall window (Places)")
-  print("  " .. Y .. "/dusk config|r or " .. Y .. "/dusk settings|r open it on Settings")
-  print("  " .. Y .. "/dusk status|r where you are and what Duskfall shows, in chat")
-  print("  " .. Y .. "/dusk save sub||zone||instance [when...]|r save the current values here")
-  print("    " .. G .. "when: dawn day dusk night, 21:00-05:30, indoors outdoors resting combat mounted swimming underwater ghost; ! in front = not|r")
-  print("  " .. Y .. "/dusk clear sub||zone||instance [when...]|r remove that Look")
-  print("  " .. Y .. "/dusk looks|r list the Looks of your Style")
-  print("  " .. Y .. "/dusk on||off|r automatic adjusting on or off")
-  print("  " .. Y .. "/dusk baseline|r make the current values your baseline")
-  print("  " .. Y .. "/dusk mode instant||fade||adapt|r how changes happen (this Style)")
-  print("  " .. Y .. "/dusk fade <seconds>|r fade time")
-  print("  " .. Y .. "/dusk adapt dark||light <seconds> [strength 0-1]|r eye adaptation per direction")
-  print("  " .. Y .. "/dusk timefade <seconds>|r time of day changes (all modes)")
-  print("  " .. Y .. "/dusk transition|r show the current transition settings")
-  print("  " .. Y .. "/dusk style [use <n> || new <name>]|r list, switch or create Styles")
-  print("  " .. Y .. "/dusk chars [remove <name>]|r list or remove known characters")
-  print("  " .. Y .. "/dusk debug|r debug output on or off")
+  local W = ns.Window
+  if not (W and W.frame and W.frame:IsShown()) then
+    if not ns.OpenWindow then return end
+    ns.OpenWindow("places", true)
+  end
+  if ns.Help and ns.Help.Open then ns.Help.Open("start") end
 end
-
-ns.Help = help
 
 local function save(args)
   local kind = args[2] and args[2]:lower()
@@ -375,6 +362,8 @@ local function handler(msg)
   elseif cmd == "transition" then showTransition()
   elseif cmd == "config" or cmd == "settings" or cmd == "options" then
     if ns.OpenWindow then ns.OpenWindow("settings") end
+  elseif cmd == "welcome" then
+    if ns.Welcome then ns.Welcome.Show() end
   elseif cmd == "moon" then
     if ns.Moon then ns.Moon.Report() end
   elseif cmd == "debug" then

@@ -34,4 +34,5 @@ UI\StatusDisplay.lua
 UI\Moon.lua
 UI\Pages.lua
 UI\Help.lua
+UI\Welcome.lua
 OptionsPanel.lua

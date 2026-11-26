@@ -11,7 +11,7 @@ ns.name = ADDON
 local getMeta = C_AddOns and C_AddOns.GetAddOnMetadata
 ns.VERSION = (getMeta and getMeta(ADDON, "Version")) or "?"
 
-local DB_VERSION = 2
+local DB_VERSION = 3
 
 ns.DEFAULTS = {
   enabled = true,     -- automatic adjusting on
@@ -191,6 +191,12 @@ MIGRATIONS[2] = function(db)
       if type(tr.fade) == "table" and tr.fade.duration == 1.0 then tr.fade.duration = 1.5 end
     end
   end
+end
+
+-- v3 (2026-11-26): db.welcomed = the welcome screen has been shown. Only new installs see it,
+-- so every table that already exists counts as welcomed (a fresh table skips migrations).
+MIGRATIONS[3] = function(db)
+  db.welcomed = true
 end
 
 local function newStyle(name)

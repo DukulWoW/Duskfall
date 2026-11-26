@@ -804,20 +804,32 @@ function UI.ClearX(parent, size, onClick, tip)
 end
 
 -- A search box: grey placeholder while empty, the clear X only once something is typed.
--- o = { placeholder, onChange = fn(text) }. Returns the edit box (:GetText, :SetText).
+-- o = { placeholder, onChange = fn(text), height }. Returns the edit box (:GetText, :SetText).
 function UI.SearchBox(parent, width, o)
   local eb = CreateFrame("EditBox", nil, parent, "InputBoxTemplate")
-  eb:SetSize(width - 6, 22)
+  eb:SetSize(width - 6, o.height or 22)
+  -- Taller than the template: its 8 px end caps skew when stretched (Kim), so our own rounded
+  -- box instead, covering the frame exactly, and the text moved in off its edge.
+  local inset = 0
+  if o.height then
+    for _, k in ipairs({ "Left", "Middle", "Right" }) do
+      local t = eb[k]
+      if t and t.Hide then t:Hide() end
+    end
+    UI.RoundBox(eb, { radius = 6, bottom = { 0, 0, 0, 0.7 }, top = { 0.04, 0.03, 0.02, 0.7 },
+      border = { 0.8, 0.72, 0.55, 0.6 } })
+    inset = 9
+  end
   eb:SetAutoFocus(false)
-  eb:SetTextInsets(0, 22, 0, 0)
+  eb:SetTextInsets(inset, o.height and 24 or 22, 0, 0)
   local ph = eb:CreateFontString(nil, "OVERLAY", "GameFontDisable")
-  ph:SetPoint("LEFT", eb, "LEFT", 0, 0)
+  ph:SetPoint("LEFT", eb, "LEFT", inset, 0)
   ph:SetText(o.placeholder or "Search")
   local x = UI.ClearX(eb, 16, function()
     eb:SetText("")
     eb:ClearFocus()
   end, "Clear")
-  x:SetPoint("RIGHT", eb, "RIGHT", -2, 0)
+  x:SetPoint("RIGHT", eb, "RIGHT", o.height and -7 or -2, 0)
   x:Hide()
   local function sync()
     local t = eb:GetText() or ""

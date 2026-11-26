@@ -64,12 +64,21 @@ local TOPICS = {
     "Copy and Paste values in the right-click menu copy the numbers from one place to another.",
   } },
   { "Commands", {
-    Y .. "/dusk|r opens this window, " .. Y .. "/dusk settings|r the settings, " .. Y .. "/dusk status|r "
-      .. "tells you in chat what Duskfall is doing.",
-    Y .. "/dusk on|r and " .. Y .. "/dusk off|r switch Duskfall on and off; there is a key binding for it too "
-      .. "(Options > Keybindings > AddOns).",
+    Y .. "/dusk|r (or " .. Y .. "/duskfall|r, " .. Y .. "/df|r) opens this window, " .. Y .. "/dusk settings|r "
+      .. "the settings, " .. Y .. "/dusk help|r this help, " .. Y .. "/dusk status|r what Duskfall is doing, in chat.",
+    Y .. "/dusk on|r, " .. Y .. "/dusk off|r: Duskfall on or off; there is a key binding for it too "
+      .. "(Options > Keybindings > AddOns). " .. Y .. "/dusk baseline|r: the current values become your baseline.",
+    Y .. "/dusk save sub|r, " .. Y .. "zone|r or " .. Y .. "instance|r, then any of " .. Y .. "dawn day dusk night "
+      .. "21:00-05:30 indoors outdoors resting combat mounted swimming underwater ghost|r (! in front = not): "
+      .. "saves the current values there. " .. Y .. "/dusk clear|r the same way removes it. " .. Y .. "/dusk looks|r "
+      .. "lists them.",
+    Y .. "/dusk mode instant|r, " .. Y .. "fade|r or " .. Y .. "adapt|r, " .. Y .. "/dusk fade <s>|r, " .. Y
+      .. "/dusk adapt dark|r or " .. Y .. "light <s> [0-1]|r, " .. Y .. "/dusk timefade <s>|r, " .. Y
+      .. "/dusk transition|r: how changes feel.",
+    Y .. "/dusk style|r lists Styles (" .. Y .. "use <n>|r, " .. Y .. "new <name>|r). " .. Y .. "/dusk chars|r "
+      .. "lists characters (" .. Y .. "remove <name>|r). " .. Y .. "/dusk welcome|r shows the welcome again.",
     "The minimap's day and night moon opens Duskfall: left-click the window, right-click on / off, "
-      .. "shift-right-click Settings. " .. Y .. "/dusk help|r lists every command.",
+      .. "shift-right-click Settings.",
   } },
 }
 
