@@ -315,7 +315,7 @@ local function buildDisplay(p)
   local HALF = math.floor((FULL_W - 12) / 2)
   local DD_W = HALF - 32
 
-  local _, mm = card(p, 12, -50, HALF, 206, "Minimap and broker", nil, controls)
+  local _, mm = card(p, 12, -50, HALF, 236, "Minimap and broker", nil, controls)
   mm(UI.Check(p, { label = "Minimap moon opens Duskfall",
     tip = "The day / night moon on the minimap gets the same clicks and tooltip as the minimap button. With this on you may not need the button at all.",
     get = function() return ns.cfg.moon ~= false end,
@@ -323,6 +323,13 @@ local function buildDisplay(p)
       ns.cfg.moon = v
       ns.Moon.Apply()
       if v and not ns.Moon.Found() then ns.Print("can't find the minimap moon on this client.") end
+    end }), 26, 4)
+  mm(UI.Check(p, { label = "Glow where a setting is in effect",
+    tip = "A slow gold ring behind Duskfall's icon on the moon and the minimap button while one of your settings is in effect where you stand.",
+    get = function() return ns.cfg.ringGlow ~= false end,
+    set = function(v)
+      ns.cfg.ringGlow = v
+      ns.Moon.UpdateRings()
     end }), 26, 10)
   mm(UI.Dropdown(p, DD_W, { label = "Minimap button",
     tip = "Left-click opens Duskfall, right-click switches it on or off, shift-right-click opens Settings. The same clicks work on the moon, in the addon compartment and on broker bars. Automatic shows the button only when the moon can't be used (switched off above, or hidden by another addon).",
@@ -339,7 +346,7 @@ local function buildDisplay(p)
   -- colorblindSimulator 0-3 and colorblindWeaknessFactor 0-1 exist on Forever (Kim, 2026-11-26:
   -- "0 0.5"). Read from the game each time, never stored by Duskfall.
   local function cvarNum(name, d) return tonumber(GetCVar(name)) or d end
-  local _, cb = card(p, 12 + HALF + 12, -50, HALF, 206, "Colorblind filter",
+  local _, cb = card(p, 12 + HALF + 12, -50, HALF, 236, "Colorblind filter",
     "The game's own filter (Options > Accessibility). Duskfall only changes it when you do.", controls)
   cb(UI.Dropdown(p, DD_W, { label = "Filter",
     items = { { 0, "Off" }, { 1, "Protanopia (red weak)" }, { 2, "Deuteranopia (green weak)" }, { 3, "Tritanopia (blue weak)" } },
@@ -351,7 +358,7 @@ local function buildDisplay(p)
     get = function() return cvarNum("colorblindWeaknessFactor", 0.5) end,
     onChange = function(v) SetCVar("colorblindWeaknessFactor", v) end }), UI.SLIDER_H, 8)
 
-  local _, sd = card(p, 12, -268, FULL_W, 150, "Status display",
+  local _, sd = card(p, 12, -298, FULL_W, 150, "Status display",
     "A small floating display of the setting in effect and the values on screen.", controls)
   local show = sd(UI.Dropdown(p, DD_W, { label = "Show it",
     items = { { "off", "Never" }, { "change", "When the setting changes" }, { "always", "Always" } },

@@ -29,6 +29,7 @@ ns.DEFAULTS = {
   statusDisplay = "change",     -- floating display: "off", "change", "always"
   statusSeconds = 4,            -- "change": seconds it stays after the change is done
   advanced = false,             -- Places in Advanced mode (full list and Look editor), else simple
+  ringGlow = true,              -- the glow ring on the moon badge and minimap button where a setting is in effect
 }
 
 -- Output ---------------------------------------------------------------------------------------

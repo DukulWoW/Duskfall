@@ -129,7 +129,12 @@ end
 ns.Listen("READY", function()
   local m = ns.cfg.minimapButton or "auto"
   ns.cfg.minimap.hide = m ~= "always"
-  if DBIcon and obj then DBIcon:Register(NAME, obj, ns.cfg.minimap) end
+  if DBIcon and obj then
+    DBIcon:Register(NAME, obj, ns.cfg.minimap)
+    -- The same glow ring as the moon badge, behind the button's icon
+    local btn = DBIcon:GetMinimapButton(NAME)
+    if btn and ns.Moon and ns.Moon.AddRing then ns.Moon.AddRing(btn, btn.icon or btn, 40) end
+  end
 end)
 ns.Listen("EVALUATED", function() ns.UpdateBroker() end)
 ns.Listen("ONOFF", function() ns.UpdateBroker() end)

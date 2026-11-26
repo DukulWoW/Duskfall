@@ -10,7 +10,8 @@
 -- seen and clicked, and the minimap button in "auto" mode shows itself when it can't. Checked at
 -- login, again after other addons have set up, on every loading screen, when the moon is shown
 -- or hidden, and when the Duskfall window opens.
--- Public: ns.Moon.Apply(), ns.Moon.Found(), ns.Moon.Searched(), ns.Moon.Usable(), ns.Moon.Check()
+-- Public: ns.Moon.Apply(), ns.Moon.Found(), ns.Moon.Searched(), ns.Moon.Usable(), ns.Moon.Check(),
+--         ns.Moon.AddRing(host, anchor, size), ns.Moon.UpdateRings()
 local ADDON, ns = ...
 local UI = ns.UI
 local M = {}
@@ -112,6 +113,87 @@ function M.Report()
   end)
 end
 
+-- The glow ring (Kim): while a setting is in effect where you stand, the bright rings of
+-- Blizzard's proc flipbook (atlas OneButton_ProcStart_Flipbook_2x, 5 frames a row), frames 3 to 6
+-- stepped slowly back and forth with a slow pulse, behind the icon. It fades in and out over
+-- FADE seconds. A soft gold disc (Assets/dot) where the atlas is missing. settings.ringGlow =
+-- false switches every ring off. Used on the moon badge and on the minimap button (UI/Broker.lua).
+local rings = {}
+local RING_SEQ = { 3, 4, 5, 6, 5, 4 }
+local RING_STEP = 0.5      -- seconds a frame
+local RING_BREATH = 0.8    -- radians a second: about 8 s a breath
+local RING_FADE = 0.8
+
+local function ringWanted()
+  return ns.cfg and ns.cfg.enabled and ns.cfg.ringGlow ~= false and ns.Detect.state.source
+    and next(ns.Detect.state.source) ~= nil
+end
+
+-- host: the frame it lives on; anchor: the region it centres on; size: its width and height.
+function M.AddRing(host, anchor, size)
+  local ring = host:CreateTexture(nil, "ARTWORK", nil, -1)
+  ring:SetSize(size, size)
+  ring:SetPoint("CENTER", anchor, "CENTER")
+  ring:SetBlendMode("ADD")
+  ring:Hide()
+  local info = C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo("OneButton_ProcStart_Flipbook_2x")
+  local frameAt
+  if info and (info.file or info.filename) and info.width and info.width > 0 then
+    local COLS = 5
+    local l, r, t, b = info.leftTexCoord, info.rightTexCoord, info.topTexCoord, info.bottomTexCoord
+    local rows = math.max(1, math.floor(info.height / (info.width / COLS) + 0.5))
+    local fw, fh = (r - l) / COLS, (b - t) / rows
+    ring:SetTexture(info.file or info.filename)
+    frameAt = function(n)
+      local c, row = (n - 1) % COLS, math.floor((n - 1) / COLS)
+      ring:SetTexCoord(l + c * fw, l + (c + 1) * fw, t + row * fh, t + (row + 1) * fh)
+    end
+    frameAt(RING_SEQ[1])
+  else
+    ring:SetTexture(UI.ART .. "dot")
+    ring:SetVertexColor(1, 0.8, 0.35)
+  end
+  local anim = CreateFrame("Frame", nil, host)
+  local clock, step, level, want = 0, 0, 0, 0
+  anim:SetScript("OnUpdate", function(self, dt)
+    clock = clock + dt
+    if level < want then level = math.min(want, level + dt / RING_FADE)
+    elseif level > want then level = math.max(want, level - dt / RING_FADE) end
+    if level <= 0 and want == 0 then
+      ring:Hide()
+      self:Hide()
+      return
+    end
+    ring:SetAlpha(level * (0.7 + 0.3 * math.sin(clock * RING_BREATH)))
+    if frameAt and clock - step >= RING_STEP then
+      step = clock
+      frameAt(RING_SEQ[math.floor(clock / RING_STEP) % #RING_SEQ + 1])
+    end
+  end)
+  anim:Hide()
+  local r = {}
+  function r.Set(on)
+    want = on and 1 or 0
+    if on then
+      ring:SetAlpha(level * 0.7)
+      ring:Show()
+      anim:Show()
+    elseif level > 0 then
+      anim:Show()   -- fades out, then hides itself
+    end
+  end
+  rings[#rings + 1] = r
+  r.Set(ringWanted())
+  return r
+end
+
+function M.UpdateRings()
+  local on = ringWanted() and true or false
+  for _, r in ipairs(rings) do r.Set(on) end
+end
+ns.Listen("EVALUATED", function() ns.Safe(M.UpdateRings, "glow ring") end)
+ns.Listen("ONOFF", function() ns.Safe(M.UpdateRings, "glow ring") end)
+
 local function hook()
   if hooked or not moon then return end
   hooked = true
@@ -135,70 +217,8 @@ local function hook()
     badge:ClearAllPoints()
     badge:SetPoint("CENTER", disc, "CENTER", r * math.sin(a), r * math.cos(a))
   end
-  -- Behind it while a setting is in effect where you stand (Kim): the bright rings of Blizzard's
-  -- proc flipbook (atlas OneButton_ProcStart_Flipbook_2x, 5 frames a row), frames 3 to 6 stepped
-  -- back and forth with a gentle pulse, only a little bigger than the icon. A soft gold disc
-  -- (Assets/dot) where the atlas is missing.
-  local ring = catcher:CreateTexture(nil, "ARTWORK")
-  ring:SetSize(25, 25)
-  ring:SetPoint("CENTER", badge, "CENTER")
-  ring:SetBlendMode("ADD")
-  ring:Hide()
-  local info = C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo("OneButton_ProcStart_Flipbook_2x")
-  local frameAt
-  if info and (info.file or info.filename) and info.width and info.width > 0 then
-    local COLS = 5
-    local l, r, t, b = info.leftTexCoord, info.rightTexCoord, info.topTexCoord, info.bottomTexCoord
-    local rows = math.max(1, math.floor(info.height / (info.width / COLS) + 0.5))
-    local fw, fh = (r - l) / COLS, (b - t) / rows
-    ring:SetTexture(info.file or info.filename)
-    frameAt = function(n)
-      local c, row = (n - 1) % COLS, math.floor((n - 1) / COLS)
-      ring:SetTexCoord(l + c * fw, l + (c + 1) * fw, t + row * fh, t + (row + 1) * fh)
-    end
-    frameAt(3)
-  else
-    ring:SetTexture(UI.ART .. "dot")
-    ring:SetVertexColor(1, 0.8, 0.35)
-  end
-  local SEQ = { 3, 4, 5, 6, 5, 4 }
-  local STEP = 0.18
-  local anim = CreateFrame("Frame", nil, catcher)
-  local clock, step = 0, 0
-  -- It fades in and out over FADE seconds when you walk into or out of a set place (Kim)
-  local FADE = 0.8
-  local level, want = 0, 0
-  anim:SetScript("OnUpdate", function(self, dt)
-    clock = clock + dt
-    if level < want then level = math.min(want, level + dt / FADE)
-    elseif level > want then level = math.max(want, level - dt / FADE) end
-    if level <= 0 and want == 0 then
-      ring:Hide()
-      self:Hide()
-      return
-    end
-    -- gentle pulse, about 3 s a breath, times the fade
-    ring:SetAlpha(level * (0.55 + 0.25 * math.sin(clock * 2.1)))
-    if frameAt and clock - step >= STEP then
-      step = clock
-      frameAt(SEQ[math.floor(clock / STEP) % #SEQ + 1])
-    end
-  end)
-  anim:Hide()
-  local function lit()
-    local on = ns.cfg.enabled and ns.Detect.state.source and next(ns.Detect.state.source) ~= nil
-    want = on and 1 or 0
-    if on then
-      ring:SetAlpha(level * 0.55)
-      ring:Show()
-      anim:Show()
-    elseif level > 0 then
-      anim:Show()   -- fades out, then hides itself
-    end
-  end
-  ns.Listen("EVALUATED", function() ns.Safe(lit, "moon glow") end)
-  ns.Listen("ONOFF", function() ns.Safe(lit, "moon glow") end)
-  lit()
+  -- Behind it, the glow ring while a setting is in effect where you stand (M.AddRing)
+  M.AddRing(catcher, badge, 36)
   M.PlaceBadge = place
   place()
   C_Timer.NewTicker(30, function()
