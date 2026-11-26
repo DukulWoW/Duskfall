@@ -18,5 +18,6 @@ UI\Window.lua
 UI\DayBar.lua
 UI\LookEditor.lua
 UI\Places.lua
+UI\Styles.lua
 UI\Pages.lua
 OptionsPanel.lua

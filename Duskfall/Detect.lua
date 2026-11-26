@@ -1,7 +1,7 @@
 -- Duskfall Detect.lua: notices where the player is and what state they are in, waits out doorway
 -- flicker, works out the target and applies it. Also the baseline safety (capture, crash check,
 -- restore at logout) and manual slider changes (held, never learned).
--- Public: D.Evaluate(why), D.Now(why), D.Preview(target, seconds), D.SetEnabled(on), D.SaveBaseline(), D.ClearHolds(), D.state
+-- Public: D.Evaluate(why), D.Now(why), D.Preview(target, seconds, opts), D.SetEnabled(on), D.SaveBaseline(), D.ClearHolds(), D.state
 local ADDON, ns = ...
 local D = {}
 ns.Detect = D
@@ -56,25 +56,35 @@ function D.Evaluate(why)
   state.pendingSig = nil
   S.Discover(env)
   local target, source, style, cands = R.Resolve(env)
-  local pv = state.preview
+  local pv, trStyle = state.preview, nil
   if pv then
-    if GetTime() < pv.ends then target = pv.target else state.preview = nil end
+    if GetTime() < pv.ends then
+      target, trStyle, timeOnly = pv.target, pv.style, false
+      why = pv.why or why
+    else
+      state.preview = nil
+    end
   end
   if state.target and not C.SameAll(state.target, target) then D.ClearHolds() end
   state.target, state.source, state.style, state.cands = target, source, style, cands
-  if ns.cfg.enabled then T.Apply(target, state.held, why, timeOnly) end
+  if ns.cfg.enabled then T.Apply(target, state.held, why, timeOnly, trStyle) end
   ns.Debug("evaluate (%s): g %.2f b %d c %d", tostring(why), target.gamma, target.brightness, target.contrast)
   ns.Fire("EVALUATED", why)
 end
 
--- Look editor Preview: show `target` for `seconds` whatever matches here; nil ends it now.
-function D.Preview(target, seconds)
+-- Preview: show `target` for `seconds` whatever matches here; nil ends it now.
+-- opts = { why, style }: the Look editor shows at once ("edit"); the Styles tab's Try it runs
+-- that Style's transition (why "demo", style). Change pv.target and Evaluate for a next step.
+function D.Preview(target, seconds, opts)
+  opts = opts or {}
   local pv = nil
-  if target then pv = { target = target, ends = GetTime() + (seconds or 10) } end
+  if target then
+    pv = { target = target, ends = GetTime() + (seconds or 10), why = opts.why or "edit", style = opts.style }
+  end
   state.preview = pv
   D.ClearHolds()
   state.target = nil
-  D.Evaluate(pv and "edit" or "preview end")
+  D.Evaluate(pv and pv.why or "preview end")
   if pv then
     C_Timer.After(seconds or 10, function()
       if state.preview ~= pv then return end

@@ -11,7 +11,7 @@
 -- (Look editor, Preview) is always instant.
 -- A new target mid-transition starts again from the values on screen, so nothing jumps.
 -- The driver frame runs only while a transition is active, writing about RATE times a second.
--- Public: T.Apply(target, held, why, timeOnly), T.Cancel(), T.Drop(key), T.IsRunning()
+-- Public: T.Apply(target, held, why, timeOnly, style), T.Cancel(), T.Drop(key), T.IsRunning()
 local ADDON, ns = ...
 local T = {}
 ns.Transition = T
@@ -76,7 +76,8 @@ end
 function T.IsRunning() return run ~= nil end
 
 -- held: key -> value for channels the player moved by hand; those are left alone.
-function T.Apply(target, held, why, timeOnly)
+-- style: whose transition to use (default the active Style; Try it on the Styles tab).
+function T.Apply(target, held, why, timeOnly, style)
   local cur = C.ReadAll()
   if not cur then return end
   local keys, n = {}, 0
@@ -95,7 +96,7 @@ function T.Apply(target, held, why, timeOnly)
     return
   end
 
-  local style = ns.Resolver.ActiveStyle()
+  style = style or ns.Resolver.ActiveStyle()
   local tr = style.transition or {}
   local mode = tr.mode or "adapt"
   local dur, strength, peak, dir = 0, 0, 0.5, nil

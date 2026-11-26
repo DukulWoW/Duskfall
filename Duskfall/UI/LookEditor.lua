@@ -5,7 +5,7 @@
 --   right: When (Any / Yes / No per condition, Time with Custom From / To), what the Look does here now
 -- Every edit saves at once and re-evaluates (instant, throttled to 25 a second), so a Look that
 -- matches where you stand changes the screen while you drag. Revert = back to how it was on open.
--- Scope: multi-select (Global, or characters). Copy / Paste scope come in B-04d.
+-- Scope: UI.ScopeDropdown (Global or characters, Copy / Paste scope, Apply to all Looks).
 -- Public: E.Create(parent, hooks) -> editor; editor:Open(look, placeKey), editor:Close(),
 --         editor:RefreshNow(). hooks = { onClose = fn(), onOpen = fn(look) }
 local ADDON, ns = ...
@@ -29,12 +29,7 @@ local ITYPES = { "itype:party", "itype:raid", "itype:pvp", "itype:arena", "itype
 local KIND_LABEL = { sub = "Subzone", zone = "Zone", instance = "Instance" }
 
 -- Helpers ----------------------------------------------------------------------------------------
-local function deepCopy(t)
-  if type(t) ~= "table" then return t end
-  local out = {}
-  for k, v in pairs(t) do out[k] = deepCopy(v) end
-  return out
-end
+local deepCopy = UI.DeepCopy
 
 local function round(k, v) return tonumber(C.Format(k, v)) end
 
@@ -115,26 +110,6 @@ end
 
 local function customString(h1, m1, h2, m2)
   return string.format("time:%02d:%02d-%02d:%02d", h1, m1, h2, m2)
-end
-
-local function scopeIsGlobal(scope)
-  return type(scope) ~= "table" or scope.global or type(scope.chars) ~= "table" or next(scope.chars) == nil
-end
-
-local function classColored(guid)
-  local c = ns.db.chars[guid]
-  local name = (c and c.name) or tostring(guid)
-  local col = c and c.class and RAID_CLASS_COLORS and RAID_CLASS_COLORS[c.class]
-  if col and col.colorStr then return "|c" .. col.colorStr .. name .. "|r" end
-  return name
-end
-
-local function scopeText(scope)
-  if scopeIsGlobal(scope) then return "Global" end
-  local names = {}
-  for guid in pairs(scope.chars) do names[#names + 1] = ns.CharName(guid) end
-  table.sort(names)
-  return table.concat(names, ", ")
 end
 
 -- "Raven Hill (Duskwood)", "Duskwood (zone)", "The Deadmines (instance)", "All dungeons".
@@ -264,42 +239,24 @@ function E.Create(parent, hooks)
 
   local scopeLbl = UI.Label(ed, "Scope", "GameFontNormalSmall")
   scopeLbl:SetPoint("LEFT", onCheck, "RIGHT", 50, 0)
-  local scopeDD = CreateFrame("DropdownButton", nil, ed, "WowStyle1DropdownTemplate")
-  scopeDD:SetPoint("LEFT", scopeLbl, "RIGHT", 8, 0)
-  scopeDD:SetWidth(220)
-  UI.Tooltip(scopeDD, "Scope", "Who this Look is for: Global (everyone using this Style), or only the characters you tick.")
-  local function scopeChanged()
-    pcall(scopeDD.OverrideText, scopeDD, scopeText(look.scope))
-    apply()
-    return MenuResponse and MenuResponse.Refresh
-  end
-  scopeDD:SetupMenu(function(_, root)
-    if not look then return end
-    root:CreateCheckbox("Global", function() return scopeIsGlobal(look.scope) end, function()
-      look.scope = { global = true }
-      return scopeChanged()
-    end)
-    local list = {}
-    for guid, c in pairs(ns.db.chars) do list[#list + 1] = { guid = guid, name = c.name or "" } end
-    table.sort(list, function(a, b) return a.name < b.name end)
-    for _, e in ipairs(list) do
-      root:CreateCheckbox(classColored(e.guid), function()
-        local sc = look.scope
-        return not scopeIsGlobal(sc) and sc.chars[e.guid] and true or false
-      end, function()
-        local sc = look.scope
-        if scopeIsGlobal(sc) then sc = { chars = {} } end
-        if sc.chars[e.guid] then sc.chars[e.guid] = nil else sc.chars[e.guid] = true end
-        if next(sc.chars) == nil then sc = { global = true } end
-        look.scope = sc
-        return scopeChanged()
+  local scopeDD = add(UI.ScopeDropdown(ed, 220, {
+    tip = "Who this Look is for: Global (everyone using this Style), or only the characters you tick.",
+    get = function() return look.scope end,
+    set = function(sc)
+      look.scope = sc
+      apply()
+    end,
+    extra = function(root)
+      root:CreateButton("Apply this scope to all Looks in this Style", function()
+        local style = R.ActiveStyle()
+        UI.Confirm("Give every Look in Style \"" .. (style.name or "?") .. "\" the scope " ..
+          UI.ScopeText(look.scope) .. "?", function()
+          for _, l in ipairs(style.looks) do l.scope = UI.DeepCopy(look.scope) end
+          apply()
+        end)
       end)
-    end
-  end)
-  add({ Refresh = function()
-    if scopeDD.GenerateMenu then pcall(scopeDD.GenerateMenu, scopeDD) end
-    pcall(scopeDD.OverrideText, scopeDD, scopeText(look.scope))
-  end })
+    end }))
+  scopeDD:SetPoint("LEFT", scopeLbl, "RIGHT", 8, 0)
 
   local rule = ed:CreateTexture(nil, "ARTWORK")
   rule:SetColorTexture(1, 0.82, 0, 0.25)

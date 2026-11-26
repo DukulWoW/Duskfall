@@ -7,7 +7,9 @@
 -- Public: UI.ART, UI.Wood(f), UI.Glow(host, region), UI.Header(parent, text), UI.Label(...),
 --         UI.Button(parent, text, w, onClick), UI.Check(parent, o), UI.Slider(parent, width, o),
 --         UI.Dropdown(parent, width, o), UI.Confirm(text, onAccept), UI.SLIDER_H,
---         UI.IconButton(parent, size, symbol, o), UI.Copy(title, text)
+--         UI.IconButton(parent, size, symbol, o), UI.Copy(title, text),
+--         UI.ScopeDropdown(parent, width, o), UI.ScopeText(scope, style), UI.ScopeIsGlobal(scope, style),
+--         UI.DeepCopy(t), UI.CharColored(guid), UI.scopeClip
 local ADDON, ns = ...
 local UI = {}
 ns.UI = UI
@@ -222,6 +224,101 @@ function UI.Dropdown(parent, width, o)
   end
   build()
   return h
+end
+
+-- Scope dropdown -------------------------------------------------------------------------------
+-- Multi-select: Global, then every known character (class colours). Ticking a character unticks
+-- Global; unticking the last one gives Global (a Look) or Unused (a Style, o.style). Below a
+-- divider: Copy scope, Paste scope, then o.extra(root) adds more. Checkbox clicks answer
+-- MenuResponse.Refresh so the menu stays open.
+-- o = { get = fn() -> scope, set = fn(scope), style = bool, extra = fn(root), tip }. :Refresh().
+function UI.DeepCopy(t)
+  if type(t) ~= "table" then return t end
+  local out = {}
+  for k, v in pairs(t) do out[k] = UI.DeepCopy(v) end
+  return out
+end
+
+function UI.CharColored(guid)
+  local c = ns.db.chars[guid]
+  local name = (c and c.name) or tostring(guid)
+  local col = c and c.class and RAID_CLASS_COLORS and RAID_CLASS_COLORS[c.class]
+  if col and col.colorStr then return "|c" .. col.colorStr .. name .. "|r" end
+  return name
+end
+
+local function scopeChars(scope)
+  if type(scope) == "table" and not scope.global and type(scope.chars) == "table" then return scope.chars end
+  return nil
+end
+
+-- style: an empty character list means Unused, not Global.
+function UI.ScopeIsGlobal(scope, style)
+  if type(scope) ~= "table" or scope.global then return true end
+  if style then return false end
+  local chars = scopeChars(scope)
+  return chars == nil or next(chars) == nil
+end
+
+function UI.ScopeText(scope, style)
+  if UI.ScopeIsGlobal(scope, style) then return "Global" end
+  local names = {}
+  for guid in pairs(scopeChars(scope) or {}) do names[#names + 1] = ns.CharName(guid) end
+  if #names == 0 then return "Unused" end
+  table.sort(names)
+  return table.concat(names, ", ")
+end
+
+function UI.ScopeDropdown(parent, width, o)
+  local dd = CreateFrame("DropdownButton", nil, parent, "WowStyle1DropdownTemplate")
+  dd:SetWidth(width)
+  if o.tip then tooltip(dd, "Scope", o.tip) end
+  local function refreshText() pcall(dd.OverrideText, dd, UI.ScopeText(o.get(), o.style)) end
+  local function done(sc)
+    ns.Safe(o.set, "scope", sc)
+    refreshText()
+    return MenuResponse and MenuResponse.Refresh
+  end
+  dd:SetupMenu(function(_, root)
+    root:CreateCheckbox("Global", function() return UI.ScopeIsGlobal(o.get(), o.style) end, function()
+      if UI.ScopeIsGlobal(o.get(), o.style) then
+        if o.style then return done({ chars = {} }) end
+        return MenuResponse and MenuResponse.Refresh
+      end
+      return done({ global = true })
+    end)
+    local list = {}
+    for guid, c in pairs(ns.db.chars) do list[#list + 1] = { guid = guid, name = c.name or "" } end
+    table.sort(list, function(a, b) return a.name < b.name end)
+    for _, e in ipairs(list) do
+      root:CreateCheckbox(UI.CharColored(e.guid), function()
+        local chars = scopeChars(o.get())
+        return chars ~= nil and chars[e.guid] == true
+      end, function()
+        local chars = {}
+        for g in pairs(scopeChars(o.get()) or {}) do chars[g] = true end
+        if chars[e.guid] then chars[e.guid] = nil else chars[e.guid] = true end
+        if next(chars) == nil and not o.style then return done({ global = true }) end
+        return done({ chars = chars })
+      end)
+    end
+    root:CreateDivider()
+    root:CreateButton("Copy scope", function() UI.scopeClip = UI.DeepCopy(o.get() or { global = true }) end)
+    local paste = root:CreateButton("Paste scope", function()
+      if not UI.scopeClip then return end
+      local sc = UI.DeepCopy(UI.scopeClip)
+      if not o.style and UI.ScopeIsGlobal(sc) then sc = { global = true } end
+      done(sc)
+    end)
+    if not UI.scopeClip and paste and paste.SetEnabled then pcall(paste.SetEnabled, paste, false) end
+    if o.extra then o.extra(root) end
+  end)
+  function dd:Refresh()
+    if self.GenerateMenu then pcall(self.GenerateMenu, self) end
+    refreshText()
+  end
+  refreshText()
+  return dd
 end
 
 -- Icon button ----------------------------------------------------------------------------------

@@ -1,5 +1,5 @@
 -- Duskfall UI/Pages.lua: the tabs of the settings window.
---   left:  Places (UI/Places.lua, loads first so it is the first tab), Styles (B-04d): placeholder
+--   left:  Places (UI/Places.lua, loads first so it is the first tab), Styles (UI/Styles.lua, also before this file)
 --   right: Settings (an overview of sub-pages, like BigNoteBox's Modules tab: General, Time of day,
 --          Baseline, Characters), About (logo, version, links, commands)
 local ADDON, ns = ...
@@ -25,18 +25,6 @@ function ns.FormatHour(h, m)
   if m == 0 then return h12 .. " " .. suffix end
   return string.format("%d:%02d %s", h12, m, suffix)
 end
-
-local function placeholder(page, text)
-  UI.Glow(page, nil, 0.8)
-  local fs = UI.Label(page, text, "GameFontHighlight")
-  fs:SetPoint("CENTER")
-  fs:SetJustifyH("CENTER")
-end
-
--- Styles -------------------------------------------------------------------------------------------
-W.AddTab("styles", "Styles", function(page)
-  placeholder(page, "Styles come in B-04d.\nUntil then: /dusk style, /dusk mode, /dusk fade, /dusk adapt.")
-end, "left")
 
 -- Settings: sub-page builders ----------------------------------------------------------------------
 local CONTENT_W = 700
