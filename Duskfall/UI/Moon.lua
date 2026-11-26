@@ -15,7 +15,9 @@ local ADDON, ns = ...
 local M = {}
 ns.Moon = M
 
-local ATLAS = "ui-hud-minimap-nightcycle"
+-- The atlas follows the clock: "...-DayCycle" by day, "...-NightCycle" by night (Kim's /dusk moon,
+-- 2026-11-26: only the night one was looked for, so by day the moon was never found)
+local ATLAS = { ["ui-hud-minimap-daycycle"] = true, ["ui-hud-minimap-nightcycle"] = true }
 local moon, hooked, catcher
 local searched = false     -- the search is over (found or given up)
 
@@ -26,7 +28,7 @@ local function find()
     local bg = child.Background
     if bg and bg.GetAtlas then
       local ok, atlas = pcall(bg.GetAtlas, bg)
-      if ok and type(atlas) == "string" and atlas:lower() == ATLAS then return child end
+      if ok and type(atlas) == "string" and ATLAS[atlas:lower()] then return child end
     end
   end
   return nil

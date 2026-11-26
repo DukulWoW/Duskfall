@@ -10,7 +10,8 @@
 --         UI.IconButton(parent, size, symbol, o), UI.Copy(title, text, anchor),
 --         UI.ScopeDropdown(parent, width, o), UI.ScopeText(scope, style), UI.ScopeIsGlobal(scope, style),
 --         UI.DeepCopy(t), UI.CharColored(guid), UI.scopeClip, UI.Gradient(tex, orient, a, b),
---         UI.Border(f, r, g, b, a), UI.RoundBox(f, o), UI.AutoHideScroll(box, bar), UI.Segmented(parent, width, o), UI.LightSlider(parent, width, o)
+--         UI.Border(f, r, g, b, a), UI.RoundBox(f, o), UI.AutoHideScroll(box, bar), UI.ClearX(parent, size, onClick, tip),
+--         UI.SearchBox(parent, width, o), UI.HelpIcon(parent, topic, title, text), UI.Segmented(parent, width, o), UI.LightSlider(parent, width, o)
 local ADDON, ns = ...
 local UI = {}
 ns.UI = UI
@@ -752,6 +753,101 @@ function UI.LightSlider(parent, width, o)
   end
   h:Refresh()
   return h
+end
+
+-- Clear X, search box, help icon ----------------------------------------------------------------
+-- BigNoteBox's round clear X (Dukul's art, Assets/clear-x): coloured, never tinted; pressed =
+-- dimmed and 1 px down-right.
+function UI.ClearX(parent, size, onClick, tip)
+  local btn = CreateFrame("Button", nil, parent)
+  btn:SetSize(size, size)
+  local tx = btn:CreateTexture(nil, "ARTWORK")
+  tx:SetSize(size, size)
+  tx:SetPoint("CENTER")
+  tx:SetTexture(UI.ART .. "clear-x")
+  local hi = btn:CreateTexture(nil, "HIGHLIGHT")
+  hi:SetAllPoints(tx)
+  hi:SetTexture(UI.ART .. "clear-x")
+  hi:SetBlendMode("ADD")
+  hi:SetAlpha(0.25)
+  local function look(down)
+    tx:SetPoint("CENTER", down and 1 or 0, down and -1 or 0)
+    tx:SetAlpha(down and 0.5 or 1)
+  end
+  btn:HookScript("OnMouseDown", function() look(true) end)
+  btn:HookScript("OnMouseUp", function() look(false) end)
+  btn:HookScript("OnHide", function() look(false) end)
+  btn:HookScript("OnLeave", function(self)
+    look(false)
+    if GameTooltip:IsOwned(self) then GameTooltip:Hide() end
+  end)
+  if tip then
+    btn:HookScript("OnEnter", function(self)
+      GameTooltip:SetOwner(self, "ANCHOR_TOP")
+      GameTooltip:AddLine(tip, 1, 1, 1)
+      GameTooltip:Show()
+    end)
+  end
+  if onClick then btn:SetScript("OnClick", onClick) end
+  return btn
+end
+
+-- A search box: grey placeholder while empty, the clear X only once something is typed.
+-- o = { placeholder, onChange = fn(text) }. Returns the edit box (:GetText, :SetText).
+function UI.SearchBox(parent, width, o)
+  local eb = CreateFrame("EditBox", nil, parent, "InputBoxTemplate")
+  eb:SetSize(width - 6, 22)
+  eb:SetAutoFocus(false)
+  eb:SetTextInsets(0, 22, 0, 0)
+  local ph = eb:CreateFontString(nil, "OVERLAY", "GameFontDisable")
+  ph:SetPoint("LEFT", eb, "LEFT", 0, 0)
+  ph:SetText(o.placeholder or "Search")
+  local x = UI.ClearX(eb, 16, function()
+    eb:SetText("")
+    eb:ClearFocus()
+  end, "Clear")
+  x:SetPoint("RIGHT", eb, "RIGHT", -2, 0)
+  x:Hide()
+  local function sync()
+    local t = eb:GetText() or ""
+    x:SetShown(t ~= "")
+    ph:SetShown(t == "" and not eb:HasFocus())
+  end
+  eb:SetScript("OnTextChanged", function(self)
+    sync()
+    if o.onChange then ns.Safe(o.onChange, "search", self:GetText() or "") end
+  end)
+  eb:SetScript("OnEditFocusGained", sync)
+  eb:SetScript("OnEditFocusLost", sync)
+  eb:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
+  eb:SetScript("OnEnterPressed", function(self) self:ClearFocus() end)
+  sync()
+  return eb
+end
+
+-- A small, quiet "?" next to a feature: faint until hovered, a tooltip on hover, and a click
+-- opens that topic in Help (ns.Help.Open).
+function UI.HelpIcon(parent, topic, title, text)
+  local b = CreateFrame("Button", nil, parent)
+  b:SetSize(16, 16)
+  b:SetNormalTexture(UI.ART .. "help-normal")
+  b:SetHighlightTexture(UI.ART .. "help-hover")
+  b:SetPushedTexture(UI.ART .. "help-press")
+  b:SetAlpha(0.35)
+  b:SetScript("OnEnter", function(self)
+    self:SetAlpha(1)
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    GameTooltip:AddLine(title, 1, 1, 1)
+    if text then GameTooltip:AddLine(text, 0.8, 0.8, 0.8, true) end
+    GameTooltip:AddLine("Click: more in Help.", 0.62, 0.71, 1)
+    GameTooltip:Show()
+  end)
+  b:SetScript("OnLeave", function(self)
+    self:SetAlpha(0.35)
+    if GameTooltip:IsOwned(self) then GameTooltip:Hide() end
+  end)
+  b:SetScript("OnClick", function() if ns.Help then ns.Help.Open(topic) end end)
+  return b
 end
 
 -- Scroll bars ----------------------------------------------------------------------------------

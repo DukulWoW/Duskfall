@@ -51,6 +51,9 @@ function SS.Create(parent)
 
   local title = UI.Label(f, "How should changes feel?", "GameFontNormalHuge")
   title:SetPoint("TOPLEFT", f, "TOPLEFT", 14, -14)
+  local titleHelp = UI.HelpIcon(f, "feel", "How changes feel", "Instant, a soft fade, or like your eyes. Speed " ..
+    "makes it quicker or slower; Try it shows it.")
+  titleHelp:SetPoint("LEFT", title, "RIGHT", 8, 0)
   local sub = UI.Label(f, "When the screen changes, for example when you walk from the sun into a cave.", "GameFontHighlight")
   sub:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -8)
   sub:SetTextColor(0.7, 0.7, 0.7)

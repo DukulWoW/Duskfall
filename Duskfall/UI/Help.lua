@@ -1,13 +1,16 @@
 -- Duskfall UI/Help.lua: how Duskfall works, in short topics (Kim, 2026-11-26). Opened by the help
 -- button between Advanced and the close button; it lies over the tabs until closed (the button
 -- again, Close, or ESC). Topics on the left, the text on the right.
--- Public: ns.Help.Toggle(), ns.Help.Shown(), ns.Help.Hide()
+-- Public: ns.Help.Toggle(), ns.Help.Open(key), ns.Help.Shown(), ns.Help.Hide()
 local ADDON, ns = ...
 local UI, W = ns.UI, ns.Window
 local H = {}
 ns.Help = H
 
 local Y = "|cffffd100"
+-- Topic keys for ns.Help.Open (the "?" icons next to features)
+local KEYS = { start = 1, wins = 2, time = 3, feel = 4, own = 5, modes = 6, sharing = 7, commands = 8 }
+
 local TOPICS = {
   { "Getting started", {
     "Duskfall changes the game's Gamma, Brightness, Contrast and Bloom for where you are.",
@@ -157,6 +160,12 @@ local function build()
 end
 
 function H.Shown() return frame ~= nil and frame:IsShown() end
+function H.Open(key)
+  if not W.frame then return end
+  if not frame then build() end
+  frame:Show()
+  show(KEYS[key] or current)
+end
 function H.Hide() if frame then frame:Hide() end end
 function H.Toggle()
   if not W.frame then return end

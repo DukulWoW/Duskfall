@@ -35,6 +35,7 @@ local SLIDERS = {
 }
 
 local PERIODS = { "dawn", "day", "dusk", "night" }
+local PLACE_KIND = { sub = "Part of a zone", zone = "Zone", instance = "Instance", itype = "Every instance of a kind" }
 local PERIOD_NAME = { dawn = "Dawn", day = "Day", dusk = "Dusk", night = "Night" }
 local PERIOD_PHRASE = { dawn = " at dawn", day = " by day", dusk = " at dusk", night = " at night" }
 local ITYPE_NAME = { party = "All dungeons", raid = "All raids", pvp = "All battlegrounds", arena = "All arenas",
@@ -303,7 +304,12 @@ function SP.Create(parent, hooks)
       if key == EVERYWHERE then key = nil end
       pick({ key = key, time = sel.time, io = sel.io }, true)
     end })
-  row("Place", placeSeg)
+  local function tip(label, topic, title, text)
+    local q = UI.HelpIcon(left, topic, title, text)
+    q:SetPoint("LEFT", label, "RIGHT", 3, 0)
+  end
+  tip(row("Place", placeSeg), "wins", "Place", "Where the setting counts: this part of the zone, the whole zone, or " ..
+    "everywhere. The most specific one wins.")
 
   local timeSeg = UI.Segmented(left, SEG_W, {
     items = function()
@@ -319,7 +325,7 @@ function SP.Create(parent, hooks)
       if v == "any" then v = nil end
       pick({ key = sel.key, time = v, io = sel.io }, true)
     end })
-  row("Time", timeSeg)
+  tip(row("Time", timeSeg), "time", "Time", "Only at one part of the day, or any time.")
 
   local ioSeg = UI.Segmented(left, SEG_W, {
     items = function()
@@ -332,7 +338,8 @@ function SP.Create(parent, hooks)
       if v == "any" then v = nil end
       pick({ key = sel.key, time = sel.time, io = v }, true)
     end })
-  row("Inside", ioSeg)
+  tip(row("Inside", ioSeg), "wins", "Inside", "Only indoors, only outdoors, or both. The game decides what " ..
+    "counts as indoors; inside dungeons it never does.")
 
   -- Left: the sliders --------------------------------------------------------------------------
   y = y - 10
@@ -409,14 +416,18 @@ function SP.Create(parent, hooks)
     local pos = ns.cfg.miniPos
     if type(pos) == "table" and pos.point then m:SetPoint(pos.point, UIParent, pos.rel or pos.point, pos.x or 0, pos.y or 0)
     else m:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, 140) end
-    UI.RoundBox(m, { radius = 12, bottom = { 0.03, 0.02, 0.01, 0.92 }, top = { 0.14, 0.11, 0.07, 0.92 },
+    UI.RoundBox(m, { radius = 12, bottom = { 0.03, 0.02, 0.01, 0.72 }, top = { 0.14, 0.11, 0.07, 0.72 },
       border = { 1, 0.82, 0, 0.45 } })
-    local icon = m:CreateTexture(nil, "ARTWORK")
-    icon:SetSize(26, 26)
-    icon:SetPoint("TOPLEFT", m, "TOPLEFT", 12, -10)
+    -- The round icon half out of the top-left corner, as on the main window (Kim)
+    local badge = CreateFrame("Frame", nil, m)
+    badge:SetSize(52, 52)
+    badge:SetPoint("TOPLEFT", m, "TOPLEFT", -16, 16)
+    badge:SetFrameLevel(m:GetFrameLevel() + 10)
+    local icon = badge:CreateTexture(nil, "ARTWORK")
+    icon:SetAllPoints()
     icon:SetTexture(UI.ART .. "icon")
     miniTitle = UI.Label(m, "", "GameFontNormalLarge")
-    miniTitle:SetPoint("LEFT", icon, "RIGHT", 8, 0)
+    miniTitle:SetPoint("TOPLEFT", m, "TOPLEFT", 46, -16)
     miniTitle:SetPoint("RIGHT", m, "RIGHT", -96, 0)
     miniTitle:SetWordWrap(false)
     local back = UI.Button(m, "Back", 76, function()
@@ -468,14 +479,28 @@ function SP.Create(parent, hooks)
   headSub:SetPoint("TOPLEFT", head, "BOTTOMLEFT", 0, -6)
   headSub:SetTextColor(0.7, 0.7, 0.7)
 
-  local area = CreateFrame("Frame", nil, right)
-  area:SetPoint("TOPLEFT", right, "TOPLEFT", 0, -58)
-  area:SetPoint("BOTTOMRIGHT", right, "BOTTOMRIGHT", -16, 40)
-  local import = UI.Button(right, "Import", 100, function()
+  local import = UI.Button(right, "Import", 90, function()
     ns.Share.ImportDialog(function() evaluate() refresh(true) end)
   end)
-  import:SetPoint("BOTTOMLEFT", right, "BOTTOMLEFT", 0, 8)
+  import:SetPoint("TOPRIGHT", right, "TOPRIGHT", -16, -16)
   UI.Tooltip(import, "Import", "Paste a setting or a Style someone exported (right-click a place > Export).")
+  local headHelp = UI.HelpIcon(right, "start", "Your places", "Everything you have set. Click one to adjust it; " ..
+    "right-click to copy, paste, export or remove it. Search finds every place you have been.")
+  headHelp:SetPoint("LEFT", head, "RIGHT", 6, 0)
+
+  -- Search: empty = your places; typed = your places and every place you have been that match
+  local query = ""
+  local search = UI.SearchBox(right, 300, { placeholder = "Search all places",
+    onChange = function(t)
+      query = (t or ""):lower():gsub("^%s+", ""):gsub("%s+$", "")
+      if refresh then refresh(false) end
+    end })
+  search:SetPoint("TOPLEFT", right, "TOPLEFT", 6, -60)
+  search:SetPoint("RIGHT", right, "RIGHT", -16, 0)
+
+  local area = CreateFrame("Frame", nil, right)
+  area:SetPoint("TOPLEFT", right, "TOPLEFT", 0, -90)
+  area:SetPoint("BOTTOMRIGHT", right, "BOTTOMRIGHT", -16, 8)
   UI.RoundBox(area, { radius = 8, bottom = { 0, 0, 0, 0.32 }, top = { 0, 0, 0, 0.22 } })
   local box = CreateFrame("Frame", nil, area, "WowScrollBoxList")
   box:SetAllPoints()
@@ -562,6 +587,13 @@ function SP.Create(parent, hooks)
         local d = self.data
         if not d then return end
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        if d.place then
+          GameTooltip:AddLine(d.label, 1, 1, 1)
+          GameTooltip:AddLine(d.kind, 0.8, 0.8, 0.8)
+          GameTooltip:AddLine("Click to adjust it.", 0.62, 0.71, 1)
+          GameTooltip:Show()
+          return
+        end
         GameTooltip:AddLine(lookLabel(d.look), 1, 1, 1)
         GameTooltip:AddLine(valuesLine(d.look), 0.8, 0.8, 0.8, true)
         if d.live then GameTooltip:AddLine("In effect where you are now.", 0.25, 1, 0.25) end
@@ -576,6 +608,19 @@ function SP.Create(parent, hooks)
       r:SetScript("OnLeave", function() GameTooltip:Hide() end)
     end
     r.data = e
+    if e.place then
+      -- A place from the search, with nothing set for it yet
+      r.name:SetText(e.label)
+      r.vals:SetText(e.kind)
+      r.tag:SetText("")
+      r.dot:Hide()
+      r.sel:SetShown(sel.key == e.place and not sel.time and not sel.io)
+      r.name:SetTextColor(0.85, 0.85, 0.85)
+      r:SetScript("OnClick", function(_, button)
+        if button == "LeftButton" then pick({ key = e.place }, true) end
+      end)
+      return
+    end
     r.name:SetText(lookLabel(e.look))
     r.vals:SetText(valuesLine(e.look))
     r.tag:SetText(e.shape and "" or "Advanced")
@@ -599,16 +644,38 @@ function SP.Create(parent, hooks)
     local live = {}
     for _, look in pairs(D.state.source or {}) do live[look] = true end
     local rows = {}
+    local function hit(label) return query == "" or label:find(query, 1, true) ~= nil end
     for _, look in ipairs(R.ActiveStyle().looks) do
-      rows[#rows + 1] = { look = look, shape = shapeOf(look), live = live[look] or false, label = lookLabel(look):lower() }
+      local label = lookLabel(look):lower()
+      if hit(label) then
+        rows[#rows + 1] = { look = look, shape = shapeOf(look), live = live[look] or false, label = label }
+      end
     end
     table.sort(rows, function(a, b)
       if a.label ~= b.label then return a.label < b.label end
       return tostring(a.look.id) < tostring(b.look.id)
     end)
+    -- Searching: every place you have been (and the instance types), after your own settings
+    if query ~= "" then
+      local places = {}
+      local function addPlace(key)
+        local label = placeLabel(key, true)
+        if hit(label:lower()) then
+          local k = kindOf(key)
+          local kind = PLACE_KIND[k] or ""
+          places[#places + 1] = { place = key, label = label, kind = kind, sort = label:lower() }
+        end
+      end
+      for key in pairs(ns.db.places) do addPlace(key) end
+      for it in pairs(ITYPE_NAME) do addPlace("itype:" .. it) end
+      table.sort(places, function(a, b) return a.sort < b.sort end)
+      for _, e in ipairs(places) do rows[#rows + 1] = e end
+    end
     local ok = pcall(box.SetDataProvider, box, CreateDataProvider(rows), ScrollBoxConstants and ScrollBoxConstants.RetainScrollPosition)
     if not ok then box:SetDataProvider(CreateDataProvider(rows)) end
     empty:SetShown(#rows == 0)
+    if query ~= "" then empty:SetText("Nothing found.")
+    else empty:SetText("Nothing set yet.\n\nMove a slider on the left and the place shows up here.") end
   end
 
   -- Refresh ------------------------------------------------------------------------------------

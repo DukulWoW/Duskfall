@@ -89,7 +89,11 @@ local function buildTime(p)
     get = function() return ns.cfg.clock24 end,
     set = function(v) ns.cfg.clock24 = v if bar then bar:Refresh() end end })
   fmt:SetPoint("TOPLEFT", src, "TOPRIGHT", 40, 0)
-  add(UI.Header(p, "Parts of the day"), 14, 4)
+  local partsHead = UI.Header(p, "Parts of the day")
+  add(partsHead, 14, 4)
+  local partsHelp = UI.HelpIcon(p, "time", "Parts of the day", "When Dawn, Day, Dusk and Night start. A setting " ..
+    "can be for one of them.")
+  partsHelp:SetPoint("LEFT", partsHead, "RIGHT", 6, 0)
   local help = UI.Label(p, "A Look can be set to one part of the day. Drag the yellow edges to change when each part starts.")
   help:SetWidth(FULL_W)
   add(help, 14, 12)
