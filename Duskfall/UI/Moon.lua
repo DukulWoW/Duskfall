@@ -123,9 +123,23 @@ local function hook()
   -- so it shows and hides with the takeover.
   local badge = catcher:CreateTexture(nil, "OVERLAY")
   badge:SetSize(15, 15)
-  -- On the visible disc (the frame is larger than the moon's art): its lower right edge (Kim)
-  badge:SetPoint("CENTER", moon.Background or catcher, "BOTTOMRIGHT", -6, 6)
   badge:SetTexture(UI.ART .. "icon")
+  -- It goes round the moon's rim with the time of day, like a sun (Kim): noon at the top, 6:00
+  -- on the left, 18:00 on the right, midnight at the bottom. Same clock as Duskfall's own.
+  local disc = moon.Background or catcher
+  local function place()
+    local env = ns.Situations.Snapshot()
+    local a = ((env.hour + env.min / 60) - 12) / 24 * 2 * math.pi
+    local r = math.max(8, (disc:GetWidth() or 30) / 2 - 3)
+    badge:ClearAllPoints()
+    badge:SetPoint("CENTER", disc, "CENTER", r * math.sin(a), r * math.cos(a))
+  end
+  M.PlaceBadge = place
+  place()
+  C_Timer.NewTicker(30, function()
+    if catcher:IsVisible() then ns.Safe(place, "moon badge") end
+  end)
+  catcher:HookScript("OnShow", function() ns.Safe(place, "moon badge") end)
   catcher:SetScript("OnClick", function(_, button)
     ns.Debug("moon click %s", tostring(button))
     ns.Safe(ns.LauncherClick, "moon click", button)
