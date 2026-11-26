@@ -641,24 +641,6 @@ end
 -- o = { label, min, max, step, from = { r, g, b }, to = { r, g, b }, get = fn() -> v,
 --       set = fn(v), fmt = fn(v) -> text, tip, lineH = height of the middle mark (the row
 --       spacing joins stacked sliders' marks into one line) }. :Refresh(), :SetEnabled(on).
--- The diamond thumb of Blizzard's settings slider, read once from a throwaway template slider.
-local diamondLook
-local function diamond()
-  if diamondLook then return diamondLook end
-  diamondLook = {}
-  local ok, tmp = pcall(CreateFrame, "Frame", nil, UIParent, "MinimalSliderWithSteppersTemplate")
-  local sl = ok and tmp and tmp.Slider
-  local t = sl and sl.GetThumbTexture and sl:GetThumbTexture()
-  if t then
-    local atlas = t.GetAtlas and t:GetAtlas()
-    if atlas and atlas ~= "" then diamondLook.atlas = atlas else diamondLook.file = t:GetTexture() end
-    diamondLook.w, diamondLook.h = t:GetSize()
-    if (diamondLook.w or 0) < 4 then diamondLook.w, diamondLook.h = 20, 20 end
-  end
-  if ok and tmp then tmp:Hide() end
-  return diamondLook
-end
-
 function UI.LightSlider(parent, width, o)
   local LABEL_W, VALUE_W, H = 84, 96, 30
   local INSET   -- half the thumb width, set once the thumb is known
@@ -689,20 +671,16 @@ function UI.LightSlider(parent, width, o)
   pcall(sl.SetObeyStepOnDrag, sl, true)
   sl:EnableMouse(true)
   pcall(sl.EnableMouseWheel, sl, false)
-  local thumb = sl:CreateTexture(nil, "OVERLAY", nil, 2)
-  local look = diamond()
-  if look.atlas then
-    thumb:SetAtlas(look.atlas, true)
-  elseif look.file then
-    thumb:SetTexture(look.file)
-  else
-    thumb:SetTexture("Interface\\Buttons\\UI-SliderBar-Button-Horizontal")
-  end
-  if not look.atlas then thumb:SetSize(look.w or 32, look.h or 32) end
+  -- Duskfall's own gold diamond (Assets/diamond: gem facets lit from the top left). The slider
+  -- moves its thumb to a layer of its choosing, so the layer is set again afterwards: on top of
+  -- the middle line (Kim)
+  local thumb = sl:CreateTexture(nil, "OVERLAY", nil, 7)
+  thumb:SetTexture(UI.ART .. "diamond")
+  thumb:SetSize(22, 22)
   sl:SetThumbTexture(thumb)
+  thumb:SetDrawLayer("OVERLAY", 7)
   -- The thumb's centre travels from half its width to the other end minus that: the track too
-  INSET = math.floor((thumb:GetWidth() or 32) / 2 + 0.5)
-  if INSET < 4 then INSET = 10 end
+  INSET = 11
 
   local well = sl:CreateTexture(nil, "BACKGROUND")
   well:SetPoint("LEFT", sl, "LEFT", INSET - 2, 0)
@@ -719,7 +697,7 @@ function UI.LightSlider(parent, width, o)
   shine:SetPoint("TOPRIGHT", track, "TOPRIGHT", 0, 0)
   shine:SetHeight(4)
   UI.Gradient(shine, "VERTICAL", { 1, 1, 1, 0 }, { 1, 1, 1, 0.3 })
-  local mark = sl:CreateTexture(nil, "OVERLAY", nil, 0)
+  local mark = sl:CreateTexture(nil, "ARTWORK", nil, 5)
   mark:SetColorTexture(1, 0.86, 0.55, 0.4)
   mark:SetSize(2, o.lineH or 16)
   local fill = sl:CreateTexture(nil, "ARTWORK", nil, 3)
