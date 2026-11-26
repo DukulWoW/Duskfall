@@ -23,24 +23,31 @@ UI.DROPDOWN_H = 44
 UI.RING_GOLD, UI.RING_BLUE = { 1, 0.85, 0.4 }, { 0.36, 0.5, 1 }
 
 -- Forever look ---------------------------------------------------------------------------------
+-- The window's background, tiled: Kim's slate (Assets/bg-slate, 2026-11-26, on trial; was "wood",
+-- Kahoof's, still in Assets to go back)
+UI.BACKGROUND = "bg-slate"
 function UI.Wood(f)
   local bg = f.Bg
   if not bg then
     bg = f:CreateTexture(nil, "BACKGROUND", nil, 0)
     bg:SetAllPoints(f)
   end
-  bg:SetTexture(UI.ART .. "wood", "REPEAT", "REPEAT")
+  bg:SetTexture(UI.ART .. UI.BACKGROUND, "REPEAT", "REPEAT")
   bg:SetHorizTile(true)
   bg:SetVertTile(true)
+  bg:SetVertexColor(1, 1, 1, 1)
   return bg
 end
 
--- Soft glow that lifts a panel off the wood. Top of BACKGROUND, under everything else.
+-- Soft glow that lifted a panel off the wood. Off since the cursor light (Kim, 2026-11-26):
+-- UI.GLOW = true brings it back everywhere. Returns the texture (hidden when off).
+UI.GLOW = false
 function UI.Glow(host, region, alpha)
   local glow = host:CreateTexture(nil, "BACKGROUND", nil, 7)
   glow:SetAllPoints(region or host)
   glow:SetTexture(UI.ART .. "glow")
   if alpha then glow:SetAlpha(alpha) end
+  glow:SetShown(UI.GLOW)
   return glow
 end
 
