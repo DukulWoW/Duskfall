@@ -482,8 +482,19 @@ W.AddTab("settings", "Settings", function(page)
         icon:AddMaskTexture(mask)
       end
     end
+    -- BigNoteBox's "Simple Glass Orb" frame round the icon (Kim): ui-glyphframe-2, file 237655
+    -- (1024 x 1024), the frame at 946,0 63 x 63 with its round hole at 950.5,3.5 56 x 56. Not on
+    -- Time of day: its icons have a border of their own.
+    if not def.iconFn then
+      local F = 46 * 63 / 56
+      local orb = tile:CreateTexture(nil, "OVERLAY")
+      orb:SetSize(F, F)
+      orb:SetPoint("CENTER", icon, "CENTER", -F / 63, 0)
+      orb:SetTexture(237655)
+      orb:SetTexCoord(946 / 1024, 1009 / 1024, 0, 63 / 1024)
+    end
     local name = UI.Label(tile, def.title, "GameFontNormalLarge")
-    name:SetPoint("TOPLEFT", icon, "TOPRIGHT", 14, 2)
+    name:SetPoint("TOPLEFT", icon, "TOPRIGHT", 16, 2)
     local desc = UI.Label(tile, def.desc)
     desc:SetPoint("TOPLEFT", name, "BOTTOMLEFT", 0, -4)
     desc:SetPoint("RIGHT", tile, "RIGHT", -30, 0)
