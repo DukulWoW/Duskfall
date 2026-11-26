@@ -146,16 +146,12 @@ local function build()
     get = function() return ns.cfg.advanced and "advanced" or "simple" end,
     set = function(v) W.SetAdvanced(v == "advanced") end })
   local close = f.CloseButton or _G.DuskfallWindowCloseButton
-  -- Help, between Advanced and the close button (BigNoteBox's help art)
-  local help = CreateFrame("Button", nil, f)
-  help:SetSize(22, 22)
+  -- Help, between Advanced and the close button: our link-button look with Kim's coloured "?"
+  -- (Assets/bt-help-normal / -press), as the About tab's buttons
+  local help = UI.IconButton(f, 22, "help", { tip = "Help", tipSub = "How Duskfall works.",
+    onClick = function() if ns.Help then ns.Help.Toggle() end end })
   if close then help:SetPoint("RIGHT", close, "LEFT", -2, 0)
   else help:SetPoint("TOPRIGHT", f, "TOPRIGHT", -40, 0) end
-  help:SetNormalTexture(UI.ART .. "help-normal")
-  help:SetHighlightTexture(UI.ART .. "help-hover")
-  help:SetPushedTexture(UI.ART .. "help-press")
-  help:SetScript("OnClick", function() if ns.Help then ns.Help.Toggle() end end)
-  UI.Tooltip(help, "Help", "How Duskfall works.")
   f.helpBtn = help
   adv:SetPoint("RIGHT", help, "LEFT", -8, 0)
   adv:Refresh()   -- the picker makes its buttons in Refresh
@@ -313,3 +309,80 @@ end)
 C_Timer.NewTicker(0.25, function()
   if frame and frame:IsShown() and ns.Transition.IsRunning() then W.UpdateStatus() end
 end)
+
+-- TEMPORARY preview (Kim, 2026-11-26; remove after test T8): /dusk framepreview switches the main
+-- window to a fully custom frame (rounded, gold edge, our title line and round close X, pill tabs)
+-- and back, so Kim can see it before deciding. Nothing is saved; a /reload undoes it too.
+local preview
+function W.FramePreview()
+  local f = frame
+  if not f then
+    ns.OpenWindow("settings", true)
+    f = frame
+    if not f then return end
+  end
+  if not preview then
+    preview = { on = false, tabs = {} }
+    local skin = CreateFrame("Frame", nil, f)
+    skin:SetAllPoints()
+    skin:SetFrameLevel(f:GetFrameLevel())
+    UI.RoundBox(skin, { radius = 12, bottom = { 0.05, 0.035, 0.02, 0.97 }, top = { 0.17, 0.12, 0.07, 0.97 },
+      border = { 1, 0.82, 0, 0.6 } })
+    UI.Glow(skin, nil, 0.7)
+    local line = skin:CreateTexture(nil, "ARTWORK")
+    line:SetColorTexture(1, 0.82, 0, 0.35)
+    line:SetHeight(1)
+    line:SetPoint("TOPLEFT", skin, "TOPLEFT", 12, -28)
+    line:SetPoint("TOPRIGHT", skin, "TOPRIGHT", -12, -28)
+    skin:Hide()
+    preview.skin = skin
+    local x = UI.ClearX(f, 20, function() f:Hide() end, "Close")
+    x:SetPoint("TOPRIGHT", f, "TOPRIGHT", -8, -4)
+    x:SetFrameLevel(f:GetFrameLevel() + 500)
+    x:Hide()
+    preview.x = x
+    for _, t in ipairs(tabs) do
+      local b = t.button
+      local pill = CreateFrame("Frame", nil, b)
+      pill:SetPoint("TOPLEFT", b, "TOPLEFT", 2, -4)
+      pill:SetPoint("BOTTOMRIGHT", b, "BOTTOMRIGHT", -2, 6)
+      pill:SetFrameLevel(b:GetFrameLevel())
+      local normal = UI.RoundBox(pill, { radius = 8, bottom = { 0.05, 0.035, 0.02, 0.95 }, top = { 0.2, 0.15, 0.09, 0.95 },
+        border = { 1, 0.82, 0, 0.45 } })
+      local picked = UI.RoundBox(pill, { radius = 8, sub = 3, bottom = { 0.5, 0.33, 0.05, 1 }, top = { 0.95, 0.75, 0.26, 1 },
+        border = { 1, 0.92, 0.55, 0.95 } })
+      pill:Hide()
+      preview.tabs[#preview.tabs + 1] = { t = t, pill = pill, normal = normal, picked = picked }
+    end
+    preview.paint = function()
+      for _, e in ipairs(preview.tabs) do
+        local sel = frame.selected == e.t.id
+        e.picked:SetShown(sel)
+        e.normal:SetShown(not sel)
+        local fs = e.t.button:GetFontString()
+        if fs then
+          if sel then fs:SetTextColor(0.14, 0.08, 0) fs:SetShadowOffset(0, 0)
+          else fs:SetTextColor(1, 0.82, 0) fs:SetShadowOffset(1, -1) end
+        end
+      end
+    end
+    hooksecurefunc(W, "Select", function() if preview.on then preview.paint() end end)
+  end
+  preview.on = not preview.on
+  local on = preview.on
+  local a = on and 0 or 1
+  if f.NineSlice then f.NineSlice:SetAlpha(a) end
+  if f.TopTileStreaks then f.TopTileStreaks:SetAlpha(a) end
+  if f.Bg then f.Bg:SetAlpha(a) end
+  if f.CloseButton then f.CloseButton:SetShown(not on) end
+  preview.skin:SetShown(on)
+  preview.x:SetShown(on)
+  for _, e in ipairs(preview.tabs) do
+    for _, r in ipairs({ e.t.button:GetRegions() }) do
+      if r.IsObjectType and r:IsObjectType("Texture") then r:SetAlpha(a) end
+    end
+    e.pill:SetShown(on)
+  end
+  if on then preview.paint() else W.Select(frame.selected) end
+  ns.Print("frame preview %s (/dusk framepreview again switches back).", on and "on" or "off")
+end

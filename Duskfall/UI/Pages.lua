@@ -500,14 +500,20 @@ W.AddTab("settings", "Settings", function(page)
     icon:SetSize(46, 46)
     icon:SetPoint("LEFT", tile, "LEFT", 16, 0)
     if def.icon then icon:SetTexture(def.icon) icon:SetTexCoord(0.08, 0.92, 0.08, 0.92) end
-    -- Fixed icons catch the cursor light too (not the ones that change: portrait, moon phase)
-    if def.icon and not def.iconFn and not def.portrait and ns.CursorLight then ns.CursorLight.Copy(icon, "art") end
+    local round
     if tile.CreateMaskTexture then
       local mask = tile:CreateMaskTexture()
       mask:SetAllPoints(icon)
       if pcall(mask.SetTexture, mask, "Interface\\CharacterFrame\\TempPortraitAlphaMask", "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE") then
         icon:AddMaskTexture(mask)
+        round = mask
       end
+    end
+    -- Fixed icons catch the cursor light too (not the ones that change: portrait, moon phase).
+    -- The copy gets the same round mask, or its square corners light up (Kim's screenshot).
+    if def.icon and not def.iconFn and not def.portrait and ns.CursorLight then
+      local lit = ns.CursorLight.Copy(icon, "art")
+      if lit and round then lit:AddMaskTexture(round) end
     end
     -- BigNoteBox's "Simple Glass Orb" frame round the icon (Kim): ui-glyphframe-2, file 237655
     -- (1024 x 1024), the frame at 946,0 63 x 63 with its round hole at 950.5,3.5 56 x 56. Not on

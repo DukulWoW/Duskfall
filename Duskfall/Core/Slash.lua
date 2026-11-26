@@ -362,6 +362,7 @@ local function handler(msg)
   elseif cmd == "transition" then showTransition()
   elseif cmd == "config" or cmd == "settings" or cmd == "options" then
     if ns.OpenWindow then ns.OpenWindow("settings") end
+  elseif cmd == "framepreview" then ns.Window.FramePreview()
   elseif cmd == "welcome" then
     if ns.Welcome then ns.Welcome.Show() end
   elseif cmd == "moon" then
