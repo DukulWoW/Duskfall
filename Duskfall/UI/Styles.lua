@@ -61,6 +61,33 @@ local function claim(st)
   return notes
 end
 
+-- Try it: darker, a short hold, and back, with st's own transition, wherever you are. Shared
+-- with simple mode (UI/SimpleStyles.lua). Returns the seconds it takes, nil when it can't run.
+function ns.TryStyle(st)
+  if not ns.cfg.enabled then ns.Print("Duskfall is off; switch it on to try a transition.") return nil end
+  local tr = trOf(st)
+  local normal = R.Resolve(D.state.env or S.Snapshot())
+  local dark = {}
+  for k, v in pairs(normal) do dark[k] = v end
+  dark.gamma = C.Clamp("gamma", normal.gamma - 0.5)
+  dark.brightness = C.Clamp("brightness", normal.brightness - 20)
+  local d1, d2 = 0, 0
+  if tr.mode == "fade" then d1, d2 = tr.fade.duration, tr.fade.duration
+  elseif tr.mode == "adapt" then d1, d2 = tr.adapt.toDark.duration, tr.adapt.toLight.duration end
+  -- Hold the dark long enough that the way back may overshoot again (settings.adaptGap)
+  local hold = math.max(1.5, (tonumber(ns.cfg.adaptGap) or 2) - d1 + 0.2)
+  local total = d1 + hold + d2 + 0.5
+  D.Preview(dark, total, { why = "demo", style = st })
+  local pv = D.state.preview
+  C_Timer.After(d1 + hold, function()
+    if D.state.preview ~= pv then return end
+    pv.target = normal
+    D.Evaluate("demo")
+  end)
+  return total
+end
+ns.StyleTransition = trOf
+
 local function copyStyle(st)
   local c = UI.DeepCopy(st)
   c.id = ns.NewID("s")
@@ -70,8 +97,12 @@ local function copyStyle(st)
   return c
 end
 
-W.AddTab("styles", "Styles", function(page)
-  UI.Glow(page, nil, 0.8)
+-- The tab holds two pages: simple mode (UI/SimpleStyles.lua, the default) and this one, Advanced mode.
+W.AddTab("styles", "Styles", function(tab)
+  UI.Glow(tab, nil, 0.8)
+  local page = CreateFrame("Frame", nil, tab)
+  page:SetAllPoints()
+  page:Hide()
   local sel
   local refresh, refreshList, refreshUse
 
@@ -295,26 +326,8 @@ W.AddTab("styles", "Styles", function(page)
   local tryBtn
   local function tryIt()
     if not sel then return end
-    if not ns.cfg.enabled then ns.Print("Duskfall is off; switch it on to try a transition.") return end
-    local tr = trOf(sel)
-    local normal = R.Resolve(D.state.env or S.Snapshot())
-    local dark = {}
-    for k, v in pairs(normal) do dark[k] = v end
-    dark.gamma = C.Clamp("gamma", normal.gamma - 0.5)
-    dark.brightness = C.Clamp("brightness", normal.brightness - 20)
-    local d1, d2 = 0, 0
-    if tr.mode == "fade" then d1, d2 = tr.fade.duration, tr.fade.duration
-    elseif tr.mode == "adapt" then d1, d2 = tr.adapt.toDark.duration, tr.adapt.toLight.duration end
-    -- Hold the dark long enough that the way back may overshoot again (settings.adaptGap)
-    local hold = math.max(1.5, (tonumber(ns.cfg.adaptGap) or 2) - d1 + 0.2)
-    local total = d1 + hold + d2 + 0.5
-    D.Preview(dark, total, { why = "demo", style = sel })
-    local pv = D.state.preview
-    C_Timer.After(d1 + hold, function()
-      if D.state.preview ~= pv then return end
-      pv.target = normal
-      D.Evaluate("demo")
-    end)
+    local total = ns.TryStyle(sel)
+    if not total then return end
     tryBtn:SetEnabled(false)
     C_Timer.After(total, function() tryBtn:SetEnabled(true) end)
   end
@@ -359,4 +372,13 @@ W.AddTab("styles", "Styles", function(page)
 
   page:SetScript("OnShow", function() refresh(false) end)
   refresh(true)
+
+  local simple = ns.SimpleStyles.Create(tab)
+  local function showMode()
+    local adv = ns.cfg.advanced and true or false
+    simple:SetShown(not adv)
+    page:SetShown(adv)
+  end
+  ns.Listen("MODE", showMode)
+  showMode()
 end, "left")

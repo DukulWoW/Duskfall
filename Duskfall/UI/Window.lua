@@ -67,6 +67,7 @@ end
 -- Tabs are selected one by one (as BigNoteBox does), never with PanelTemplates_SetTab: that
 -- re-anchors the whole row in a line, which broke the left / right groups (Kim's screenshot).
 function W.Select(id)
+  if ns.Help then ns.Help.Hide() end
   for _, t in ipairs(tabs) do
     if t.id == id then
       if not t.page.built then
@@ -115,10 +116,13 @@ local function build()
   local function liftBadge()
     local top = f:GetFrameLevel()
     for _, child in ipairs({ f:GetChildren() }) do
-      if child ~= badge and child ~= f.advCheck and child:GetFrameLevel() > top then top = child:GetFrameLevel() end
+      if child ~= badge and child ~= f.advCheck and child ~= f.helpBtn and child:GetFrameLevel() > top then
+        top = child:GetFrameLevel()
+      end
     end
     badge:SetFrameLevel(top + 5)
     if f.advCheck then f.advCheck:SetFrameLevel(top + 5) end
+    if f.helpBtn then f.helpBtn:SetFrameLevel(top + 5) end
   end
   badge.Lift = liftBadge
   local icon = badge:CreateTexture(nil, "ARTWORK")
@@ -135,8 +139,18 @@ local function build()
   advText:SetFontObject("GameFontNormalSmall")
   advText:SetText("Advanced")
   local close = f.CloseButton or _G.DuskfallWindowCloseButton
-  if close then adv:SetPoint("RIGHT", close, "LEFT", -(advText:GetStringWidth() + 6), 0)
-  else adv:SetPoint("TOPRIGHT", f, "TOPRIGHT", -100, 0) end
+  -- Help, between Advanced and the close button (BigNoteBox's help art)
+  local help = CreateFrame("Button", nil, f)
+  help:SetSize(22, 22)
+  if close then help:SetPoint("RIGHT", close, "LEFT", -2, 0)
+  else help:SetPoint("TOPRIGHT", f, "TOPRIGHT", -40, 0) end
+  help:SetNormalTexture(UI.ART .. "help-normal")
+  help:SetHighlightTexture(UI.ART .. "help-hover")
+  help:SetPushedTexture(UI.ART .. "help-press")
+  help:SetScript("OnClick", function() if ns.Help then ns.Help.Toggle() end end)
+  UI.Tooltip(help, "Help", "How Duskfall works.")
+  f.helpBtn = help
+  adv:SetPoint("RIGHT", help, "LEFT", -(advText:GetStringWidth() + 8), 0)
   adv:SetChecked(ns.cfg.advanced and true or false)
   adv:SetScript("OnClick", function(self) W.SetAdvanced(self:GetChecked()) end)
   UI.Tooltip(adv, "Advanced mode", "Places shows every place you have been and the full Look editor, " ..
@@ -166,7 +180,9 @@ local function build()
   f:SetScript("OnKeyDown", function(self, key)
     if InCombatLockdown() or key ~= "ESCAPE" then return end
     local t = current()
-    if t and t.page.Back and t.page.Back() then
+    local helpOpen = ns.Help and ns.Help.Shown()
+    if helpOpen then ns.Help.Hide() end
+    if helpOpen or (t and t.page.Back and t.page.Back()) then
       pcall(self.SetPropagateKeyboardInput, self, false)
       C_Timer.After(0, function()
         if not InCombatLockdown() then pcall(self.SetPropagateKeyboardInput, self, true) end
@@ -246,11 +262,11 @@ local function build()
   f:Hide()
 end
 
--- Simple or Advanced mode (title bar switch). Shows Places, the tab it changes.
+-- Simple or Advanced mode (title bar switch): Places and Styles. From another tab it shows Places.
 function W.SetAdvanced(on)
   ns.cfg.advanced = on and true or false
   if frame and frame.advCheck then frame.advCheck:SetChecked(ns.cfg.advanced) end
-  if frame and frame.selected ~= "places" then W.Select("places") end
+  if frame and frame.selected ~= "places" and frame.selected ~= "styles" then W.Select("places") end
   ns.Fire("MODE", ns.cfg.advanced)
 end
 

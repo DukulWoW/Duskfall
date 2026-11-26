@@ -657,7 +657,7 @@ local function diamond()
 end
 
 function UI.LightSlider(parent, width, o)
-  local LABEL_W, VALUE_W, H = 90, 112, 30
+  local LABEL_W, VALUE_W, H = 84, 96, 30
   local INSET   -- half the thumb width, set once the thumb is known
   local h = CreateFrame("Frame", nil, parent)
   h:SetSize(width, H)
@@ -667,7 +667,7 @@ function UI.LightSlider(parent, width, o)
   local val = UI.Label(h, "", "GameFontHighlight")
   val:SetPoint("RIGHT", h, "RIGHT", 0, 0)
   val:SetWidth(VALUE_W)
-  val:SetJustifyH("RIGHT")
+  val:SetJustifyH("LEFT")   -- right next to the track, so the track can be long (Kim)
   if o.tip then
     local hot = CreateFrame("Frame", nil, h)
     hot:SetPoint("LEFT", h, "LEFT", 0, 0)
@@ -678,7 +678,7 @@ function UI.LightSlider(parent, width, o)
 
   local sl = CreateFrame("Slider", nil, h)
   sl:SetPoint("LEFT", h, "LEFT", LABEL_W - 6, 0)
-  sl:SetPoint("RIGHT", h, "RIGHT", -VALUE_W - 4, 0)
+  sl:SetPoint("RIGHT", h, "RIGHT", -VALUE_W + 2, 0)
   sl:SetHeight(H)
   sl:SetOrientation("HORIZONTAL")
   sl:SetMinMaxValues(o.min, o.max)

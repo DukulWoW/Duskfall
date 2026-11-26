@@ -337,9 +337,9 @@ function SP.Create(parent, hooks)
   -- Left: the sliders --------------------------------------------------------------------------
   y = y - 10
   local sliders = {}
-  for _, def in ipairs(SLIDERS) do
+  local function sliderOpts(def)
     local ch = C.byKey[def.key]
-    local s = UI.LightSlider(left, LEFT_W, { label = ch.label, min = def.min, max = def.max, step = def.step,
+    return { label = ch.label, min = def.min, max = def.max, step = def.step,
       from = def.from, to = def.to, tip = def.tip,
       -- What you get, as the game's own slider shows it, and the change from your baseline (Kim)
       fmt = function(v)
@@ -357,7 +357,10 @@ function SP.Create(parent, hooks)
         local look = current()
         return look and look.values and tonumber(look.values[def.key]) or 0
       end,
-      set = function(v) setValue(def.key, v) end })
+      set = function(v) setValue(def.key, v) end }
+  end
+  for _, def in ipairs(SLIDERS) do
+    local s = UI.LightSlider(left, LEFT_W, sliderOpts(def))
     s:SetPoint("TOPLEFT", left, "TOPLEFT", 12, y)
     y = y - 36
     sliders[#sliders + 1] = s
@@ -375,8 +378,80 @@ function SP.Create(parent, hooks)
   end)
   reset:SetPoint("TOPLEFT", left, "TOPLEFT", 12, y - 8)
   UI.Tooltip(reset, "Reset", "Remove this setting: the screen goes back to normal for it.")
+  -- Mini panel (Kim): the window steps aside for a small panel with only the sliders, so the
+  -- whole screen shows the change. Back (or closing it) brings the window back.
+  local mini, miniSliders, miniTitle, miniHint = nil, {}, nil, nil
+  local keepSel = false
+  local function refreshMini()
+    if not (mini and mini:IsShown()) then return end
+    miniTitle:SetText(describe(sel, true))
+    for _, sl in ipairs(miniSliders) do sl:Refresh() end
+    local look = current()
+    local env = S.Snapshot()
+    if not look then miniHint:SetText(GREY .. "Nothing set yet.|r")
+    elseif wins(look, env) then miniHint:SetText(GREEN .. "In effect here now.|r")
+    else miniHint:SetText(GREY .. "Not in effect here: a preview shows while you drag.|r") end
+  end
+  local function buildMini()
+    local m = CreateFrame("Frame", "DuskfallMiniPanel", UIParent)
+    m:SetSize(470, 232)
+    m:SetFrameStrata("HIGH")
+    m:SetClampedToScreen(true)
+    m:SetMovable(true)
+    m:EnableMouse(true)
+    m:RegisterForDrag("LeftButton")
+    m:SetScript("OnDragStart", m.StartMoving)
+    m:SetScript("OnDragStop", function(self)
+      self:StopMovingOrSizing()
+      local point, _, rel, x, yy = self:GetPoint(1)
+      ns.cfg.miniPos = { point = point, rel = rel, x = x, y = yy }
+    end)
+    local pos = ns.cfg.miniPos
+    if type(pos) == "table" and pos.point then m:SetPoint(pos.point, UIParent, pos.rel or pos.point, pos.x or 0, pos.y or 0)
+    else m:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, 140) end
+    UI.RoundBox(m, { radius = 12, bottom = { 0.03, 0.02, 0.01, 0.92 }, top = { 0.14, 0.11, 0.07, 0.92 },
+      border = { 1, 0.82, 0, 0.45 } })
+    local icon = m:CreateTexture(nil, "ARTWORK")
+    icon:SetSize(26, 26)
+    icon:SetPoint("TOPLEFT", m, "TOPLEFT", 12, -10)
+    icon:SetTexture(UI.ART .. "icon")
+    miniTitle = UI.Label(m, "", "GameFontNormalLarge")
+    miniTitle:SetPoint("LEFT", icon, "RIGHT", 8, 0)
+    miniTitle:SetPoint("RIGHT", m, "RIGHT", -96, 0)
+    miniTitle:SetWordWrap(false)
+    local back = UI.Button(m, "Back", 76, function()
+      keepSel = true
+      m:Hide()
+      ns.OpenWindow("places", true)
+    end, 22)
+    back:SetPoint("TOPRIGHT", m, "TOPRIGHT", -12, -12)
+    UI.Tooltip(back, "Back", "Back to the Duskfall window.")
+    local yy = -48
+    for _, def in ipairs(SLIDERS) do
+      local sl = UI.LightSlider(m, 446, sliderOpts(def))
+      sl:SetPoint("TOPLEFT", m, "TOPLEFT", 12, yy)
+      yy = yy - 36
+      miniSliders[#miniSliders + 1] = sl
+    end
+    miniHint = UI.Label(m, "")
+    miniHint:SetPoint("BOTTOMLEFT", m, "BOTTOMLEFT", 14, 12)
+    tinsert(UISpecialFrames, "DuskfallMiniPanel")
+    m:Hide()
+    mini = m
+  end
+  local miniBtn = UI.Button(left, "Mini panel", 110, function()
+    if not mini then buildMini() end
+    if ns.Window.frame then ns.Window.frame:Hide() end
+    mini:Show()
+    refreshMini()
+  end)
+  miniBtn:SetPoint("LEFT", reset, "RIGHT", 8, 0)
+  UI.Tooltip(miniBtn, "Mini panel", "Swap this window for a small panel with only the sliders, so you see the " ..
+    "whole screen while you adjust. Back brings the window back.")
+  ns.Listen("EVALUATED", function() refreshMini() end)
+
   local hint = UI.Label(left, "")
-  hint:SetPoint("LEFT", reset, "RIGHT", 12, 0)
+  hint:SetPoint("LEFT", miniBtn, "RIGHT", 12, 0)
   hint:SetPoint("RIGHT", left, "RIGHT", -12, 0)
   hint:SetWordWrap(true)
   hint:SetJustifyV("MIDDLE")
@@ -395,7 +470,12 @@ function SP.Create(parent, hooks)
 
   local area = CreateFrame("Frame", nil, right)
   area:SetPoint("TOPLEFT", right, "TOPLEFT", 0, -58)
-  area:SetPoint("BOTTOMRIGHT", right, "BOTTOMRIGHT", -16, 8)
+  area:SetPoint("BOTTOMRIGHT", right, "BOTTOMRIGHT", -16, 40)
+  local import = UI.Button(right, "Import", 100, function()
+    ns.Share.ImportDialog(function() evaluate() refresh(true) end)
+  end)
+  import:SetPoint("BOTTOMLEFT", right, "BOTTOMLEFT", 0, 8)
+  UI.Tooltip(import, "Import", "Paste a setting or a Style someone exported (right-click a place > Export).")
   UI.RoundBox(area, { radius = 8, bottom = { 0, 0, 0, 0.32 }, top = { 0, 0, 0, 0.22 } })
   local box = CreateFrame("Frame", nil, area, "WowScrollBoxList")
   box:SetAllPoints()
@@ -436,6 +516,9 @@ function SP.Create(parent, hooks)
         refresh(true)
       end)
       if not ns.valueClip and paste and paste.SetEnabled then pcall(paste.SetEnabled, paste, false) end
+      root:CreateButton("Export", function()
+        UI.Copy(lookLabel(look), ns.Share.ExportLook(look), owner)
+      end)
       root:CreateDivider()
       root:CreateButton("Remove", function()
         UI.Confirm("Remove the setting \"" .. lookLabel(look) .. "\"?", function()
@@ -487,7 +570,7 @@ function SP.Create(parent, hooks)
           GameTooltip:AddLine("Set up in Advanced mode. " .. whyAdvanced(d.look), 0.62, 0.71, 1, true)
           GameTooltip:AddLine("Click to open it there.", 0.62, 0.71, 1)
         end
-        GameTooltip:AddLine("Right-click: copy, paste or remove", 0.6, 0.6, 0.6)
+        GameTooltip:AddLine("Right-click: copy, paste, export or remove", 0.6, 0.6, 0.6)
         GameTooltip:Show()
       end)
       r:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -591,8 +674,13 @@ function SP.Create(parent, hooks)
   f:SetScript("OnShow", function()
     local env = D.state.env or S.Snapshot()
     lastPlace = placeID(env)
-    picked = false
-    sel = defaultShape(env)
+    -- Back from the mini panel: keep the setting that was being adjusted
+    if keepSel then
+      keepSel = false
+    else
+      picked = false
+      sel = defaultShape(env)
+    end
     refresh(true)
   end)
 

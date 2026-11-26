@@ -24,11 +24,14 @@ UI\Widgets.lua
 UI\Window.lua
 UI\DayBar.lua
 UI\LookEditor.lua
+UI\Share.lua
 UI\Simple.lua
 UI\Places.lua
+UI\SimpleStyles.lua
 UI\Styles.lua
 UI\Broker.lua
 UI\StatusDisplay.lua
 UI\Moon.lua
 UI\Pages.lua
+UI\Help.lua
 OptionsPanel.lua
