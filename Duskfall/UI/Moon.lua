@@ -134,6 +134,33 @@ local function hook()
     badge:ClearAllPoints()
     badge:SetPoint("CENTER", disc, "CENTER", r * math.sin(a), r * math.cos(a))
   end
+  -- A soft gold glow behind it, breathing slowly, while a setting is in effect where you stand (Kim)
+  local glow = catcher:CreateTexture(nil, "ARTWORK")
+  glow:SetSize(30, 30)
+  glow:SetPoint("CENTER", badge, "CENTER")
+  glow:SetTexture(UI.ART .. "dot")
+  glow:SetVertexColor(1, 0.8, 0.35)
+  glow:SetBlendMode("ADD")
+  glow:Hide()
+  local ag = glow:CreateAnimationGroup()
+  ag:SetLooping("BOUNCE")
+  local fade = ag:CreateAnimation("Alpha")
+  fade:SetFromAlpha(0.25)
+  fade:SetToAlpha(0.75)
+  fade:SetDuration(1.6)
+  fade:SetSmoothing("IN_OUT")
+  local function lit()
+    local on = ns.cfg.enabled and ns.Detect.state.source and next(ns.Detect.state.source) ~= nil
+    glow:SetShown(on and true or false)
+    if on then
+      if not ag:IsPlaying() then ag:Play() end
+    else
+      ag:Stop()
+    end
+  end
+  ns.Listen("EVALUATED", function() ns.Safe(lit, "moon glow") end)
+  ns.Listen("ONOFF", function() ns.Safe(lit, "moon glow") end)
+  lit()
   M.PlaceBadge = place
   place()
   C_Timer.NewTicker(30, function()
