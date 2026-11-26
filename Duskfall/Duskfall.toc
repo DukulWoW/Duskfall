@@ -13,13 +13,13 @@
 
 libs\libs.xml
 
-Core.lua
-Channels.lua
-Situations.lua
-Resolver.lua
-Transition.lua
-Detect.lua
-Slash.lua
+Core\Core.lua
+Core\Channels.lua
+Core\Situations.lua
+Core\Resolver.lua
+Core\Transition.lua
+Core\Detect.lua
+Core\Slash.lua
 UI\Widgets.lua
 UI\Window.lua
 UI\DayBar.lua
@@ -35,4 +35,4 @@ UI\Moon.lua
 UI\Pages.lua
 UI\Help.lua
 UI\Welcome.lua
-OptionsPanel.lua
+Core\OptionsPanel.lua
