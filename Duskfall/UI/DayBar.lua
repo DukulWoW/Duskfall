@@ -5,7 +5,7 @@
 --   0           5          8                17         20          24
 --
 -- Drag an edge to move when a part starts (whole hours; an edge never passes its neighbours, so
--- the order Dawn < Day < Dusk < Night always holds). Under the bar one line per part with its icon
+-- the order Dawn < Day < Dusk < Night always holds). Under the bar a 2 x 2 grid of cards, one per part, with its icon
 -- (BNB's ui-dawn / day / dusk / night) and from - to. Reset puts back 5, 8, 17, 20.
 -- Public: UI.DayBar(parent, width) -> holder with :Refresh()
 local ADDON, ns = ...
@@ -22,11 +22,12 @@ local COLOR = {
 local TEXT_COLOR = { night = { 0.85, 0.88, 1 }, dawn = { 0.15, 0.05, 0.05 }, day = { 0.2, 0.15, 0.05 }, dusk = { 0.15, 0.07, 0 } }
 local DEFAULT = { dawn = 5, day = 8, dusk = 17, night = 20 }
 local BAR_H, HANDLE_W = 26, 10
+local GRID_TOP = 20 + BAR_H + 34          -- the cards start under the hour ticks
+local CARD_H, CARD_GAP = 72, 12
 
 function UI.DayBar(parent, width)
   local h = CreateFrame("Frame", nil, parent)
-  local LINES_H = 4 * 24
-  h:SetSize(width, 20 + BAR_H + 18 + 12 + LINES_H + 30)
+  h:SetSize(width, GRID_TOP + 2 * CARD_H + CARD_GAP + 44)
 
   local nowText = UI.Label(h, "", "GameFontHighlight")
   nowText:SetPoint("TOPLEFT", h, "TOPLEFT", 0, 0)
@@ -86,25 +87,27 @@ function UI.DayBar(parent, width)
   local function x(hour) return width * hour / 24 end
   local function buckets() return ns.cfg.buckets end
 
-  -- Lines under the bar
+  -- Under the bar: the four parts as a 2 x 2 grid of cards, each tinted with its own colour (Kim)
   local lines = {}
+  local cardW = math.floor((width - CARD_GAP) / 2)
   for i, key in ipairs(ORDER) do
-    local row = CreateFrame("Frame", nil, h)
-    row:SetSize(width, 22)
-    row:SetPoint("TOPLEFT", h, "TOPLEFT", 0, -(20 + BAR_H + 30 + (i - 1) * 24))
-    local icon = row:CreateTexture(nil, "ARTWORK")
-    icon:SetSize(20, 20)
-    icon:SetPoint("LEFT", row, "LEFT", 0, 0)
+    local card = CreateFrame("Frame", nil, h)
+    card:SetSize(cardW, CARD_H)
+    local cx = ((i - 1) % 2) * (cardW + CARD_GAP)
+    local cy = -(GRID_TOP + math.floor((i - 1) / 2) * (CARD_H + CARD_GAP))
+    card:SetPoint("TOPLEFT", h, "TOPLEFT", cx, cy)
+    local c = COLOR[key]
+    UI.RoundBox(card, { radius = 10, bottom = { 0, 0, 0, 0.5 }, top = { c[1] * 0.45, c[2] * 0.45, c[3] * 0.45, 0.55 },
+      border = { c[1], c[2], c[3], 0.45 } })
+    local icon = card:CreateTexture(nil, "ARTWORK")
+    icon:SetSize(44, 44)
+    icon:SetPoint("LEFT", card, "LEFT", 14, 0)
     icon:SetTexture(UI.ART .. "ui-" .. key)
-    local sw = row:CreateTexture(nil, "ARTWORK")
-    sw:SetSize(12, 12)
-    sw:SetPoint("LEFT", icon, "RIGHT", 8, 0)
-    sw:SetColorTexture(COLOR[key][1], COLOR[key][2], COLOR[key][3], 1)
-    local name = UI.Label(row, NAME[key], "GameFontNormal")
-    name:SetPoint("LEFT", sw, "RIGHT", 8, 0)
-    name:SetWidth(70)
-    local span = UI.Label(row, "", "GameFontHighlight")
-    span:SetPoint("LEFT", name, "RIGHT", 8, 0)
+    local name = UI.Label(card, NAME[key], "GameFontNormalLarge")
+    name:SetPoint("TOPLEFT", icon, "TOPRIGHT", 14, -2)
+    name:SetTextColor(c[1] * 0.5 + 0.5, c[2] * 0.5 + 0.5, c[3] * 0.5 + 0.5)
+    local span = UI.Label(card, "", "GameFontHighlightLarge")
+    span:SetPoint("BOTTOMLEFT", icon, "BOTTOMRIGHT", 14, 2)
     lines[key] = span
   end
 
@@ -241,7 +244,7 @@ function UI.DayBar(parent, width)
     h:Refresh()
     ns.Detect.Evaluate("settings")
   end)
-  reset:SetPoint("TOPRIGHT", h, "TOPRIGHT", 0, -(20 + BAR_H + 30))
+  reset:SetPoint("BOTTOMRIGHT", h, "BOTTOMRIGHT", 0, 6)
 
   function h:Refresh()
     draw()

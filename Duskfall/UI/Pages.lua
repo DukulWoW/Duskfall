@@ -8,9 +8,8 @@ local UI, W, C, D = ns.UI, ns.Window, ns.Channels, ns.Detect
 ns.LINKS = {
   { key = "dukul", name = "Dukul.net", url = "https://dukul.net", sub = "Dukul's other addons" },
   { key = "github", name = "GitHub", url = "https://github.com/DukulWoW/Duskfall" },
-  -- CurseForge and Wago get their urls when Duskfall is released
-  { key = "curseforge", name = "CurseForge", url = nil },
-  { key = "wago", name = "Wago", url = nil },
+  { key = "curseforge", name = "CurseForge", url = "https://www.curseforge.com/wow/addons/duskfall" },
+  { key = "wago", name = "Wago", url = "https://addons.wago.io/addons/duskfall" },
   { key = "bugs", name = "Report a bug", url = "https://github.com/DukulWoW/Duskfall/issues", sub = "Opens the issue tracker link" },
 }
 
@@ -28,6 +27,7 @@ end
 
 -- Settings: sub-page builders ----------------------------------------------------------------------
 local CONTENT_W = 700
+local FULL_W = 728        -- the whole width of a sub-page (752) less its 12 px margins
 
 -- Stacks widgets from the top of a frame; every widget with :Refresh() is refreshed on show.
 local function stacker(parent, y)
@@ -91,9 +91,9 @@ local function buildTime(p)
   fmt:SetPoint("TOPLEFT", src, "TOPRIGHT", 40, 0)
   add(UI.Header(p, "Parts of the day"), 14, 4)
   local help = UI.Label(p, "A Look can be set to one part of the day. Drag the yellow edges to change when each part starts.")
-  help:SetWidth(CONTENT_W - 24)
+  help:SetWidth(FULL_W)
   add(help, 14, 12)
-  bar = UI.DayBar(p, CONTENT_W - 24)
+  bar = UI.DayBar(p, FULL_W)
   add(bar, bar:GetHeight(), 8)
   local r = refresh
   return function() r() fmt:Refresh() end
@@ -180,6 +180,7 @@ local function buildCharacters(p)
     end)
   end)
   ScrollUtil.InitScrollBoxListWithScrollBar(box, scroll, view)
+  UI.AutoHideScroll(box, scroll)
 
   refresh = function()
     local list = {}
@@ -309,12 +310,8 @@ W.AddTab("settings", "Settings", function(page)
     overview:Show()
     return true
   end
-  page:SetScript("OnShow", function()
-    if page.openSub then
-      local sub = subs[page.openSub]
-      if sub.refresh then sub.refresh() end
-    end
-  end)
+  -- Leaving the tab (or closing the window) goes back to the overview: coming back starts there (Kim)
+  page:SetScript("OnHide", function() page.Back() end)
   ns.OpenSettingsPage = function(key)
     ns.OpenWindow("settings", true)
     open(key)
@@ -322,54 +319,74 @@ W.AddTab("settings", "Settings", function(page)
 end, "right")
 
 -- About tab ---------------------------------------------------------------------------------------
+-- One calm centred column (Kim: "think Apple"): icon, name, version, one line on what it does, the
+-- links, and the commands folded away behind a button.
 W.AddTab("about", "About", function(page)
   UI.Glow(page, nil, 0.8)
-  local logo = page:CreateTexture(nil, "ARTWORK")
-  logo:SetSize(96, 96)
-  logo:SetPoint("TOP", page, "TOP", 0, -16)
+  local col = CreateFrame("Frame", nil, page)
+  col:SetPoint("TOP", page, "TOP", 0, -18)
+  col:SetSize(560, 440)
+
+  local logo = col:CreateTexture(nil, "ARTWORK")
+  logo:SetSize(104, 104)
+  logo:SetPoint("TOP", col, "TOP", 0, 0)
   logo:SetTexture(UI.ART .. "icon")
 
-  local name = page:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge3")
-  name:SetPoint("TOP", logo, "BOTTOM", 0, -6)
+  local name = col:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge3")
+  name:SetPoint("TOP", logo, "BOTTOM", 0, -8)
   name:SetText("|cff3355ccD|cff506ac5u|cff6d7fbes|cff8a94b7k|cffa8a9aff|cffc5bea8a|cffe2d3a1l|cffffe89al|r")
-  local ver = UI.Label(page, "Version " .. ns.VERSION, "GameFontHighlight")
-  ver:SetPoint("TOP", name, "BOTTOM", 0, -4)
-  ver:SetTextColor(0.7, 0.7, 0.7)
-  local by = UI.Label(page, "by Dukul", "GameFontHighlightSmall")
-  by:SetPoint("TOP", ver, "BOTTOM", 0, -2)
-  by:SetTextColor(0.55, 0.55, 0.55)
+  local ver = UI.Label(col, "Version " .. ns.VERSION .. "   |cff6f6f6fby|r Dukul", "GameFontHighlight")
+  ver:SetPoint("TOP", name, "BOTTOM", 0, -6)
+  ver:SetTextColor(0.62, 0.62, 0.62)
 
-  local desc = UI.Label(page, "Duskfall sets gamma, brightness, contrast and bloom for every place you go: a cave, a city, "
-    .. "a dungeon, indoors or out, day or night. Changes glide in, or adapt like real eyes do.", "GameFontHighlight")
-  desc:SetPoint("TOP", by, "BOTTOM", 0, -12)
-  desc:SetWidth(560)
+  local desc = UI.Label(col, "Gamma, brightness, contrast and bloom that follow you through the world, and change "
+    .. "the way your eyes do.", "GameFontHighlight")
+  desc:SetPoint("TOP", ver, "BOTTOM", 0, -16)
+  desc:SetWidth(460)
   desc:SetJustifyH("CENTER")
+  desc:SetSpacing(3)
+  desc:SetTextColor(0.88, 0.86, 0.82)
 
-  -- Link buttons (BigNoteBox's icon buttons); a site without a url yet is left out
-  local SZ, GAP = 32, 8
+  -- Link buttons (BigNoteBox's icon buttons); a site without a url is left out
+  local SZ, GAP = 32, 10
   local shown = {}
   for _, l in ipairs(ns.LINKS) do if l.url then shown[#shown + 1] = l end end
   local rowW = #shown * SZ + (#shown - 1) * GAP
   for i, l in ipairs(shown) do
-    local b = UI.IconButton(page, SZ, l.key, {
+    local b = UI.IconButton(col, SZ, l.key, {
       tip = l.name, tipSub = l.sub or ("Copy the " .. l.name .. " link"),
       onClick = function() UI.Copy(l.name, l.url) end,
     })
-    b:SetPoint("TOPLEFT", desc, "BOTTOM", -math.floor(rowW / 2) + (i - 1) * (SZ + GAP), -14)
+    b:SetPoint("TOPLEFT", desc, "BOTTOM", -math.floor(rowW / 2) + (i - 1) * (SZ + GAP), -18)
   end
 
-  local cmdH = UI.Header(page, "Commands")
-  cmdH:SetPoint("TOP", desc, "BOTTOM", 0, -(14 + SZ + 24))
-  cmdH:SetPoint("LEFT", page, "LEFT", 60, 0)
-  local cmds = UI.Label(page, table.concat({
-    "|cffffd100/dusk|r  this window, on Places",
-    "|cffffd100/dusk config|r or |cffffd100/dusk settings|r  this window, on Settings",
-    "|cffffd100/dusk status|r  where you are and what Duskfall shows, in chat",
-    "|cffffd100/dusk save|r sub, zone or instance [conditions]  save the values on screen for here",
-    "|cffffd100/dusk clear|r sub, zone or instance [conditions]  remove that Look",
-    "|cffffd100/dusk on|r, |cffffd100/dusk off|r  automatic adjusting on or off (also a key binding)",
-    "|cffffd100/dusk help|r  every command",
+  -- Commands, folded away until asked for
+  local panel = CreateFrame("Frame", nil, col)
+  panel:SetPoint("TOP", desc, "BOTTOM", 0, -(18 + SZ + 52))
+  panel:SetSize(520, 150)
+  UI.RoundBox(panel, { radius = 10, bottom = { 0, 0, 0, 0.5 }, top = { 0.18, 0.14, 0.09, 0.4 },
+    border = { 1, 0.82, 0, 0.2 } })
+  local cmds = UI.Label(panel, table.concat({
+    "|cffffd100/dusk|r   this window",
+    "|cffffd100/dusk settings|r   this window, on Settings",
+    "|cffffd100/dusk status|r   where you are and what Duskfall shows, in chat",
+    "|cffffd100/dusk save|r  /  |cffffd100clear|r  sub, zone or instance [conditions]   from chat",
+    "|cffffd100/dusk on|r  /  |cffffd100off|r   switch Duskfall on or off (also a key binding)",
+    "|cffffd100/dusk help|r   every command",
   }, "\n"), "GameFontHighlight")
-  cmds:SetPoint("TOPLEFT", cmdH, "BOTTOMLEFT", 0, -6)
-  cmds:SetSpacing(3)
+  cmds:SetPoint("TOPLEFT", panel, "TOPLEFT", 18, -16)
+  cmds:SetPoint("RIGHT", panel, "RIGHT", -18, 0)
+  cmds:SetSpacing(5)
+  panel:Hide()
+
+  local toggle
+  toggle = UI.Button(col, "Commands", 140, function()
+    panel:SetShown(not panel:IsShown())
+    toggle:SetText(panel:IsShown() and "Hide commands" or "Commands")
+  end)
+  toggle:SetPoint("TOP", desc, "BOTTOM", 0, -(18 + SZ + 16))
+
+  local foot = UI.Label(page, "A free fan project, not affiliated with Blizzard Entertainment. All rights reserved.",
+    "GameFontDisableSmall")
+  foot:SetPoint("BOTTOM", page, "BOTTOM", 0, 8)
 end, "right")

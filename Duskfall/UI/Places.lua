@@ -374,6 +374,7 @@ W.AddTab("places", "Places", function(tab)
     end)
   end)
   ScrollUtil.InitScrollBoxListWithScrollBar(box, scroll, view)
+  UI.AutoHideScroll(box, scroll)
 
   -- The rows of the list, filtered and sorted.
   local function buildRows()
@@ -591,6 +592,7 @@ W.AddTab("places", "Places", function(tab)
     row:SetScript("OnClick", function() openEditor(look) end)
   end)
   ScrollUtil.InitScrollBoxListWithScrollBar(lookBox, lookScroll, lookView)
+  UI.AutoHideScroll(lookBox, lookScroll)
 
   -- Quick-add: values = what is on screen where it differs from what Duskfall shows (as /dusk save).
   local function quickAdd(when, suffix)

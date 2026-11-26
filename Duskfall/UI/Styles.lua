@@ -130,6 +130,7 @@ W.AddTab("styles", "Styles", function(page)
     end)
   end)
   ScrollUtil.InitScrollBoxListWithScrollBar(box, scroll, view)
+  UI.AutoHideScroll(box, scroll)
 
   local styles = function() return ns.db.styles end
 

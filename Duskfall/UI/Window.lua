@@ -36,14 +36,22 @@ local function statusText()
   for _, ch in ipairs(C.list) do
     local v = cur[ch.key]
     local s = ch.short .. " " .. (v and C.Format(ch.key, v) or "-")
-    if st.held[ch.key] ~= nil then s = "|cffff9f40" .. s .. "|r"
-    elseif st.source and st.source[ch.key] then s = "|cffffd100" .. s .. "|r" end
+    if st.held[ch.key] ~= nil then s = "|cffd09060" .. s .. "|r"
+    elseif st.source and st.source[ch.key] then s = "|cffc8b070" .. s .. "|r" end
     vals[#vals + 1] = s
   end
   local onoff = ""
   if not ns.cfg.enabled then onoff = "|cffff4040Off|r   " end
-  return string.format("%sStyle: |cffffffff%s|r     Here: |cffffffff%s|r     %s", onoff, style.name or "?", place,
+  return string.format("%sStyle: |cffc0c0c0%s|r     Here: |cffc0c0c0%s|r     %s", onoff, style.name or "?", place,
     table.concat(vals, "  "))
+end
+
+function W.UpdateTitle()
+  if not frame then return end
+  local t = "Duskfall"
+  if not ns.cfg.enabled then t = "Duskfall  |cffff6060(Off)|r" end
+  if frame.SetTitle then frame:SetTitle(t)
+  elseif frame.TitleContainer and frame.TitleContainer.TitleText then frame.TitleContainer.TitleText:SetText(t) end
 end
 
 function W.UpdateStatus()
@@ -95,8 +103,7 @@ local function build()
   else
     f:SetPoint("CENTER")
   end
-  if f.SetTitle then f:SetTitle("Duskfall")
-  elseif f.TitleContainer and f.TitleContainer.TitleText then f.TitleContainer.TitleText:SetText("Duskfall") end
+  W.UpdateTitle()
   -- The window without the portrait ring (as BNB's windows), and our round icon on its own,
   -- half out of the top-left corner so it never covers page titles (Kim)
   pcall(ButtonFrameTemplate_HidePortrait, f)
@@ -214,7 +221,8 @@ local function build()
   strip:SetFrameLevel(f:GetFrameLevel() + 20)
   local status = strip:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
   status:SetAllPoints(strip)
-  status:SetJustifyH("LEFT")
+  status:SetJustifyH("CENTER")
+  status:SetTextColor(0.6, 0.6, 0.6)
   status:SetWordWrap(false)
   f.status = status
 
@@ -264,6 +272,10 @@ function ns.OpenWindow(tabID, keepOpen)
 end
 
 ns.Listen("EVALUATED", function() W.UpdateStatus() end)
+ns.Listen("ONOFF", function()
+  W.UpdateTitle()
+  W.UpdateStatus()
+end)
 -- Values move during a transition: keep the strip current while it runs.
 C_Timer.NewTicker(0.25, function()
   if frame and frame:IsShown() and ns.Transition.IsRunning() then W.UpdateStatus() end

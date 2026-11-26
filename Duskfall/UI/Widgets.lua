@@ -10,7 +10,7 @@
 --         UI.IconButton(parent, size, symbol, o), UI.Copy(title, text),
 --         UI.ScopeDropdown(parent, width, o), UI.ScopeText(scope, style), UI.ScopeIsGlobal(scope, style),
 --         UI.DeepCopy(t), UI.CharColored(guid), UI.scopeClip, UI.Gradient(tex, orient, a, b),
---         UI.Border(f, r, g, b, a), UI.Segmented(parent, width, o), UI.LightSlider(parent, width, o)
+--         UI.Border(f, r, g, b, a), UI.RoundBox(f, o), UI.AutoHideScroll(box, bar), UI.Segmented(parent, width, o), UI.LightSlider(parent, width, o)
 local ADDON, ns = ...
 local UI = {}
 ns.UI = UI
@@ -69,8 +69,15 @@ end
 UI.Tooltip = tooltip
 
 -- Button ---------------------------------------------------------------------------------------
+-- SharedButtonTemplate is the current Blizzard button: red with bronze edges on Forever and sharp
+-- at any size; UIPanelButtonTemplate (the old low-res grey-edged one) only where it is missing (BNB).
+local buttonTemplate
 function UI.Button(parent, text, w, onClick, h)
-  local b = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
+  if not buttonTemplate then
+    buttonTemplate = (C_XMLUtil and C_XMLUtil.GetTemplateInfo and C_XMLUtil.GetTemplateInfo("SharedButtonTemplate"))
+      and "SharedButtonTemplate" or "UIPanelButtonTemplate"
+  end
+  local b = CreateFrame("Button", nil, parent, buttonTemplate)
   b:SetSize(w or 120, h or 22)
   b:SetText(text)
   if onClick then b:SetScript("OnClick", function(self) ns.Safe(onClick, "button", self) end) end
@@ -386,9 +393,9 @@ end
 -- Gradient and border --------------------------------------------------------------------------
 -- A plain texture shaded from colour a to colour b ({ r, g, b, a }). "HORIZONTAL": a = left,
 -- b = right; "VERTICAL": a = bottom, b = top. The modern form takes ColorMixins; older clients
--- had SetGradientAlpha with numbers.
-function UI.Gradient(tex, orient, a, b)
-  tex:SetColorTexture(1, 1, 1, 1)
+-- had SetGradientAlpha with numbers. file: shade a white texture (a round corner) instead of a plain one.
+function UI.Gradient(tex, orient, a, b, file)
+  if file then tex:SetTexture(file) else tex:SetColorTexture(1, 1, 1, 1) end
   local ok = CreateColor and pcall(tex.SetGradient, tex, orient,
     CreateColor(a[1], a[2], a[3], a[4] or 1), CreateColor(b[1], b[2], b[3], b[4] or 1))
   if not ok and tex.SetGradientAlpha then
@@ -418,6 +425,106 @@ function UI.Border(f, r, g, b, a)
   right:SetWidth(1)
 end
 
+-- Rounded box ----------------------------------------------------------------------------------
+-- A rectangle with rounded corners (Assets/round-corner, a quarter disc), shaded from o.bottom to
+-- o.top, with an optional 1 px rounded frame (o.border, Assets/round-ring; for boxes rounded on all
+-- four corners). Corners can be square: :SetCorners(tl, tr, bl, br).
+-- o = { radius, bottom = {r,g,b,a}, top = {r,g,b,a}, border = {r,g,b,a}, layer, sub }.
+-- Returns a box with :SetCorners(...), :SetShown(on), :Layout() (also on the frame's size change).
+local CORNERS = { tl = { 0, 1, 0, 1 }, tr = { 1, 0, 0, 1 }, bl = { 0, 1, 1, 0 }, br = { 1, 0, 1, 0 } }
+local CORNER_POINT = { tl = "TOPLEFT", tr = "TOPRIGHT", bl = "BOTTOMLEFT", br = "BOTTOMRIGHT" }
+local function lerp(a, b, t)
+  return { a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t, a[3] + (b[3] - a[3]) * t,
+           (a[4] or 1) + ((b[4] or 1) - (a[4] or 1)) * t }
+end
+
+function UI.RoundBox(f, o)
+  local R = o.radius or 6
+  local layer, sub = o.layer or "BACKGROUND", o.sub or 1
+  local box = { round = { tl = true, tr = true, bl = true, br = true } }
+  local all = {}
+  local function tex(level)
+    local t = f:CreateTexture(nil, layer, nil, level)
+    all[#all + 1] = t
+    return t
+  end
+  local c = {}
+  for k, point in pairs(CORNER_POINT) do
+    c[k] = tex(sub)
+    c[k]:SetSize(R, R)
+    c[k]:SetPoint(point, f, point, 0, 0)
+  end
+  local top, mid, bot = tex(sub), tex(sub), tex(sub)
+  top:SetPoint("TOPLEFT", c.tl, "TOPRIGHT")
+  top:SetPoint("BOTTOMRIGHT", c.tr, "BOTTOMLEFT")
+  mid:SetPoint("TOPLEFT", c.tl, "BOTTOMLEFT")
+  mid:SetPoint("BOTTOMRIGHT", c.br, "TOPRIGHT")
+  bot:SetPoint("TOPLEFT", c.bl, "TOPRIGHT")
+  bot:SetPoint("BOTTOMRIGHT", c.br, "BOTTOMLEFT")
+
+  if o.border then
+    local col = o.border
+    local function solid()
+      local t = tex(sub + 1)
+      t:SetColorTexture(col[1], col[2], col[3], col[4] or 1)
+      return t
+    end
+    for k, point in pairs(CORNER_POINT) do
+      local t = tex(sub + 1)
+      t:SetSize(R, R)
+      t:SetPoint(point, f, point, 0, 0)
+      t:SetTexture(UI.ART .. "round-ring")
+      t:SetTexCoord(unpack(CORNERS[k]))
+      t:SetVertexColor(col[1], col[2], col[3], col[4] or 1)
+    end
+    local tl = solid()
+    tl:SetPoint("TOPLEFT", f, "TOPLEFT", R, 0)
+    tl:SetPoint("TOPRIGHT", f, "TOPRIGHT", -R, 0)
+    tl:SetHeight(1)
+    local bl = solid()
+    bl:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", R, 0)
+    bl:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -R, 0)
+    bl:SetHeight(1)
+    local ll = solid()
+    ll:SetPoint("TOPLEFT", f, "TOPLEFT", 0, -R)
+    ll:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", 0, R)
+    ll:SetWidth(1)
+    local rl = solid()
+    rl:SetPoint("TOPRIGHT", f, "TOPRIGHT", 0, -R)
+    rl:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", 0, R)
+    rl:SetWidth(1)
+  end
+
+  -- The fill is shaded per piece, each with its own slice of the bottom-to-top gradient
+  function box:Layout()
+    local H = f:GetHeight()
+    if not H or H < 2 * R then H = 2 * R end
+    local a, b = R / H, (H - R) / H
+    local lo, hi = o.bottom, o.top or o.bottom
+    local function shade(t, from, to, file)
+      UI.Gradient(t, "VERTICAL", lerp(lo, hi, from), lerp(lo, hi, to), file)
+    end
+    for k, t in pairs(c) do
+      local file = box.round[k] and (UI.ART .. "round-corner") or nil
+      if k == "tl" or k == "tr" then shade(t, b, 1, file) else shade(t, 0, a, file) end
+      if file then t:SetTexCoord(unpack(CORNERS[k])) else t:SetTexCoord(0, 1, 0, 1) end
+    end
+    shade(top, b, 1)
+    shade(mid, a, b)
+    shade(bot, 0, a)
+  end
+  function box:SetCorners(tl, tr, bl, br)
+    box.round = { tl = tl and true or false, tr = tr and true or false, bl = bl and true or false, br = br and true or false }
+    box:Layout()
+  end
+  function box:SetShown(on)
+    for _, t in ipairs(all) do t:SetShown(on) end
+  end
+  f:HookScript("OnSizeChanged", function() box:Layout() end)
+  box:Layout()
+  return box
+end
+
 -- Segmented control ----------------------------------------------------------------------------
 --   [ Canals | Undercity | Everywhere ]
 -- A row of joined buttons, one of them picked (as macOS). Widths follow the texts.
@@ -427,19 +534,18 @@ function UI.Segmented(parent, width, o)
   local H = o.height or 24
   local f = CreateFrame("Frame", nil, parent)
   f:SetSize(width, H)
-  local bg = f:CreateTexture(nil, "BACKGROUND", nil, 2)
-  bg:SetAllPoints()
-  UI.Gradient(bg, "VERTICAL", { 0, 0, 0, 0.6 }, { 0.14, 0.11, 0.07, 0.6 })
-  UI.Border(f, 1, 0.82, 0, 0.35)
+  UI.RoundBox(f, { radius = 7, sub = 2, bottom = { 0, 0, 0, 0.6 }, top = { 0.14, 0.11, 0.07, 0.6 },
+    border = { 1, 0.82, 0, 0.35 } })
   local buttons, items = {}, {}
   local enabled = true
 
   local function button(i)
     local b = CreateFrame("Button", nil, f)
-    b.pick = b:CreateTexture(nil, "BACKGROUND", nil, 4)
-    b.pick:SetPoint("TOPLEFT", b, "TOPLEFT", 1, -1)
-    b.pick:SetPoint("BOTTOMRIGHT", b, "BOTTOMRIGHT", -1, 1)
-    UI.Gradient(b.pick, "VERTICAL", { 0.5, 0.33, 0.05, 0.95 }, { 0.93, 0.72, 0.24, 0.95 })
+    -- The picked look, inside the frame line; only the outer ends of the row are rounded
+    local inner = CreateFrame("Frame", nil, b)
+    inner:SetPoint("TOPLEFT", b, "TOPLEFT", 1, -1)
+    inner:SetPoint("BOTTOMRIGHT", b, "BOTTOMRIGHT", -1, 1)
+    b.pick = UI.RoundBox(inner, { radius = 6, sub = 4, bottom = { 0.5, 0.33, 0.05, 0.95 }, top = { 0.93, 0.72, 0.24, 0.95 } })
     local hl = b:CreateTexture(nil, "HIGHLIGHT")
     hl:SetAllPoints()
     hl:SetColorTexture(1, 1, 1, 0.08)
@@ -498,6 +604,8 @@ function UI.Segmented(parent, width, o)
       b.text:SetPoint("CENTER", b, "CENTER", it[3] and 8 or 0, 0)
       b.text:SetWidth(math.max(10, w - 10 - (it[3] and 17 or 0)))
       local on = it[1] == cur
+      local first, last = i == 1, i == #items
+      b.pick:SetCorners(first, last, first, last)
       b.pick:SetShown(on)
       if on then b.text:SetTextColor(1, 1, 1) else b.text:SetTextColor(1, 0.82, 0) end
       b:SetEnabled(enabled)
@@ -520,8 +628,27 @@ end
 -- Right-click puts it back to 0. The range should be symmetric around 0.
 -- o = { label, min, max, step, from = { r, g, b }, to = { r, g, b }, get = fn() -> v,
 --       set = fn(v), fmt = fn(v) -> text, tip }. Returns a holder: :Refresh(), :SetEnabled(on).
+-- The diamond thumb of Blizzard's settings slider, read once from a throwaway template slider.
+local diamondLook
+local function diamond()
+  if diamondLook then return diamondLook end
+  diamondLook = {}
+  local ok, tmp = pcall(CreateFrame, "Frame", nil, UIParent, "MinimalSliderWithSteppersTemplate")
+  local sl = ok and tmp and tmp.Slider
+  local t = sl and sl.GetThumbTexture and sl:GetThumbTexture()
+  if t then
+    local atlas = t.GetAtlas and t:GetAtlas()
+    if atlas and atlas ~= "" then diamondLook.atlas = atlas else diamondLook.file = t:GetTexture() end
+    diamondLook.w, diamondLook.h = t:GetSize()
+    if (diamondLook.w or 0) < 4 then diamondLook.w, diamondLook.h = 20, 20 end
+  end
+  if ok and tmp then tmp:Hide() end
+  return diamondLook
+end
+
 function UI.LightSlider(parent, width, o)
-  local LABEL_W, VALUE_W, H, INSET = 90, 76, 30, 16
+  local LABEL_W, VALUE_W, H = 90, 76, 30
+  local INSET   -- half the thumb width, set once the thumb is known
   local h = CreateFrame("Frame", nil, parent)
   h:SetSize(width, H)
   local lbl = UI.Label(h, o.label, "GameFontNormal")
@@ -550,9 +677,18 @@ function UI.LightSlider(parent, width, o)
   sl:EnableMouse(true)
   pcall(sl.EnableMouseWheel, sl, false)
   local thumb = sl:CreateTexture(nil, "OVERLAY", nil, 2)
-  thumb:SetTexture("Interface\\Buttons\\UI-SliderBar-Button-Horizontal")
-  thumb:SetSize(32, 32)
+  local look = diamond()
+  if look.atlas then
+    thumb:SetAtlas(look.atlas)
+  elseif look.file then
+    thumb:SetTexture(look.file)
+  else
+    thumb:SetTexture("Interface\\Buttons\\UI-SliderBar-Button-Horizontal")
+  end
+  thumb:SetSize(look.w or 32, look.h or 32)
   sl:SetThumbTexture(thumb)
+  -- The thumb's centre travels from half its width to the other end minus that: the track too
+  INSET = math.floor((look.w or 32) / 2 + 0.5)
 
   local well = sl:CreateTexture(nil, "BACKGROUND")
   well:SetPoint("LEFT", sl, "LEFT", INSET - 2, 0)
@@ -624,6 +760,14 @@ function UI.LightSlider(parent, width, o)
   end
   h:Refresh()
   return h
+end
+
+-- Scroll bars ----------------------------------------------------------------------------------
+-- A list's scroll bar shows only when there is something to scroll (Kim).
+function UI.AutoHideScroll(box, bar)
+  if ScrollUtil and ScrollUtil.AddManagedScrollBarVisibilityBehavior then
+    pcall(ScrollUtil.AddManagedScrollBarVisibilityBehavior, box, bar)
+  end
 end
 
 -- Copy box -------------------------------------------------------------------------------------

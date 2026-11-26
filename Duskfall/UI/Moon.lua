@@ -2,8 +2,10 @@
 -- It is not GameTimeFrame but an anonymous child of MinimapCluster.MinimapContainer (made in
 -- Blizzard_Minimap/Camelot/Diel.lua), found by its .Background atlas "UI-HUD-Minimap-NightCycle"
 -- (A12, fstack). Clicking it does nothing by default, so it takes the minimap button's clicks
--- (ns.LauncherClick) and adds Duskfall's lines under its tooltip. Scripts are hooked, never
--- replaced; settings.moon = false switches it off again (mouse back as it was).
+-- (ns.LauncherClick) and adds Duskfall's lines under its tooltip. Hooking the moon's own mouse
+-- scripts did nothing on Forever (Kim, 2026-11-26), so an invisible button of our own lies on top
+-- of it, one strata up so no minimap frame catches the click first. The moon itself is never
+-- changed; settings.moon = false hides the button.
 -- Minimap addons may hide, fade or move the moon off screen: M.Usable() checks it can really be
 -- seen and clicked, and the minimap button in "auto" mode shows itself when it can't. Checked at
 -- login, again after other addons have set up, on every loading screen, when the moon is shown
@@ -14,7 +16,7 @@ local M = {}
 ns.Moon = M
 
 local ATLAS = "ui-hud-minimap-nightcycle"
-local moon, hooked, mouseWas
+local moon, hooked, catcher
 local searched = false     -- the search is over (found or given up)
 
 local function find()
@@ -64,24 +66,30 @@ end
 local function hook()
   if hooked or not moon then return end
   hooked = true
-  mouseWas = moon:IsMouseEnabled()
-  moon:HookScript("OnMouseUp", function(self, button)
-    if not on() or not self:IsMouseOver() then return end
+  catcher = CreateFrame("Button", nil, moon)
+  catcher:SetAllPoints(moon)
+  catcher:SetFrameStrata("MEDIUM")
+  catcher:RegisterForClicks("AnyUp")
+  catcher:SetScript("OnClick", function(_, button)
+    ns.Debug("moon click %s", tostring(button))
     ns.Safe(ns.LauncherClick, "moon click", button)
   end)
-  moon:HookScript("OnEnter", function(self)
-    if not on() then return end
-    -- Under the moon's own tooltip if it has one, else a tooltip of our own
-    if not GameTooltip:IsOwned(self) then
-      GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-    else
+  catcher:SetScript("OnEnter", function(self)
+    -- The moon's own tooltip first, if it has one, then Duskfall's lines
+    local own = moon:GetScript("OnEnter")
+    if own then pcall(own, moon) end
+    if GameTooltip:IsOwned(moon) and GameTooltip:IsShown() then
       GameTooltip:AddLine(" ")
+    else
+      GameTooltip:SetOwner(self, "ANCHOR_LEFT")
     end
     ns.Safe(ns.FillTooltip, "moon tooltip", GameTooltip)
     GameTooltip:Show()
   end)
-  moon:HookScript("OnLeave", function(self)
-    if GameTooltip:IsOwned(self) then GameTooltip:Hide() end
+  catcher:SetScript("OnLeave", function(self)
+    local own = moon:GetScript("OnLeave")
+    if own then pcall(own, moon) end
+    if GameTooltip:IsOwned(self) or GameTooltip:IsOwned(moon) then GameTooltip:Hide() end
   end)
   -- A minimap addon hiding or showing it: look again on the next frame (after its layout)
   local again = function() C_Timer.After(0, function() ns.Safe(M.Check, "moon check") end) end
@@ -93,9 +101,9 @@ function M.Apply()
   if moon then
     if on() then
       hook()
-      moon:EnableMouse(true)
-    elseif hooked then
-      moon:EnableMouse(mouseWas and true or false)
+      catcher:Show()
+    elseif catcher then
+      catcher:Hide()
     end
   end
   M.Check()

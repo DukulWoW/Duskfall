@@ -577,6 +577,7 @@ function E.Create(parent, hooks)
     end)
   end)
   ScrollUtil.InitScrollBoxListWithScrollBar(wBox, wScroll, wView)
+  UI.AutoHideScroll(wBox, wScroll)
 
   refreshWhere = function()
     local list = {}

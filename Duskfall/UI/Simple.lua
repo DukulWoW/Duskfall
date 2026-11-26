@@ -248,10 +248,8 @@ function SP.Create(parent, hooks)
   card:SetPoint("TOPLEFT", left, "TOPLEFT", 12, -10)
   card:SetPoint("TOPRIGHT", left, "TOPRIGHT", -12, -10)
   card:SetHeight(82)
-  local cardBg = card:CreateTexture(nil, "BACKGROUND", nil, 1)
-  cardBg:SetAllPoints()
-  UI.Gradient(cardBg, "VERTICAL", { 0, 0, 0, 0.5 }, { 0.22, 0.17, 0.1, 0.4 })
-  UI.Border(card, 1, 0.82, 0, 0.25)
+  UI.RoundBox(card, { radius = 10, bottom = { 0, 0, 0, 0.5 }, top = { 0.22, 0.17, 0.1, 0.4 },
+    border = { 1, 0.82, 0, 0.25 } })
   local placeText = UI.Label(card, "", "GameFontNormalHuge")
   placeText:SetPoint("TOPLEFT", card, "TOPLEFT", 14, -12)
   placeText:SetPoint("RIGHT", card, "RIGHT", -14, 0)
@@ -391,9 +389,7 @@ function SP.Create(parent, hooks)
   local area = CreateFrame("Frame", nil, right)
   area:SetPoint("TOPLEFT", right, "TOPLEFT", 0, -58)
   area:SetPoint("BOTTOMRIGHT", right, "BOTTOMRIGHT", -16, 8)
-  local areaBg = area:CreateTexture(nil, "BACKGROUND", nil, 1)
-  areaBg:SetAllPoints()
-  areaBg:SetColorTexture(0, 0, 0, 0.3)
+  UI.RoundBox(area, { radius = 8, bottom = { 0, 0, 0, 0.32 }, top = { 0, 0, 0, 0.22 } })
   local box = CreateFrame("Frame", nil, area, "WowScrollBoxList")
   box:SetAllPoints()
   local scroll = CreateFrame("EventFrame", nil, right, "MinimalScrollBar")
@@ -409,6 +405,31 @@ function SP.Create(parent, hooks)
     if not (MenuUtil and MenuUtil.CreateContextMenu) then return end
     MenuUtil.CreateContextMenu(owner, function(_, root)
       root:CreateTitle(lookLabel(look))
+      -- The same clipboard as the Look editor's Copy / Paste values (ns.valueClip)
+      root:CreateButton("Copy values", function()
+        ns.valueClip = { absolute = look.absolute and true or false, values = UI.DeepCopy(look.values or {}) }
+      end)
+      local paste = root:CreateButton("Paste values", function()
+        local clip = ns.valueClip
+        if not clip then return end
+        local base, out = ns.db.baseline or {}, {}
+        for k, x in pairs(clip.values) do
+          x = tonumber(x)
+          if x ~= nil and C.byKey[k] and base[k] then
+            local same = clip.absolute == (look.absolute and true or false)
+            if same then out[k] = x
+            elseif look.absolute then out[k] = tonumber(C.Format(k, C.Clamp(k, base[k] + x)))
+            else out[k] = tonumber(C.Format(k, x - base[k])) end
+          end
+        end
+        if next(out) == nil then return end
+        look.values = out
+        stopPreview()
+        evaluate()
+        refresh(true)
+      end)
+      if not ns.valueClip and paste and paste.SetEnabled then pcall(paste.SetEnabled, paste, false) end
+      root:CreateDivider()
       root:CreateButton("Remove", function()
         UI.Confirm("Remove the setting \"" .. lookLabel(look) .. "\"?", function()
           removeLook(look)
@@ -432,9 +453,9 @@ function SP.Create(parent, hooks)
       hl:SetAllPoints()
       hl:SetColorTexture(1, 1, 1, 0.07)
       r.dot = r:CreateTexture(nil, "ARTWORK")
-      r.dot:SetSize(7, 7)
-      r.dot:SetPoint("TOPLEFT", r, "TOPLEFT", 8, -10)
-      r.dot:SetColorTexture(0.25, 1, 0.25, 1)
+      r.dot:SetSize(9, 9)
+      r.dot:SetPoint("TOPLEFT", r, "TOPLEFT", 7, -9)
+      UI.Gradient(r.dot, "VERTICAL", { 0.05, 0.55, 0.1 }, { 0.55, 1, 0.5 }, UI.ART .. "dot")
       r.tag = UI.Label(r, "", "GameFontHighlightSmall")
       r.tag:SetPoint("TOPRIGHT", r, "TOPRIGHT", -8, -6)
       r.tag:SetTextColor(0.62, 0.71, 1)
@@ -459,7 +480,7 @@ function SP.Create(parent, hooks)
           GameTooltip:AddLine("Set up in Advanced mode. " .. whyAdvanced(d.look), 0.62, 0.71, 1, true)
           GameTooltip:AddLine("Click to open it there.", 0.62, 0.71, 1)
         end
-        GameTooltip:AddLine("Right-click: remove", 0.6, 0.6, 0.6)
+        GameTooltip:AddLine("Right-click: copy, paste or remove", 0.6, 0.6, 0.6)
         GameTooltip:Show()
       end)
       r:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -482,6 +503,7 @@ function SP.Create(parent, hooks)
     end)
   end)
   ScrollUtil.InitScrollBoxListWithScrollBar(box, scroll, view)
+  UI.AutoHideScroll(box, scroll)
 
   local function refreshList()
     local live = {}
