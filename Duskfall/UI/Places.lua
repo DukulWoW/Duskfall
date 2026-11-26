@@ -4,7 +4,7 @@
 --          how many Looks of the active Style use the place (green = one of them is in effect now),
 --          grey = no Looks (off). A blue bar marks where you are. Right-click: Forget place.
 --   right: the selected place, its Looks (on/off, Delete, "active" / "matches" tags) and the
---          quick-add buttons; below them the slot for the Look editor (B-04c).
+--          quick-add buttons. Clicking a Look (or adding one) opens the Look editor over the tab.
 -- Opening the window selects the place of the Look in effect now, and that Look (Kim).
 -- A flat list with open / closed zones, not Blizzard's tree view (untested on Forever).
 local ADDON, ns = ...
@@ -187,6 +187,9 @@ local function detailText(look, key)
   return table.concat(parts, GREY .. "  /  |r")
 end
 
+-- Shared with the Look editor
+ns.PlaceUI = { kindOf = kindOf, placeName = placeName, zoneName = zoneName, zoneKeyOf = zoneKeyOf, liveSets = liveSets }
+
 local function changed(why)
   D.ClearHolds()
   D.state.target = nil
@@ -208,7 +211,7 @@ W.AddTab("places", "Places", function(page)
   local expanded, collapsed = {}, {}   -- zones open, groups closed (this session only)
   local activeOnly = false
   local wantJump = true          -- select the live Look on the next show of this page
-  local refreshAll, selectPlace
+  local refreshAll, selectPlace, openEditor
 
   -- Left ---------------------------------------------------------------------------------------
   local left = CreateFrame("Frame", nil, page)
@@ -512,8 +515,7 @@ W.AddTab("places", "Places", function(page)
 
   local lookArea = CreateFrame("Frame", nil, detail)
   lookArea:SetPoint("TOPLEFT", detail, "TOPLEFT", 0, -78)
-  lookArea:SetPoint("RIGHT", detail, "RIGHT", -16, 0)
-  lookArea:SetHeight(LOOK_H * 5)
+  lookArea:SetPoint("BOTTOMRIGHT", detail, "BOTTOMRIGHT", -16, 42)
   shade(lookArea)
   local lookBox = CreateFrame("Frame", nil, lookArea, "WowScrollBoxList")
   lookBox:SetAllPoints()
@@ -581,10 +583,7 @@ W.AddTab("places", "Places", function(page)
         changed("places")
       end)
     end)
-    row:SetScript("OnClick", function()
-      selLook = look
-      refreshRight()
-    end)
+    row:SetScript("OnClick", function() openEditor(look) end)
   end)
   ScrollUtil.InitScrollBoxListWithScrollBar(lookBox, lookScroll, lookView)
 
@@ -594,9 +593,8 @@ W.AddTab("places", "Places", function(page)
     local style = R.ActiveStyle()
     local existing = ns.FindLook(style, selKey, when)
     if existing then
-      selLook = existing
-      ns.Print("Look \"%s\" already exists, selected it.", existing.name or "?")
-      refreshRight()
+      ns.Print("Look \"%s\" already exists, opened it.", existing.name or "?")
+      openEditor(existing)
       return
     end
     local values, n = {}, 0
@@ -615,17 +613,13 @@ W.AddTab("places", "Places", function(page)
     local look = { id = ns.NewID("l"), name = name, on = true, scope = { global = true }, absolute = false,
                    where = { selKey }, when = when, values = values }
     table.insert(style.looks, look)
-    selLook = look
-    if n > 0 then
-      ns.Print("added Look \"%s\" with the values on screen.", name)
-    else
-      ns.Print("added Look \"%s\" with no values yet: the Look editor comes in B-04c.", name)
-    end
+    if n > 0 then ns.Print("added Look \"%s\" with the values on screen.", name) end
     changed("places")
+    openEditor(look)
   end
 
   local addAny = UI.Button(detail, "+ Look here", 120, function() quickAdd({}, "") end)
-  addAny:SetPoint("TOPLEFT", lookArea, "BOTTOMLEFT", 0, -10)
+  addAny:SetPoint("BOTTOMLEFT", detail, "BOTTOMLEFT", 0, 10)
   UI.Tooltip(addAny, "+ Look here", "A Look for this place with no conditions. Takes the values on screen where you changed them.")
   local addIn = UI.Button(detail, "+ Indoors here", 120, function() quickAdd({ "indoors" }, " (indoors)") end)
   addIn:SetPoint("LEFT", addAny, "RIGHT", 8, 0)
@@ -634,18 +628,9 @@ W.AddTab("places", "Places", function(page)
   addNight:SetPoint("LEFT", addIn, "RIGHT", 8, 0)
   UI.Tooltip(addNight, "+ Night here", "A Look for this place that only counts at night.")
 
-  local rule = detail:CreateTexture(nil, "ARTWORK")
-  rule:SetColorTexture(1, 0.82, 0, 0.25)
-  rule:SetHeight(1)
-  rule:SetPoint("TOPLEFT", addAny, "BOTTOMLEFT", 0, -14)
-  rule:SetPoint("RIGHT", detail, "RIGHT", -4, 0)
-
-  local editHead = UI.Header(detail, "Look editor")
-  editHead:SetPoint("TOPLEFT", rule, "BOTTOMLEFT", 4, -10)
-  local editText = UI.Label(detail, "")
-  editText:SetPoint("TOPLEFT", editHead, "BOTTOMLEFT", 0, -8)
-  editText:SetPoint("RIGHT", detail, "RIGHT", -8, 0)
-  editText:SetTextColor(0.75, 0.75, 0.75)
+  local clickTip = UI.Label(detail, "Click a Look to edit it.")
+  clickTip:SetPoint("LEFT", listHead, "RIGHT", 10, 0)
+  clickTip:SetTextColor(0.65, 0.65, 0.65)
 
   refreshRight = function()
     if not selKey then
@@ -678,13 +663,26 @@ W.AddTab("places", "Places", function(page)
     noLooks:SetShown(#rows == 0)
     -- Indoors never counts in instances (IsIndoors is false there, A7)
     addIn:SetEnabled(k == "sub" or k == "zone")
+  end
 
-    if selLook then
-      editText:SetText("|cffffffff" .. (selLook.name or "?") .. "|r\n\n" .. detailText(selLook, selKey) ..
-        "\n\nEditing comes in B-04c. For now, switch it on or off or delete it in the list above.")
-    else
-      editText:SetText("Select a Look above to edit it (the editor comes in B-04c).")
+  -- The editor covers the whole tab; Back (or ESC) comes back to the list.
+  local editor = ns.LookEditor.Create(page, { onClose = function()
+    left:Show()
+    right:Show()
+    refreshAll()
+  end })
+  openEditor = function(look)
+    selLook = look
+    left:Hide()
+    right:Hide()
+    editor:Open(look, selKey)
+  end
+  page.Back = function()
+    if editor:IsShown() then
+      editor:Close()
+      return true
     end
+    return false
   end
 
   selectPlace = function(key)
@@ -695,6 +693,10 @@ W.AddTab("places", "Places", function(page)
 
   refreshAll = function()
     if not page:IsVisible() then return end
+    if editor:IsShown() then
+      editor:RefreshNow()
+      return
+    end
     refreshHere()
     refreshTree()
     refreshRight()
@@ -733,7 +735,8 @@ W.AddTab("places", "Places", function(page)
   page:SetScript("OnShow", function()
     if wantJump then
       wantJump = false
-      jump(true)
+      -- An open editor stays open (close the window to look at the world, open it again)
+      if editor:IsShown() then refreshAll() else jump(true) end
     else
       refreshAll()
     end

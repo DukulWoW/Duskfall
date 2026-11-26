@@ -7,7 +7,8 @@
 --            the change is towards brighter, e.g. a bloom flare); the rest fade. Strength is the
 --            overshoot as a share of the change. Two overshoots never come closer than
 --            settings.adaptGap seconds (a ride along a zone border dips once).
--- A change caused only by the clock always fades over settings.timeFade seconds.
+-- A change caused only by the clock always fades over settings.timeFade seconds. why "edit"
+-- (Look editor, Preview) is always instant.
 -- A new target mid-transition starts again from the values on screen, so nothing jumps.
 -- The driver frame runs only while a transition is active, writing about RATE times a second.
 -- Public: T.Apply(target, held, why, timeOnly), T.Cancel(), T.Drop(key), T.IsRunning()
@@ -87,6 +88,12 @@ function T.Apply(target, held, why, timeOnly)
     end
   end
   if n == 0 then T.Cancel() return end
+  -- The Look editor writes as you drag (and Preview): at once, never a transition per step.
+  if why == "edit" then
+    T.Cancel()
+    for k in pairs(keys) do C.Write(k, target[k]) end
+    return
+  end
 
   local style = ns.Resolver.ActiveStyle()
   local tr = style.transition or {}

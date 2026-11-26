@@ -1,7 +1,7 @@
 -- Duskfall Detect.lua: notices where the player is and what state they are in, waits out doorway
 -- flicker, works out the target and applies it. Also the baseline safety (capture, crash check,
 -- restore at logout) and manual slider changes (held, never learned).
--- Public: D.Evaluate(why), D.Now(why), D.SetEnabled(on), D.SaveBaseline(), D.ClearHolds(), D.state
+-- Public: D.Evaluate(why), D.Now(why), D.Preview(target, seconds), D.SetEnabled(on), D.SaveBaseline(), D.ClearHolds(), D.state
 local ADDON, ns = ...
 local D = {}
 ns.Detect = D
@@ -13,6 +13,7 @@ local ZONE_SETTLE = 0.2   -- zone events: the subzone text can lag a moment behi
 local state = {
   env = nil, target = nil, source = nil, style = nil, cands = nil,
   sig = nil,              -- signature of the last applied state
+  preview = nil,          -- { target, ends } while the Look editor previews
   pendingSig = nil, pendingAt = 0,
   held = {},              -- key -> value the player set by hand while here
   hinted = false,         -- the hold hint was printed for the current hold
@@ -55,11 +56,34 @@ function D.Evaluate(why)
   state.pendingSig = nil
   S.Discover(env)
   local target, source, style, cands = R.Resolve(env)
+  local pv = state.preview
+  if pv then
+    if GetTime() < pv.ends then target = pv.target else state.preview = nil end
+  end
   if state.target and not C.SameAll(state.target, target) then D.ClearHolds() end
   state.target, state.source, state.style, state.cands = target, source, style, cands
   if ns.cfg.enabled then T.Apply(target, state.held, why, timeOnly) end
   ns.Debug("evaluate (%s): g %.2f b %d c %d", tostring(why), target.gamma, target.brightness, target.contrast)
   ns.Fire("EVALUATED", why)
+end
+
+-- Look editor Preview: show `target` for `seconds` whatever matches here; nil ends it now.
+function D.Preview(target, seconds)
+  local pv = nil
+  if target then pv = { target = target, ends = GetTime() + (seconds or 10) } end
+  state.preview = pv
+  D.ClearHolds()
+  state.target = nil
+  D.Evaluate(pv and "edit" or "preview end")
+  if pv then
+    C_Timer.After(seconds or 10, function()
+      if state.preview ~= pv then return end
+      state.preview = nil
+      D.ClearHolds()
+      state.target = nil
+      D.Evaluate("preview end")
+    end)
+  end
 end
 
 -- Apply at once, skipping the debounce (zone change, combat).
