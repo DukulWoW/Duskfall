@@ -1,0 +1,55 @@
+name: Bug report
+description: Something in Duskfall is broken, looks wrong, or shows a Lua error.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! Please check the [open issues](https://github.com/DukulWoW/Duskfall/issues) first, in case someone already reported it.
+  - type: input
+    id: version
+    attributes:
+      label: Duskfall version
+      description: Shown in the addon list, or on Duskfall's About tab (/dusk).
+      placeholder: "1.0.0"
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you expect, and what happened instead? A screenshot helps a lot with anything that looks wrong.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: How can we make it happen again?
+      placeholder: |
+        1. Go to ... at night
+        2. Open Duskfall and ...
+        3. See ...
+  - type: input
+    id: where
+    attributes:
+      label: Where were you?
+      description: Optional. Zone and part of the zone, indoors or outdoors, and the time of day, if it matters for the bug.
+      placeholder: "Tirisfal Glades, Ruins of Lordaeron, outdoors, night"
+  - type: textarea
+    id: status
+    attributes:
+      label: /dusk status
+      description: Optional. Type /dusk status in chat where it happens and paste what it prints.
+      render: text
+  - type: textarea
+    id: error
+    attributes:
+      label: Lua error
+      description: If you got an error, paste the full text here. The BugSack and BugGrabber addons make errors easy to copy.
+      render: text
+  - type: textarea
+    id: addons
+    attributes:
+      label: Other addons
+      description: Optional. If the bug looks like a clash with another addon (anything that changes gamma, brightness or the minimap especially), which ones do you use?
