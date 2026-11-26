@@ -367,7 +367,10 @@ local function buildDisplay(p)
     fmt = function(v) return string.format("%d%%", math.floor(v * 100 + 0.5)) end,
     tip = "How bright the cursor light is. Move the mouse over this window to see it.",
     get = function() return tonumber(ns.cfg.cursorLightStrength) or 1 end,
-    onChange = function(v) ns.cfg.cursorLightStrength = v end }), UI.SLIDER_H, 8)
+    onChange = function(v)
+      ns.cfg.cursorLightStrength = v
+      if ns.CursorLight then ns.CursorLight.Refresh() end
+    end }), UI.SLIDER_H, 8)
 
   local _, sd = card(p, 12, -324, FULL_W, 150, "Status display",
     "A small floating display of the setting in effect and the values on screen.", controls)
