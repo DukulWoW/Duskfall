@@ -66,6 +66,7 @@ local function build()
   end
 
   tinsert(UISpecialFrames, "DuskfallWelcome")
+  if ns.CursorLight then ns.CursorLight.Attach(f) end
   f:Hide()
   frame = f
 end

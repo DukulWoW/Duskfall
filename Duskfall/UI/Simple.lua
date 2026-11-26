@@ -496,6 +496,7 @@ function SP.Create(parent, hooks)
     miniHint = UI.Label(m, "")
     miniHint:SetPoint("BOTTOMLEFT", m, "BOTTOMLEFT", 14, 12)
     tinsert(UISpecialFrames, "DuskfallMiniPanel")
+    if ns.CursorLight then ns.CursorLight.Attach(m) end
     m:Hide()
     mini = m
   end

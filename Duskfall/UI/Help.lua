@@ -49,7 +49,7 @@ local TOPICS = {
       .. Y .. "Settings > Baseline|r saves the values on screen as your new baseline.",
   } },
   { "Simple and Advanced", {
-    "Duskfall starts simple. Tick " .. Y .. "Advanced|r at the top for everything else:",
+    "Duskfall starts simple. Pick " .. Y .. "Advanced|r at the top (Simple | Advanced) for everything else:",
     "every place you have visited, one setting for several places, combat, mounted, swimming, "
       .. "underwater, resting and ghost, your own hours, fixed values instead of changes, settings for "
       .. "only some characters, and several Styles with who uses which.",

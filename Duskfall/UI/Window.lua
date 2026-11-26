@@ -114,6 +114,12 @@ local function build()
   badge:SetPoint("TOPLEFT", f, "TOPLEFT", -ICON_OUT, ICON_OUT)
   -- Above the template's border (NineSlice), title and close button, which sit on child frames of
   -- their own: one level over the highest of them (at +30 on the window it was behind the border)
+  -- Raise a frame and everything in it, keeping their order (a control made of child frames)
+  local function raise(fr, lvl)
+    local old = fr:GetFrameLevel()
+    fr:SetFrameLevel(lvl)
+    for _, c in ipairs({ fr:GetChildren() }) do raise(c, lvl + (c:GetFrameLevel() - old)) end
+  end
   local function liftBadge()
     local top = f:GetFrameLevel()
     for _, child in ipairs({ f:GetChildren() }) do
@@ -122,7 +128,7 @@ local function build()
       end
     end
     badge:SetFrameLevel(top + 5)
-    if f.advCheck then f.advCheck:SetFrameLevel(top + 5) end
+    if f.advCheck then raise(f.advCheck, top + 5) end
     if f.helpBtn then f.helpBtn:SetFrameLevel(top + 5) end
   end
   badge.Lift = liftBadge
@@ -130,9 +136,15 @@ local function build()
   icon:SetAllPoints()
   icon:SetTexture(UI.ART .. "icon")
   -- Advanced mode, left of the close button (Kim): Places shows the full list and Look editor
-  local adv = UI.Switch(f, {})
-  adv.Text:SetFontObject("GameFontNormalSmall")
-  adv:SetLabel("Advanced")
+  -- Simple | Advanced as a small picker (Kim: two views of the same page)
+  local adv = UI.Segmented(f, 136, { height = 18,
+    items = function()
+      return { { "simple", "Simple", nil, "Places and Styles in a few plain choices." },
+               { "advanced", "Advanced", nil, "Every place you have been, the full Look editor and every " ..
+                 "condition and option." } }
+    end,
+    get = function() return ns.cfg.advanced and "advanced" or "simple" end,
+    set = function(v) W.SetAdvanced(v == "advanced") end })
   local close = f.CloseButton or _G.DuskfallWindowCloseButton
   -- Help, between Advanced and the close button (BigNoteBox's help art)
   local help = CreateFrame("Button", nil, f)
@@ -146,12 +158,9 @@ local function build()
   UI.Tooltip(help, "Help", "How Duskfall works.")
   f.helpBtn = help
   adv:SetPoint("RIGHT", help, "LEFT", -8, 0)
-  adv:SetChecked(ns.cfg.advanced and true or false, true)
-  adv.onToggle = function(self) W.SetAdvanced(self:GetChecked()) end
-  UI.Tooltip(adv, "Advanced mode", "Places shows every place you have been and the full Look editor, " ..
-    "with every condition and option. Off: the simple page.")
   f.advCheck = adv
   pcall(ButtonFrameTemplate_HideButtonBar, f)
+  if ns.CursorLight then ns.CursorLight.Attach(f) end
   if f.Inset then f.Inset:Hide() end
   UI.Wood(f)
   UI.Glow(f, f.Bg, 0.6)
@@ -260,7 +269,7 @@ end
 -- Simple or Advanced mode (title bar switch): Places and Styles. From another tab it shows Places.
 function W.SetAdvanced(on)
   ns.cfg.advanced = on and true or false
-  if frame and frame.advCheck then frame.advCheck:SetChecked(ns.cfg.advanced) end
+  if frame and frame.advCheck then frame.advCheck:Refresh() end
   if frame and frame.selected ~= "places" and frame.selected ~= "styles" then W.Select("places") end
   ns.Fire("MODE", ns.cfg.advanced)
 end

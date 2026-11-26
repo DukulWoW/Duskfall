@@ -346,7 +346,7 @@ local function buildDisplay(p)
   -- colorblindSimulator 0-3 and colorblindWeaknessFactor 0-1 exist on Forever (Kim, 2026-11-26:
   -- "0 0.5"). Read from the game each time, never stored by Duskfall.
   local function cvarNum(name, d) return tonumber(GetCVar(name)) or d end
-  local _, cb = card(p, 12 + HALF + 12, -50, HALF, 236, "Colorblind filter",
+  local _, cb = card(p, 12 + HALF + 12, -50, HALF, 236, "Colorblind filter and light",
     "The game's own filter (Options > Accessibility). Duskfall only changes it when you do.", controls)
   cb(UI.Dropdown(p, DD_W, { label = "Filter",
     items = { { 0, "Off" }, { 1, "Protanopia (red weak)" }, { 2, "Deuteranopia (green weak)" }, { 3, "Tritanopia (blue weak)" } },
@@ -357,6 +357,10 @@ local function buildDisplay(p)
     tip = "How strongly the filter adjusts the colours.",
     get = function() return cvarNum("colorblindWeaknessFactor", 0.5) end,
     onChange = function(v) SetCVar("colorblindWeaknessFactor", v) end }), UI.SLIDER_H, 8)
+  cb(UI.Check(p, { label = "Cursor light in Duskfall's windows",
+    tip = "A soft warm light follows the mouse over Duskfall's windows, and lifts them when your screen is dark.",
+    get = function() return ns.cfg.cursorLight ~= false end,
+    set = function(v) ns.cfg.cursorLight = v end }), 26, 4)
 
   local _, sd = card(p, 12, -298, FULL_W, 150, "Status display",
     "A small floating display of the setting in effect and the values on screen.", controls)
@@ -399,7 +403,7 @@ local SUBPAGES = {
         ns.cfg.clock == "local" and "your" or "server")
     end },
   { key = "display", title = "Display", build = buildDisplay, icon = "Interface\\Icons\\INV_Misc_Spyglass_03",
-    desc = "Minimap moon and button, broker, status display, colorblind filter.",
+    desc = "Minimap moon and button, broker, status display, colorblind filter, cursor light.",
     summary = function()
       local btn = { auto = "button automatic", always = "button always", never = "no button" }
       return (ns.cfg.moon ~= false and "Moon on, " or "Moon off, ") .. (btn[ns.cfg.minimapButton or "auto"] or "")
