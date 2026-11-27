@@ -66,7 +66,8 @@ function Share.ExportStyle(st)
   local a = tr.adapt or {}
   local dk, lt = a.toDark or {}, a.toLight or {}
   local head = table.concat({ esc(st.name or L["STYLE_DEFAULT"]), tr.mode or "adapt", num(fade.duration or 1.5),
-    num(dk.duration or 4), num(dk.strength or 0.3), num(lt.duration or 1), num(lt.strength or 0.3) }, "^")
+    num(dk.duration or 4), num(dk.strength or 0.3), num(lt.duration or 1), num(lt.strength or 0.3),
+    num(st.clarity or 0) }, "^")   -- the 8th field (Clarity) since 1.3.0; older versions ignore it
   local parts = { PREFIX .. "style:" .. head }
   for _, look in ipairs(st.looks or {}) do parts[#parts + 1] = lookBody(look) end
   return table.concat(parts, ";")
@@ -169,6 +170,7 @@ function Share.Import(text)
     tr.adapt.toDark.strength = dur(h[5], 0, 1, 0.3)
     tr.adapt.toLight.duration = dur(h[6], 0, 10, 1)
     tr.adapt.toLight.strength = dur(h[7], 0, 1, 0.3)
+    st.clarity = dur(h[8], 0, 1, 0)   -- strings from before 1.3.0 have none: no Clarity, as there
     for i = 2, #parts do
       local look = parseLook(parts[i])
       if look then st.looks[#st.looks + 1] = look end

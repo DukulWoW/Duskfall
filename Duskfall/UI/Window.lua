@@ -344,8 +344,7 @@ local function build()
   -- passing on in combat, so there ESC simply closes the window (UISpecialFrames).
   -- Propagation is left on at all times except for the one ESC that went back, and switched on
   -- again on the next frame, so keys can never get stuck in the window if combat starts.
-  f:EnableKeyboard(true)
-  pcall(f.SetPropagateKeyboardInput, f, true)
+  UI.KeyboardOn(f)   -- in combat: once combat ends
   f:SetScript("OnKeyDown", function(self, key)
     if InCombatLockdown() or key ~= "ESCAPE" then return end
     local t = current()

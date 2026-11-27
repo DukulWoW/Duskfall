@@ -16,11 +16,11 @@ local SS = {}
 ns.SimpleStyles = SS
 
 local GREY = "|cff9d9d9d"
-local CARD_H, CARD_GAP = 286, 14   -- the cards fill the page down to the Speed box (Kim)
+local CARD_H, CARD_GAP = 246, 14   -- the cards fill the page down to the Speed box (Kim)
 -- Whole-pixel columns (5 px bar + 2 px gap): fractional widths drew uneven gaps (Kim)
 local COL_W, BAR_W, COLS = 7, 5, 30
-local GRAPH_W, GRAPH_H = COL_W * COLS - (COL_W - BAR_W), 116
-local SPEED_H = 72
+local GRAPH_W, GRAPH_H = COL_W * COLS - (COL_W - BAR_W), 92
+local SPEED_H = 112   -- Speed, then Clarity (1.3.0)
 local BASE = { fade = 1.5, dark = 4.0, light = 1.0 }
 local K = 1.3
 
@@ -317,7 +317,7 @@ function SS.Create(parent)
       t.adapt.toLight.duration = round1(BASE.light * x)
     end })
   -- Label, slider and Try it centred in the box; the note hangs below the slider (Kim)
-  speed:SetPoint("LEFT", speedBox, "LEFT", 14, 0)
+  speed:SetPoint("TOPLEFT", speedBox, "TOPLEFT", 14, -8)
   local speedNote = UI.Label(speedBox, "")
   speedNote:SetPoint("TOPLEFT", speed, "BOTTOMLEFT", 90, -2)
   speedNote:SetTextColor(0.6, 0.6, 0.6)
@@ -332,6 +332,19 @@ function SS.Create(parent)
   tryBtn:SetKind("main")
   tryBtn:SetPoint("RIGHT", speedBox, "RIGHT", -16, 0)
   UI.Tooltip(tryBtn, L["TRY_IT"], L["SS_TRY_TIP"])
+
+  -- Clarity (1.3.0): Contrast rises with the light, under the speed
+  local clarity = UI.LightSlider(speedBox, 550, { label = L["CLARITY"], min = 0, max = 1, step = 0.05, mid = 0.5,
+    from = { 0.45, 0.45, 0.48 }, to = { 0.96, 0.62, 0.2 },
+    tip = L["CLARITY_TIP"],
+    fmt = function(v) return math.floor(v * 100 + 0.5) .. "%" end,
+    zero = function() return "50%" end,   -- the mark is the default here, not "no change"   --noloc
+    get = function() return tonumber(style().clarity) or 0 end,
+    set = function(v)
+      style().clarity = v
+      if style() == R.ActiveStyle() then ns.Detect.Evaluate("edit") end
+    end })
+  clarity:SetPoint("BOTTOMLEFT", speedBox, "BOTTOMLEFT", 14, 8)
 
   -- Share --------------------------------------------------------------------------------------
   local share
@@ -372,6 +385,7 @@ function SS.Create(parent)
     local mode = tr().mode
     for _, c in ipairs(cards) do c.picked:SetShown(c.def.mode == mode) end
     speed:Refresh()
+    clarity:Refresh()
     speed:SetEnabled(mode ~= "instant")
     if mode == "instant" then speedNote:SetText(L["SS_NO_SPEED"])
     elseif mode == "fade" then speedNote:SetText(L["SS_FADE_SPEED"])

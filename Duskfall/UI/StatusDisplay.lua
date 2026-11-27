@@ -6,6 +6,11 @@
 --   "always"   always shown
 -- Clicks (Kim, 2026-11-27): left opens the settings for where you are, right closes it. It is
 -- dragged only when always shown or after "Move" on the Display page. Position: settings.statusPos.
+-- Quick Light slider (Kim, 1.3.0): a row under it (settings.quickLight "status") with one slider that
+-- makes here lighter or darker at once: Gamma and Brightness together (Contrast follows with the
+-- Style's Clarity). It saves the same setting simple mode makes, for this place (settings.quickLightFor:
+-- "place", "io" with indoors / outdoors, "iotime" with the time of day too). While the mouse is on the
+-- display it does not fade.
 -- Public: ns.StatusDisplay.Refresh(), .Unlock(seconds), .ResetPosition(), .Test(), .Place(f)
 local ADDON, ns = ...
 local L = ns.L
@@ -14,6 +19,8 @@ local SD = {}
 ns.StatusDisplay = SD
 
 local W, H = 280, 46
+local LIGHT_H = 30                           -- the Light slider's row
+local LIGHT = { gamma = 0.35, brightness = 12 }   -- at full right (left: the same down)
 local FADE = 0.6       -- the slow fade out after a change (the windows use UI.FADE_OUT)
 local frame
 local hideAt          -- GetTime() at which "change" mode starts fading out
@@ -36,6 +43,56 @@ local function place(f)
   end
 end
 
+-- The setting the Light slider changes: simple mode's shape for where you are
+local function lightShape()
+  local env = D.state.env or ns.Situations.Snapshot()
+  local S = ns.Situations
+  local key
+  if env.instance then key = "instance:" .. env.instance
+  else key = S.PlaceKey("sub", env) or S.PlaceKey("zone", env) end
+  local sh = { key = key }
+  local how = ns.cfg.quickLightFor or "place"
+  if how ~= "place" then
+    if env.underwater then sh.io = "underwater"
+    elseif not env.instance then sh.io = env.indoors and "indoors" or "outdoors" end
+    if how == "iotime" then sh.time = env.period end
+  end
+  return sh
+end
+
+local function lightGet()
+  local SP = ns.SimplePlaces
+  local look = SP and SP.FindLook(lightShape())
+  local v = look and look.values or {}
+  if v.gamma then return math.max(-1, math.min(1, v.gamma / LIGHT.gamma)) end
+  if v.brightness then return math.max(-1, math.min(1, v.brightness / LIGHT.brightness)) end
+  return 0
+end
+
+local function lightSet(x)
+  local SP = ns.SimplePlaces
+  if not SP then return end
+  local sh = lightShape()
+  local look = SP.FindLook(sh)
+  if math.abs(x) < 0.001 then
+    if not look then return end
+    look.values.gamma, look.values.brightness = nil, nil
+    if next(look.values) == nil then SP.RemoveLook(look) end
+  else
+    look = look or SP.NewLook(sh)
+    look.values = look.values or {}
+    look.values.gamma = tonumber(string.format("%.2f", LIGHT.gamma * x))
+    look.values.brightness = math.floor(LIGHT.brightness * x + (x > 0 and 0.5 or -0.5))
+  end
+  D.ClearHolds()
+  D.state.target = nil
+  D.Evaluate("edit")
+end
+
+local function lightWanted()
+  return ns.cfg.quickLight ~= "off" and ns.cfg.enabled and D.state.comparing ~= "before"
+end
+
 local function fill()
   local state = ns.StateText()
   local color = "|cffffd100"
@@ -43,6 +100,12 @@ local function fill()
   elseif state == L["BR_BASELINE"] or D.state.comparing == "before" then color = "|cffffffff" end
   frame.look:SetText(color .. state .. "|r")
   frame.values:SetText(ns.ValuesText())
+  local want = lightWanted()
+  if frame.light:IsShown() ~= want then
+    frame.light:SetShown(want)
+    frame:SetHeight(want and H + LIGHT_H or H)
+  end
+  if want and not frame.light:IsMouseOver() then frame.light:Refresh() end   -- not under the user's hand
 end
 
 local function build()
@@ -79,7 +142,7 @@ local function build()
     border = { 1, 0.82, 0, 0.85 }, sweep = true })   -- gold to blue, as the window frame (Kim)
   local icon = f:CreateTexture(nil, "ARTWORK")
   icon:SetSize(34, 34)
-  icon:SetPoint("LEFT", f, "LEFT", 6, 0)
+  icon:SetPoint("TOPLEFT", f, "TOPLEFT", 6, -6)
   icon:SetTexture(UI.ART .. "icon")
   f.look = UI.Label(f, "", "GameFontNormal")
   f.look:SetPoint("TOPLEFT", icon, "TOPRIGHT", 8, -2)
@@ -95,12 +158,12 @@ local function build()
   -- track, a 1 px core with a low halo, and it starts under the text, clear of the icon.
   local BAR_X, BAR_R = 48, 12
   local track = f:CreateTexture(nil, "ARTWORK")
-  track:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", BAR_X, 6)
+  track:SetPoint("TOPLEFT", f, "TOPLEFT", BAR_X, -(H - 9))   -- from the top: the Light row may hang below
   track:SetSize(W - BAR_X - BAR_R, 3)
   track:SetColorTexture(1, 1, 1, 0.06)
   track:Hide()
   local bar = CreateFrame("Frame", nil, f)
-  bar:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", BAR_X, 6)
+  bar:SetPoint("TOPLEFT", f, "TOPLEFT", BAR_X, -(H - 9))
   bar:SetSize(1, 3)
   pcall(bar.SetClipsChildren, bar, true)
   local B, G = UI.RING_BLUE, { 1, 0.82, 0 }
@@ -115,6 +178,18 @@ local function build()
   bar:Hide()
   bar.track = track
   f.bar = bar
+  -- The Light slider row (hidden while settings.quickLight is "off")
+  f.light = UI.LightSlider(f, W - 16, { label = L["QL_LIGHT"], labelW = 52, valueW = 64, min = -1, max = 1,
+    step = 0.05, mid = 0, lineH = 12, from = { 0.08, 0.08, 0.12 }, to = { 1, 0.93, 0.66 },
+    tip = L["QL_TIP"],
+    fmt = function(v)
+      local p = math.floor(math.abs(v) * 100 + 0.5)
+      return (v > 0 and "+" or "-") .. p .. "%"   --noloc
+    end,
+    get = lightGet,
+    set = function(v) ns.Safe(lightSet, "light slider", v) end })
+  f.light:SetPoint("TOPLEFT", f, "TOPLEFT", 8, -(H - 4))
+  f.light:Hide()
   f.hint = UI.Label(f, L["SD_DRAG"], "GameFontDisableSmall")
   f.hint:SetPoint("TOP", f, "BOTTOM", 0, -2)
   f.hint:Hide()
@@ -146,7 +221,9 @@ local function build()
       return
     end
     if (mode() == "change" or testing) and not unlocked and hideAt then
-      if ns.Transition.IsRunning() then
+      if self:IsMouseOver() then
+        hideAt = math.max(hideAt, now + 1.5)   -- the Light slider is being used: stay
+      elseif ns.Transition.IsRunning() then
         -- "As long as the change" goes as soon as it is done; else statusSeconds after it
         local after = ns.cfg.statusStay == "change" and 0.2 or (tonumber(ns.cfg.statusSeconds) or 4)
         hideAt = math.max(hideAt, now + after)

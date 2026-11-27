@@ -1519,6 +1519,29 @@ local function propagate(f, on)
   pcall(f.SetPropagateKeyboardInput, f, on)
 end
 
+-- Keyboard on, keys passed on (for ESC handling). EnableKeyboard and SetPropagateKeyboardInput are
+-- protected in combat (ADDON_ACTION_BLOCKED even inside pcall; Kim 2026-11-27: the window first
+-- opened while the pet fought): in combat it waits for combat to end.
+local keyWait
+function UI.KeyboardOn(f)
+  if not InCombatLockdown() then
+    f:EnableKeyboard(true)
+    pcall(f.SetPropagateKeyboardInput, f, true)
+    return
+  end
+  if not keyWait then
+    keyWait = { frames = {}, ev = CreateFrame("Frame") }
+    keyWait.ev:SetScript("OnEvent", function(self)
+      self:UnregisterEvent("PLAYER_REGEN_ENABLED")
+      local list = keyWait.frames
+      keyWait.frames = {}
+      for _, w in ipairs(list) do UI.KeyboardOn(w) end
+    end)
+  end
+  table.insert(keyWait.frames, f)
+  keyWait.ev:RegisterEvent("PLAYER_REGEN_ENABLED")
+end
+
 local function buildCopy()
   copyHelper = CreateFrame("EditBox", nil, UIParent)
   copyHelper:SetSize(1, 1)
@@ -1718,8 +1741,7 @@ function UI.Fader(f, o)
   end
   function f:IsClosing() return closing end
   if o.esc then
-    f:EnableKeyboard(true)
-    pcall(f.SetPropagateKeyboardInput, f, true)
+    UI.KeyboardOn(f)
     f:HookScript("OnKeyDown", function(self, key)
       if key ~= "ESCAPE" or InCombatLockdown() then return end
       if self.escHandled then self.escHandled = nil return end   -- a page used this ESC (Window.lua)

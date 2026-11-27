@@ -67,6 +67,8 @@ function D.Evaluate(why)
       state.preview = nil
     end
   end
+  -- Clarity (the Style's, or the previewed Style's) on whatever is about to show
+  target = R.WithClarity(target, not pv and source or nil, trStyle or style)
   if state.target and not C.SameAll(state.target, target) then D.ClearHolds() end
   state.target, state.source, state.style, state.cands = target, source, style, cands
   if ns.cfg.enabled and not state.comparing then T.Apply(target, state.held, why, timeOnly, trStyle) end

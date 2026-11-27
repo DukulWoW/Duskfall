@@ -477,6 +477,9 @@ L["ST_DIP_TIP"] = "Cuánto se oscurece inicialmente por debajo del nuevo valor, 
 L["ST_LIGHT_D_TIP"] = "Cuánto tarda el destello en disiparse cuando aumenta la luz."
 L["ST_GLARE"] = "Destello"
 L["ST_GLARE_TIP"] = "Cuánto aumenta inicialmente el brillo por encima del nuevo valor, como proporción del cambio."
+L["CLARITY"] = "Claridad"
+L["CLARITY_SUB"] = "el contraste sube con la luz"
+L["CLARITY_TIP"] = "Cuando un ajuste aclara la pantalla más que tus propios valores, el contraste sube en esta proporción del aumento, para que la imagen siga nítida en lugar de gris y apagada. En cero está desactivada. Un ajuste con un contraste fijo conserva el suyo."
 L["ST_TRY_TIP"] = "La pantalla se oscurece, espera y vuelve a la normalidad con la transición de este estilo, estés donde estés."
 L["ST_TRY_SUB"] = "Los cambios se guardan al instante. Probar los reproduce en tu pantalla."
 L["ST_USES_THIS"] = "Este personaje usa este estilo."
@@ -664,6 +667,16 @@ L["DS_MOVE_TIP"] = "Muestra el indicador durante 20 segundos para que puedas arr
 L["DS_RESET_POS"] = "Restablecer posición"
 L["DS_TEST"] = "Probar"
 L["DS_TEST_TIP"] = "Muestra el indicador tal como aparece cuando cambia el ajuste activo: permanece durante el tiempo establecido arriba y luego desaparece. Funciona aunque Mostrarlo esté desactivado."
+L["QL_LIGHT"] = "Luz"
+L["QL_TIP"] = "Más claro o más oscuro aquí, al instante: el gamma y el brillo se mueven juntos (el contraste sigue con la claridad del estilo). Guarda un ajuste para este lugar, como el modo sencillo; en Ajustes > Pantalla eliges qué abarca."
+L["QL_SHOW"] = "Control de luz"
+L["QL_SHOW_TIP"] = "Un control bajo el indicador de estado que aclara u oscurece al instante el lugar donde estás."
+L["QL_WITH_STATUS"] = "Con el indicador"
+L["QL_FOR"] = "Guarda para"
+L["QL_FOR_TIP"] = "Para qué guarda un ajuste el control de luz: este lugar; este lugar en interiores o exteriores (como estás ahora); o eso y también la hora del día."
+L["QL_FOR_PLACE"] = "Este lugar"
+L["QL_FOR_IO"] = "Lugar + int./ext."
+L["QL_FOR_IOTIME"] = "Lugar + int./ext. + hora"
 
 -- About ----------------------------------------------------------------------------------------
 L["TAB_ABOUT"] = "Acerca de"
@@ -743,6 +756,8 @@ L["PN_TOAST_TIP"] = "Haz clic para leer las novedades. Clic derecho para cerrar.
 
 -- Patch notes (one key per note, newest version first) -----------------------------------------
 L["PN_130_04"] = "Duskfall también está disponible en español, coreano, japonés y ucraniano. El japonés y el ucraniano (el juego no tiene cliente en esos idiomas) se eligen en los Ajustes."
+L["PN_130_06"] = "Claridad: el contraste sube con la luz, para que una pantalla más clara siga nítida en lugar de gris. Un control por estilo (pestaña Estilos); los estilos nuevos empiezan en la mitad."
+L["PN_130_07"] = "Control de luz: bajo el indicador de estado, un control aclara u oscurece al instante el lugar donde estás y lo guarda para este lugar (Ajustes > Pantalla)."
 L["PN_130_01"] = "Los botones y las barras de Lugar, Hora y Entorno tienen el borde de la ventana, que pasa del dorado al azul."
 L["PN_130_02"] = "Tus lugares: los ajustes activos donde estás aparecen primero, encima de una línea fina."
 L["PN_130_03"] = "Entrañas cuenta como interior (el juego la considera exterior, por eso puedes ir en montura allí)."

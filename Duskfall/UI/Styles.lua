@@ -335,6 +335,23 @@ W.AddTab("styles", L["TAB_STYLES"], function(tab)
   c1:SetPoint("RIGHT", page, "RIGHT", -2, 0)
   local c2 = UI.Card(page, LEFT_W + 8, -144, 10, 236)
   c2:SetPoint("RIGHT", page, "RIGHT", -2, 0)
+  -- Clarity (1.3.0): a card of its own under the transition
+  local c3 = UI.Card(page, LEFT_W + 8, -388, 10, 74)
+  c3:SetPoint("RIGHT", page, "RIGHT", -2, 0)
+  local clHead = UI.Header(right, L["CLARITY"])
+  clHead:SetPoint("TOPLEFT", right, "TOPLEFT", 4, -396)
+  local clSub = UI.Label(right, L["CLARITY_SUB"])
+  clSub:SetPoint("LEFT", clHead, "RIGHT", 8, 0)
+  clSub:SetTextColor(0.65, 0.65, 0.65)
+  local clarity = add(UI.Slider(right, COL + SW, { label = L["CLARITY"], min = 0, max = 1, step = 0.05, default = 0.5,
+    fmt = pct, tip = L["CLARITY_TIP"],
+    get = function() return sel and tonumber(sel.clarity) or 0 end,
+    onChange = function(v)
+      if not sel then return end
+      sel.clarity = v
+      if sel == R.ActiveStyle() then D.Evaluate("edit") end
+    end }))
+  clarity:SetPoint("TOPLEFT", right, "TOPLEFT", 4, -414)
 
   local tryBtn
   local function tryIt()

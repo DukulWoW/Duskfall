@@ -9,7 +9,8 @@
 -- Unset channels fall through to the next Look, then to the baseline. Values are offsets from
 -- the baseline unless the Look is absolute. Results are clamped.
 --
--- Public: R.ActiveStyle(), R.Resolve(env) -> target, source, style, candidates
+-- Public: R.ActiveStyle(), R.Resolve(env) -> target, source, style, candidates,
+--         R.WithClarity(target, source, style) -> target with the Style's Clarity added
 local ADDON, ns = ...
 local R = {}
 ns.Resolver = R
@@ -69,4 +70,27 @@ function R.Resolve(env)
     target[k] = C.Clamp(k, v)
   end
   return target, source, style, cands
+end
+
+-- Clarity (Kim, 1.3.0; Forever Bright's idea): a lift without more contrast looks grey and flat, so
+-- when the screen goes brighter than the baseline (Gamma, Brightness), Contrast rises by
+-- style.clarity (0 - 1) of that lift. Worked out here, never saved: 0 (or nil, every Style made
+-- before 1.3.0) is the old behaviour. A Look with a fixed Contrast keeps its own.
+-- One Brightness point = one point of lift; Gamma counts GAMMA_POINTS per 1.0 (as Hold to brighten:
+-- Gamma 0.6 ~ Brightness 16).
+local GAMMA_POINTS = 27
+R.GAMMA_POINTS = GAMMA_POINTS
+function R.WithClarity(target, source, style)
+  local k = style and tonumber(style.clarity) or 0
+  if k <= 0 or not target then return target end
+  local src = source and source.contrast
+  if src and src.absolute then return target end
+  local base = ns.db.baseline or {}
+  local lift = math.max(0, (target.brightness or 0) - (base.brightness or 0))
+    + math.max(0, (target.gamma or 0) - (base.gamma or 0)) * GAMMA_POINTS
+  if lift <= 0 then return target end
+  local out = {}
+  for key, v in pairs(target) do out[key] = v end
+  out.contrast = C.Clamp("contrast", (target.contrast or 50) + k * lift)
+  return out
 end

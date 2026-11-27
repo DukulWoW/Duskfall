@@ -29,6 +29,8 @@ ns.DEFAULTS = {
   statusDisplay = "change",     -- floating display: "off", "change", "always"
   statusSeconds = 4,            -- "change": seconds it stays after the change is done
   statusStay = "seconds",       -- "seconds" (statusSeconds after the change) or "change" (as long as it runs)
+  quickLight = "status",        -- 1.3.0: the Light slider under the status display: "status" (with it) or "off"
+  quickLightFor = "place",      -- what it saves for: "place", "io" (+ indoors / outdoors), "iotime" (+ time of day)
   advanced = false,             -- Places in Advanced mode (full list and Look editor), else simple
   ringGlow = true,              -- the glow ring on the moon badge and minimap button where a setting is in effect
   cursorLight = true,           -- a soft light follows the mouse over Duskfall's windows (UI/CursorLight.lua)
@@ -211,6 +213,7 @@ end
 local function newStyle(name)
   return {
     id = ns.NewID("s"), name = name, scope = { global = true },
+    clarity = 0.5,   -- 1.3.0: new Styles lift Contrast with the light (Styles made before have none)
     transition = {
       mode = "adapt",
       fade = { duration = 1.5 },

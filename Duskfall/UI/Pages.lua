@@ -521,7 +521,9 @@ local function buildDisplay(p)
     end }), UI.SLIDER_H, 8)
 
   local _, sd = card(p, 12, -324, FULL_W, 150, L["DS_STATUS"], L["DS_STATUS_DESC"], controls)
-  local show = sd(UI.Dropdown(p, DD_W, { label = L["DS_SHOW"],
+  -- Four in a row (1.3.0): Show, Stays, the Light slider, what it saves for
+  local QW = math.floor((FULL_W - 32 - 3 * 12) / 4)
+  local show = sd(UI.Dropdown(p, QW, { label = L["DS_SHOW"],
     items = { { "off", L["DS_NEVER"] }, { "change", L["DS_ON_CHANGE"] }, { "always", L["DS_ALWAYS"] } },
     get = function() return ns.cfg.statusDisplay end,
     set = function(v)
@@ -529,7 +531,7 @@ local function buildDisplay(p)
       ns.StatusDisplay.Refresh(v == "change")
     end }), UI.DROPDOWN_H, 10)
   -- Stays (Kim, 2026-11-27): as long as the change runs, or some seconds after it
-  local stays = UI.Dropdown(p, DD_W, { label = L["DS_STAYS"],
+  local stays = UI.Dropdown(p, QW, { label = L["DS_STAYS"],
     tip = L["DS_STAYS_TIP"],
     items = { { "change", L["DS_AS_LONG"] }, { 2, L["DS_AFTER"]:format(2) }, { 4, L["DS_AFTER"]:format(4) },
               { 6, L["DS_AFTER"]:format(6) }, { 10, L["DS_AFTER"]:format(10) }, { 15, L["DS_AFTER"]:format(15) } },
@@ -545,8 +547,21 @@ local function buildDisplay(p)
         ns.cfg.statusSeconds = v
       end
     end })
-  stays:SetPoint("TOPLEFT", show, "TOPLEFT", HALF + 12, 0)
+  stays:SetPoint("TOPLEFT", show, "TOPLEFT", QW + 12, 0)
   controls[#controls + 1] = stays
+  local function sdRefresh() if ns.StatusDisplay then ns.StatusDisplay.Refresh() end end
+  local ql = UI.Dropdown(p, QW, { label = L["QL_SHOW"], tip = L["QL_SHOW_TIP"],
+    items = { { "status", L["QL_WITH_STATUS"] }, { "off", L["WIN_OFF"] } },
+    get = function() return ns.cfg.quickLight or "status" end,
+    set = function(v) ns.cfg.quickLight = v sdRefresh() end })
+  ql:SetPoint("TOPLEFT", show, "TOPLEFT", 2 * (QW + 12), 0)
+  controls[#controls + 1] = ql
+  local qlFor = UI.Dropdown(p, QW, { label = L["QL_FOR"], tip = L["QL_FOR_TIP"],
+    items = { { "place", L["QL_FOR_PLACE"] }, { "io", L["QL_FOR_IO"] }, { "iotime", L["QL_FOR_IOTIME"] } },
+    get = function() return ns.cfg.quickLightFor or "place" end,
+    set = function(v) ns.cfg.quickLightFor = v sdRefresh() end })
+  qlFor:SetPoint("TOPLEFT", show, "TOPLEFT", 3 * (QW + 12), 0)
+  controls[#controls + 1] = qlFor
   local move = UI.Button(p, L["DS_MOVE"], 120, function() ns.StatusDisplay.Unlock(20) end)
   UI.Tooltip(move, L["DS_MOVE"], L["DS_MOVE_TIP"])
   sd(move, 22, 8)

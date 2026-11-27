@@ -96,6 +96,9 @@ local function findLook(sh)
   return nil
 end
 
+-- For the status display's Light slider (UI/StatusDisplay.lua): the same settings simple mode makes
+SP.FindLook = findLook
+
 local function kindOf(key) return key and ns.PlaceUI.kindOf(key) end
 local function noIndoors(key) local k = kindOf(key) return k == "instance" or k == "itype" end
 
@@ -172,6 +175,7 @@ local function removeLook(look)
     if l == look then table.remove(looks, i) return end
   end
 end
+SP.NewLook, SP.RemoveLook = newLook, removeLook
 
 -- Does the Look set every one of its values where the player is now?
 local function wins(look, env)

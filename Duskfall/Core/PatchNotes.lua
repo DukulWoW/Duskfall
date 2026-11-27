@@ -11,6 +11,8 @@ local L = ns.L
 ns.PATCH_NOTES = {
   { version = "1.3.0", date = nil, notes = {
     { "new", L["PN_130_04"] },
+    { "new", L["PN_130_06"] },
+    { "new", L["PN_130_07"] },
     { "change", L["PN_130_02"] },
     { "change", L["PN_130_01"] },
     { "change", L["PN_130_05"] },

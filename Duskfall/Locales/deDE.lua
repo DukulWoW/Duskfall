@@ -477,6 +477,9 @@ L["ST_DIP_TIP"] = "Wie weit das Bild zunächst unter den neuen Wert abdunkelt, a
 L["ST_LIGHT_D_TIP"] = "Wie lange der Blendeffekt braucht, um abzuklingen, wenn das Bild heller wird."
 L["ST_GLARE"] = "Blendeffekt"
 L["ST_GLARE_TIP"] = "Wie weit das Bild zunächst über den neuen Wert hinaus aufhellt, als Anteil der Änderung."
+L["CLARITY"] = "Klarheit"
+L["CLARITY_SUB"] = "Kontrast steigt mit dem Licht"
+L["CLARITY_TIP"] = "Wenn eine Einstellung das Bild heller macht als deine eigenen Werte, steigt der Kontrast um diesen Anteil mit, damit das Bild klar bleibt statt grau und flach. Bei null ist sie aus. Eine Einstellung mit festem Kontrast behält ihren eigenen."
 L["ST_TRY_TIP"] = "Das Bild wird dunkler, wartet kurz und kehrt mit dem Übergang dieses Stils zurück – unabhängig davon, wo du bist."
 L["ST_TRY_SUB"] = "Änderungen werden sofort gespeichert. Mit „Ausprobieren“ siehst du sie auf deinem Bildschirm."
 L["ST_USES_THIS"] = "Dieser Charakter verwendet diesen Stil."
@@ -664,6 +667,16 @@ L["DS_MOVE_TIP"] = "Zeigt die Anzeige 20 Sekunden lang, damit du sie an die gew�
 L["DS_RESET_POS"] = "Position zurücksetzen"
 L["DS_TEST"] = "Testen"
 L["DS_TEST_TIP"] = "Zeigt die Anzeige so, wie sie beim Wechsel der wirksamen Einstellung erscheint: Sie bleibt für die oben festgelegte Zeit sichtbar und wird dann ausgeblendet. Funktioniert auch, wenn „Anzeigen“ ausgeschaltet ist."
+L["QL_LIGHT"] = "Licht"
+L["QL_TIP"] = "Hier sofort heller oder dunkler: Gamma und Helligkeit bewegen sich zusammen (der Kontrast folgt mit der Klarheit des Stils). Er speichert eine Einstellung für diesen Ort, wie der einfache Modus; unter Einstellungen > Anzeige legst du fest, wofür sie gilt."
+L["QL_SHOW"] = "Lichtregler"
+L["QL_SHOW_TIP"] = "Ein Regler unter der Statusanzeige, der deinen Ort sofort heller oder dunkler macht."
+L["QL_WITH_STATUS"] = "Mit der Anzeige"
+L["QL_FOR"] = "Speichert für"
+L["QL_FOR_TIP"] = "Wofür der Lichtregler eine Einstellung speichert: diesen Ort; diesen Ort drinnen oder draußen (wie du gerade bist); oder zusätzlich die Tageszeit."
+L["QL_FOR_PLACE"] = "Diesen Ort"
+L["QL_FOR_IO"] = "Ort + drinnen/draußen"
+L["QL_FOR_IOTIME"] = "Ort + drinnen/draußen + Zeit"
 
 -- About ----------------------------------------------------------------------------------------
 L["TAB_ABOUT"] = "Info"
@@ -743,6 +756,8 @@ L["PN_TOAST_TIP"] = "Klicken, um die Neuerungen zu lesen. Rechtsklick zum Schlie
 
 -- Patch notes (one key per note, newest version first) -----------------------------------------
 L["PN_130_04"] = "Duskfall spricht jetzt auch Spanisch, Koreanisch, Japanisch und Ukrainisch. Japanisch und Ukrainisch (dafür gibt es keinen Spielclient) wählst du in den Einstellungen."
+L["PN_130_06"] = "Klarheit: Der Kontrast steigt mit dem Licht, damit ein helleres Bild klar bleibt statt grau. Ein Regler pro Stil (Reiter Stile); neue Stile beginnen bei der Hälfte."
+L["PN_130_07"] = "Lichtregler: Unter der Statusanzeige macht ein Regler deinen Ort sofort heller oder dunkler und speichert das für diesen Ort (Einstellungen > Anzeige)."
 L["PN_130_01"] = "Schaltflächen und die Leisten Ort, Tageszeit und Umgebung haben den Rand des Fensters, von Gold zu Blau."
 L["PN_130_02"] = "Deine Orte: Die Einstellungen, die an deinem Ort wirken, stehen oben, über einer dünnen Linie."
 L["PN_130_03"] = "Unterstadt zählt als drinnen (das Spiel nennt es draußen, deshalb kann man dort reiten)."
