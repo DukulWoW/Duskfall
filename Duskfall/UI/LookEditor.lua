@@ -1,6 +1,6 @@
 -- Duskfall UI/LookEditor.lua: the Look editor (B-04c). Opens over the whole Places tab when a
 -- Look is clicked (Back / ESC returns to the list). Two columns:
---   left:  Values (set checkbox, slider, number box, "Current" per channel; Absolute; Copy /
+--   left:  Values (set checkbox, slider, number box, L["LE_CURRENT"] per channel; Absolute; Copy /
 --          Paste), actions (Preview, Revert, Duplicate, Up, Down, Delete), Where list
 --   right: When (Any / Yes / No per condition, Time with Custom From / To), what the Look does here now
 -- Every edit saves at once and re-evaluates (instant, throttled to 25 a second), so a Look that
@@ -10,6 +10,7 @@
 --         editor:RefreshNow(). hooks = { onClose = fn(), onOpen = fn(look) }
 local ADDON, ns = ...
 local UI, C, S, D, R = ns.UI, ns.Channels, ns.Situations, ns.Detect, ns.Resolver
+local L = ns.L
 local E = {}
 ns.LookEditor = E
 
@@ -20,13 +21,15 @@ local STEP = { gamma = 0.01, brightness = 1, contrast = 1, bloom = 0.01 }
 local GREY = "|cff9d9d9d"
 
 local FLAGS = {
-  { "indoors", "Indoors" }, { "resting", "Resting" }, { "combat", "In combat" }, { "mounted", "Mounted" },
-  { "swimming", "Swimming" }, { "underwater", "Underwater" }, { "ghost", "Ghost" },
+  { "indoors", L["INDOORS"] }, { "resting", L["LE_RESTING"] }, { "combat", L["LE_COMBAT"] }, { "mounted", L["LE_MOUNTED"] },
+  { "swimming", L["LE_SWIMMING"] }, { "underwater", L["UNDERWATER"] }, { "ghost", L["LE_GHOST"] },
 }
-local ANY_YES_NO = { { "any", "Any" }, { "yes", "Yes" }, { "no", "No" } }
-local TIMES = { { "any", "Any" }, { "dawn", "Dawn" }, { "day", "Day" }, { "dusk", "Dusk" }, { "night", "Night" }, { "custom", "Custom" } }
+local ANY_YES_NO = { { "any", L["LE_ANY"] }, { "yes", L["LE_YES"] }, { "no", L["LE_NO"] } }
+local TIMES = { { "any", L["LE_ANY"] }, { "dawn", L["PERIOD_DAWN"] }, { "day", L["PERIOD_DAY"] }, { "dusk", L["PERIOD_DUSK"] },
+                { "night", L["PERIOD_NIGHT"] }, { "custom", L["LE_CUSTOM"] } }
 local ITYPES = { "itype:party", "itype:raid", "itype:pvp", "itype:arena", "itype:scenario" }
-local KIND_LABEL = { sub = "Subzone", zone = "Zone", instance = "Instance" }
+local KIND_LABEL = { sub = L["KIND_SUB"], zone = L["KIND_ZONE"], instance = L["KIND_INSTANCE"] }
+local KIND_LOWER = { zone = L["LE_IN_ZONE"], instance = L["LE_IN_INSTANCE"] }
 
 -- Helpers ----------------------------------------------------------------------------------------
 local deepCopy = UI.DeepCopy
@@ -118,7 +121,7 @@ local function whereLabel(key)
   local k = P.kindOf(key)
   if k == "itype" then return P.placeName(key) end
   if k == "sub" then return P.placeName(key) .. GREY .. "  (" .. P.zoneName(P.zoneKeyOf(key)) .. ")|r" end
-  return P.placeName(key) .. GREY .. "  (" .. string.lower(KIND_LABEL[k] or "?") .. ")|r"
+  return P.placeName(key) .. GREY .. "  (" .. (KIND_LOWER[k] or "?") .. ")|r"
 end
 
 -- Create -----------------------------------------------------------------------------------------
@@ -201,9 +204,9 @@ function E.Create(parent, hooks)
   end
 
   -- Header -------------------------------------------------------------------------------------
-  local back = UI.BackButton(ed, 24, { tip = "Back", tipSub = "Back to the place (ESC)", onClick = function() ed:Close() end })
+  local back = UI.BackButton(ed, 24, { tip = L["BTN_BACK"], tipSub = L["LE_BACK_TIP"], onClick = function() ed:Close() end })
   back:SetPoint("TOPLEFT", ed, "TOPLEFT", 12, -10)
-  local title = UI.Header(ed, "Edit Look")
+  local title = UI.Header(ed, L["LE_TITLE"])
   title:SetFontObject("GameFontNormalLarge")
   title:SetPoint("LEFT", back, "RIGHT", 8, 0)
   local from = UI.Label(ed, "")
@@ -212,7 +215,7 @@ function E.Create(parent, hooks)
   from:SetWordWrap(false)
   from:SetTextColor(0.7, 0.7, 0.7)
 
-  local nameLbl = UI.Label(ed, "Name", "GameFontNormalSmall")
+  local nameLbl = UI.Label(ed, L["LE_NAME"], "GameFontNormalSmall")
   nameLbl:SetPoint("TOPLEFT", ed, "TOPLEFT", 12, -48)
   local name = CreateFrame("EditBox", nil, ed, "InputBoxTemplate")
   name:SetSize(220, 20)
@@ -232,25 +235,24 @@ function E.Create(parent, hooks)
   name:SetScript("OnEditFocusLost", function(self) self:SetText(look.name or "") end)
   add({ Refresh = function() name:SetText(look.name or "") name:SetCursorPosition(0) end })
 
-  local onCheck = add(UI.Check(ed, { label = "On", tip = "An off Look is kept but never used.",
+  local onCheck = add(UI.Check(ed, { label = L["LE_ON"], tip = L["LOOK_OFF_TIP"],
     get = function() return look.on ~= false end,
     set = function(v) look.on = v apply() end }))
   onCheck:SetPoint("LEFT", name, "RIGHT", 14, 0)
 
-  local scopeLbl = UI.Label(ed, "Scope", "GameFontNormalSmall")
+  local scopeLbl = UI.Label(ed, L["LE_SCOPE"], "GameFontNormalSmall")
   scopeLbl:SetPoint("LEFT", onCheck, "RIGHT", 50, 0)
   local scopeDD = add(UI.ScopeDropdown(ed, 220, {
-    tip = "Who this Look is for: Global (everyone using this Style), or only the characters you tick.",
+    tip = L["LE_SCOPE_TIP"],
     get = function() return look.scope end,
     set = function(sc)
       look.scope = sc
       apply()
     end,
     extra = function(root)
-      root:CreateButton("Apply this scope to all Looks in this Style", function()
+      root:CreateButton(L["LE_SCOPE_ALL"], function()
         local style = R.ActiveStyle()
-        UI.Confirm("Give every Look in Style \"" .. (style.name or "?") .. "\" the scope " ..
-          UI.ScopeText(look.scope) .. "?", function()
+        UI.Confirm(L["LE_SCOPE_ALL_CONFIRM"]:format(style.name or "?", UI.ScopeText(look.scope)), function()
           for _, l in ipairs(style.looks) do l.scope = UI.DeepCopy(look.scope) end
           apply()
         end)
@@ -270,11 +272,11 @@ function E.Create(parent, hooks)
   col1:SetPoint("BOTTOMLEFT", ed, "BOTTOMLEFT", 12, 6)
   col1:SetWidth(COL_W)
 
-  local valHead = UI.Header(col1, "Values")
+  local valHead = UI.Header(col1, L["LE_VALUES"])
   valHead:SetPoint("TOPLEFT", col1, "TOPLEFT", 0, -4)
 
-  local absCheck = add(UI.Check(col1, { label = "Absolute",
-    tip = "Off: the values are offsets from your baseline (+/-), so they follow it when you change it. On: fixed values.",
+  local absCheck = add(UI.Check(col1, { label = L["LE_ABSOLUTE"],
+    tip = L["LE_ABSOLUTE_TIP"],
     get = function() return look.absolute end,
     set = function(v)
       -- Converted so the screen stays the same
@@ -294,13 +296,13 @@ function E.Create(parent, hooks)
   absCheck:SetPoint("LEFT", valHead, "RIGHT", 16, 0)
 
   local paste
-  local copy = UI.Button(col1, "Copy", 56, function()
+  local copy = UI.Button(col1, L["BTN_COPY"], 56, function()
     ns.valueClip = { absolute = look.absolute and true or false, values = deepCopy(look.values or {}) }
     paste:SetEnabled(true)
   end, 20)
   copy:SetPoint("TOPRIGHT", col1, "TOPRIGHT", -62, -2)
-  UI.Tooltip(copy, "Copy values", "Remember this Look's values to paste into another Look.")
-  paste = UI.Button(col1, "Paste", 56, function()
+  UI.Tooltip(copy, L["COPY_VALUES"], L["LE_COPY_TIP"])
+  paste = UI.Button(col1, L["BTN_PASTE"], 56, function()
     local clip = ns.valueClip
     if not clip then return end
     local out = {}
@@ -317,7 +319,7 @@ function E.Create(parent, hooks)
     apply()
   end, 20)
   paste:SetPoint("TOPRIGHT", col1, "TOPRIGHT", 0, -2)
-  UI.Tooltip(paste, "Paste values", "Replace this Look's values with the copied ones.")
+  UI.Tooltip(paste, L["PASTE_VALUES"], L["LE_PASTE_TIP"])
   add({ Refresh = function() paste:SetEnabled(ns.valueClip ~= nil) end })
 
   local function channelRow(ch, y)
@@ -327,13 +329,13 @@ function E.Create(parent, hooks)
     row:SetSize(COL_W, 28)
     local set = UI.Switch(row, {})
     set:SetPoint("LEFT", row, "LEFT", 0, 0)
-    UI.Tooltip(set, ch.label, "On: this Look sets " .. ch.label .. ". Off: it falls through to the next Look, or your baseline.")
+    UI.Tooltip(set, ch.label, L["LE_SETS_TIP"]:format(ch.label))
     local lbl = UI.Label(row, ch.label, "GameFontHighlightSmall")
     lbl:SetPoint("LEFT", set, "RIGHT", 6, 0)
     lbl:SetWidth(60)
-    local cur = UI.Button(row, "Current", 60, nil, 20)
+    local cur = UI.Button(row, L["LE_CURRENT"], 60, nil, 20)
     cur:SetPoint("RIGHT", row, "RIGHT", 0, 0)
-    UI.Tooltip(cur, "Use current", "Take the " .. ch.label .. " on screen now (for example after moving the game's own slider).")
+    UI.Tooltip(cur, L["LE_USE_CURRENT"], L["LE_USE_CURRENT_TIP"]:format(ch.label))
     local box = CreateFrame("EditBox", nil, row, "InputBoxTemplate")
     box:SetSize(44, 20)
     box:SetPoint("RIGHT", cur, "LEFT", -8, 0)
@@ -435,30 +437,30 @@ function E.Create(parent, hooks)
   baseNote:SetTextColor(0.65, 0.65, 0.65)
   add({ Refresh = function()
     if look.absolute then
-      baseNote:SetText("Fixed values: your baseline does not change them.")
+      baseNote:SetText(L["LE_FIXED_NOTE"])
     else
       local b = {}
       for _, ch in ipairs(C.list) do b[#b + 1] = ch.short .. " " .. C.Format(ch.key, baseOf(ch.key)) end
-      baseNote:SetText("Offsets from your baseline: " .. table.concat(b, "  "))
+      baseNote:SetText(L["LE_OFFSETS_NOTE"]:format(table.concat(b, "  ")))
     end
   end })
 
   -- Actions ----------------------------------------------------------------------------------
   local actY = -26 - #C.list * 30 - 26
-  local previewBtn = UI.Button(col1, "Preview", 110, function()
+  local previewBtn = UI.Button(col1, L["LE_PREVIEW"], 110, function()
     if previewEnd then stopPreview() else startPreview(false) end
   end)
   previewBtn:SetPoint("TOPLEFT", col1, "TOPLEFT", 0, actY)
-  UI.Tooltip(previewBtn, "Preview", "Show this Look's values for " .. PREVIEW_SECONDS .. " seconds, even where it does not match. Click again to stop.")
+  UI.Tooltip(previewBtn, L["LE_PREVIEW"], L["LE_PREVIEW_TIP"]:format(PREVIEW_SECONDS))
   refreshPreviewButton = function()
     if previewEnd then
-      previewBtn:SetText(string.format("Stop (%d)", math.max(0, math.ceil(previewEnd - GetTime()))))
+      previewBtn:SetText(L["LE_STOP"]:format(math.max(0, math.ceil(previewEnd - GetTime()))))
     else
-      previewBtn:SetText("Preview")
+      previewBtn:SetText(L["LE_PREVIEW"])
     end
   end
 
-  local revert = UI.Button(col1, "Revert", 110, function()
+  local revert = UI.Button(col1, L["LE_REVERT"], 110, function()
     if not snapshot then return end
     for kk in pairs(look) do look[kk] = nil end
     for kk, v in pairs(deepCopy(snapshot)) do look[kk] = v end
@@ -466,7 +468,7 @@ function E.Create(parent, hooks)
     apply()
   end)
   revert:SetPoint("LEFT", previewBtn, "RIGHT", 10, 0)
-  UI.Tooltip(revert, "Revert", "Back to how this Look was when you opened it.")
+  UI.Tooltip(revert, L["LE_REVERT"], L["LE_REVERT_TIP"])
 
   local function styleIndex()
     local style = R.ActiveStyle()
@@ -474,17 +476,17 @@ function E.Create(parent, hooks)
     return nil, style
   end
 
-  local dup = UI.Button(col1, "Duplicate", 110, function()
+  local dup = UI.Button(col1, L["LE_DUPLICATE"], 110, function()
     local i, style = styleIndex()
     local copyLook = deepCopy(look)
     copyLook.id = ns.NewID("l")
-    copyLook.name = (look.name or "Look") .. " (copy)"
+    copyLook.name = L["LE_COPY_NAME"]:format(look.name or L["LE_LOOK"])
     table.insert(style.looks, (i or #style.looks) + 1, copyLook)
     ed:Open(copyLook, placeKey)
     apply()
   end)
   dup:SetPoint("LEFT", revert, "RIGHT", 10, 0)
-  UI.Tooltip(dup, "Duplicate", "A copy of this Look, right after it, opened in the editor.")
+  UI.Tooltip(dup, L["LE_DUPLICATE"], L["LE_DUPLICATE_TIP"])
 
   local orderLbl
   local function move(dir)
@@ -496,12 +498,12 @@ function E.Create(parent, hooks)
     refreshAll()
     apply()
   end
-  local up = UI.Button(col1, "Up", 52, function() move(-1) end)
+  local up = UI.Button(col1, L["LE_UP"], 52, function() move(-1) end)
   up:SetPoint("TOPLEFT", previewBtn, "BOTTOMLEFT", 0, -8)
-  local down = UI.Button(col1, "Down", 52, function() move(1) end)
+  local down = UI.Button(col1, L["LE_DOWN"], 52, function() move(1) end)
   down:SetPoint("LEFT", up, "RIGHT", 6, 0)
-  UI.Tooltip(up, "Move up", "Order only decides between two Looks that are equally specific.")
-  UI.Tooltip(down, "Move down", "Order only decides between two Looks that are equally specific.")
+  UI.Tooltip(up, L["LE_MOVE_UP"], L["LE_ORDER_TIP"])
+  UI.Tooltip(down, L["LE_MOVE_DOWN"], L["LE_ORDER_TIP"])
   orderLbl = UI.Label(col1, "")
   orderLbl:SetPoint("LEFT", down, "RIGHT", 8, 0)
   orderLbl:SetTextColor(0.65, 0.65, 0.65)
@@ -509,11 +511,11 @@ function E.Create(parent, hooks)
     local i, style = styleIndex()
     up:SetEnabled(i ~= nil and i > 1)
     down:SetEnabled(i ~= nil and i < #style.looks)
-    orderLbl:SetText(i and string.format("%d of %d", i, #style.looks) or "")
+    orderLbl:SetText(i and L["LE_ORDER"]:format(i, #style.looks) or "")
   end })
 
-  local del = UI.Button(col1, "Delete", 110, function()
-    UI.Confirm("Delete the Look \"" .. (look.name or "?") .. "\"?", function()
+  local del = UI.Button(col1, L["BTN_DELETE"], 110, function()
+    UI.Confirm(L["LOOK_DELETE_CONFIRM"]:format(look.name or "?"), function()
       local i, style = styleIndex()
       if i then table.remove(style.looks, i) end
       stopPreview()
@@ -528,9 +530,9 @@ function E.Create(parent, hooks)
 
   -- Where (left column, bottom) --------------------------------------------------------------
   local whereY = actY - 68
-  local whereHead = UI.Header(col1, "Where")
+  local whereHead = UI.Header(col1, L["LE_WHERE"])
   whereHead:SetPoint("TOPLEFT", col1, "TOPLEFT", 0, whereY)
-  local whereTip = UI.Label(col1, "any one of these")
+  local whereTip = UI.Label(col1, L["LE_ANY_OF"])
   whereTip:SetPoint("LEFT", whereHead, "RIGHT", 8, 0)
   whereTip:SetTextColor(0.65, 0.65, 0.65)
 
@@ -544,7 +546,7 @@ function E.Create(parent, hooks)
   local wScroll = CreateFrame("EventFrame", nil, col1, "MinimalScrollBar")
   wScroll:SetPoint("TOPLEFT", wArea, "TOPRIGHT", 4, 0)
   wScroll:SetPoint("BOTTOMLEFT", wArea, "BOTTOMRIGHT", 4, 0)
-  local wEmpty = UI.Label(wArea, "No places: this Look counts everywhere.")
+  local wEmpty = UI.Label(wArea, L["LE_NO_PLACES"])
   wEmpty:SetPoint("CENTER")
   wEmpty:SetTextColor(1, 0.62, 0.25)
 
@@ -555,10 +557,10 @@ function E.Create(parent, hooks)
     if not row.name then
       row.on = UI.Switch(row, {})
       row.on:SetPoint("LEFT", row, "LEFT", 2, 0)
-      UI.Tooltip(row.on, "On / off", "A place switched off is kept in the list but not used.")
+      UI.Tooltip(row.on, L["ON_OFF"], L["LE_PLACE_OFF_TIP"])
       row.x = UI.ClearX(row, 16)   -- the search box's round X (Kim)
       row.x:SetPoint("RIGHT", row, "RIGHT", -4, 0)
-      UI.Tooltip(row.x, "Remove", "Take this place out of the Look.")
+      UI.Tooltip(row.x, L["BTN_REMOVE"], L["LE_REMOVE_PLACE_TIP"])
       row.name = UI.Label(row, "", "GameFontHighlightSmall")
       row.name:SetPoint("LEFT", row.on, "RIGHT", 6, 0)
       row.name:SetPoint("RIGHT", row.x, "LEFT", -6, 0)
@@ -590,8 +592,8 @@ function E.Create(parent, hooks)
     local any = false
     for _, s in ipairs(look.where or {}) do if s:sub(1, 1) ~= "~" then any = true end end
     wEmpty:SetShown(not any)
-    if #list > 0 and not any then wEmpty:SetText("All places are off: this Look counts everywhere.")
-    else wEmpty:SetText("No places: this Look counts everywhere.") end
+    if #list > 0 and not any then wEmpty:SetText(L["LE_ALL_OFF"])
+    else wEmpty:SetText(L["LE_NO_PLACES"]) end
   end
   add({ Refresh = function() refreshWhere() end })
 
@@ -611,7 +613,7 @@ function E.Create(parent, hooks)
     apply()
   end
 
-  local addHere = UI.Button(col1, "Add current place", 150, function(self)
+  local addHere = UI.Button(col1, L["LE_ADD_HERE"], 150, function(self)
     if not (MenuUtil and MenuUtil.CreateContextMenu) then return end
     MenuUtil.CreateContextMenu(self, function(_, root)
       local env = S.Snapshot()
@@ -620,14 +622,14 @@ function E.Create(parent, hooks)
         local key = S.PlaceKey(kind, env)
         if key then
           any = true
-          root:CreateButton(KIND_LABEL[kind] .. ": " .. (S.PlaceName(kind, env) or key), function() addWhere(key) end)
+          root:CreateButton(L["LE_ADD_PLACE"]:format(KIND_LABEL[kind], S.PlaceName(kind, env) or key), function() addWhere(key) end)
         end
       end
-      if not any then root:CreateTitle("No place to add here") end
+      if not any then root:CreateTitle(L["LE_NO_PLACE_HERE"]) end
     end)
   end)
   addHere:SetPoint("TOPLEFT", wArea, "BOTTOMLEFT", 0, -6)
-  local addType = UI.Button(col1, "Add instance type", 150, function(self)
+  local addType = UI.Button(col1, L["LE_ADD_TYPE"], 150, function(self)
     if not (MenuUtil and MenuUtil.CreateContextMenu) then return end
     MenuUtil.CreateContextMenu(self, function(_, root)
       for _, key in ipairs(ITYPES) do
@@ -651,9 +653,9 @@ function E.Create(parent, hooks)
   col2:SetPoint("TOPLEFT", ed, "TOPLEFT", COL2_X, -78)
   col2:SetPoint("BOTTOMRIGHT", ed, "BOTTOMRIGHT", -12, 6)
 
-  local whenHead = UI.Header(col2, "When")
+  local whenHead = UI.Header(col2, L["LE_WHEN"])
   whenHead:SetPoint("TOPLEFT", col2, "TOPLEFT", 0, -4)
-  local whenTip = UI.Label(col2, "all of these")
+  local whenTip = UI.Label(col2, L["LE_ALL_OF"])
   whenTip:SetPoint("LEFT", whenHead, "RIGHT", 8, 0)
   whenTip:SetTextColor(0.65, 0.65, 0.65)
 
@@ -662,20 +664,20 @@ function E.Create(parent, hooks)
     local c = (i - 1) % 2
     local r = math.floor((i - 1) / 2)
     local dd = add(UI.Dropdown(col2, DD_W, { label = f[2], items = ANY_YES_NO,
-      tip = (f[1] == "indoors") and "Yes = indoors, No = outdoors. Inside instances the game never reports indoors." or nil,
+      tip = (f[1] == "indoors") and L["LE_INDOORS_TIP"] or nil,
       get = function() return flagState(look, f[1]) end,
       set = function(v) setFlag(look, f[1], v) apply() end }))
     dd:SetPoint("TOPLEFT", col2, "TOPLEFT", c * (DD_W + 20), -24 - r * DD_STEP)
   end
 
   local custom
-  local timeDD = add(UI.Dropdown(col2, DD_W, { label = "Time",
-    tip = "Dawn, day, dusk and night follow Settings > Time of day.",
+  local timeDD = add(UI.Dropdown(col2, DD_W, { label = L["SP_TIME"],
+    tip = L["LE_TIME_TIP"],
     items = function()
       local list = {}
       for _, t in ipairs(TIMES) do list[#list + 1] = t end
       if look and timeState(look) == "other" then
-        list[#list + 1] = { "other", "Not " .. (timeEntry(look) or "?") }
+        list[#list + 1] = { "other", L["LE_NOT_TIME"]:format(timeEntry(look) or "?") }
       end
       return list
     end,
@@ -715,9 +717,9 @@ function E.Create(parent, hooks)
     end
   end
   local pickers = {
-    UI.Dropdown(custom, 84, { label = "From", items = hourItems, get = part(1), set = setPart(1) }),
+    UI.Dropdown(custom, 84, { label = L["LE_FROM_TIME"], items = hourItems, get = part(1), set = setPart(1) }),
     UI.Dropdown(custom, 64, { label = " ", items = MINS, get = part(2), set = setPart(2) }),
-    UI.Dropdown(custom, 84, { label = "To", items = hourItems, get = part(3), set = setPart(3) }),
+    UI.Dropdown(custom, 84, { label = L["LE_TO_TIME"], items = hourItems, get = part(3), set = setPart(3) }),
     UI.Dropdown(custom, 64, { label = " ", items = MINS, get = part(4), set = setPart(4) }),
   }
   local px = 0
@@ -733,7 +735,7 @@ function E.Create(parent, hooks)
   add(custom)
 
   -- What the Look does where you stand
-  local nowHead = UI.Header(col2, "Here now")
+  local nowHead = UI.Header(col2, L["LE_HERE_NOW"])
   nowHead:SetPoint("TOPLEFT", col2, "TOPLEFT", 0, -24 - 5 * DD_STEP - 8)
   local nowText = UI.Label(col2, "", "GameFontHighlight")
   nowText:SetPoint("TOPLEFT", nowHead, "BOTTOMLEFT", 0, -6)
@@ -748,23 +750,23 @@ function E.Create(parent, hooks)
     local active, matching = ns.PlaceUI.liveSets()
     local text, sub
     if previewEnd then
-      text = "|cffffd100Previewing|r"
-      sub = "The screen shows this Look's values until the preview ends."
+      text = "|cffffd100" .. L["LE_PREVIEWING"] .. "|r"
+      sub = L["LE_PREVIEWING_SUB"]
     elseif look.on == false then
-      text = GREY .. "Off|r"
-      sub = "Switched off: never used."
+      text = GREY .. L["LE_OFF"] .. "|r"
+      sub = L["LE_OFF_SUB"]
     elseif not ns.ScopeOf(look.scope, ns.charKey) then
-      text = GREY .. "Not for this character|r"
-      sub = "Its scope names other characters."
+      text = GREY .. L["LE_NOT_CHAR"] .. "|r"
+      sub = L["LE_NOT_CHAR_SUB"]
     elseif active[look] then
-      text = "|cff40ff40In effect|r"
-      sub = "It sets the screen where you stand now, so edits show at once."
+      text = "|cff40ff40" .. L["LE_IN_EFFECT"] .. "|r"
+      sub = L["LE_IN_EFFECT_SUB"]
     elseif matching[look] then
-      text = "|cffffd100Matches, outranked|r"
-      sub = "A more specific Look wins here (or sets every channel this one sets)."
+      text = "|cffffd100" .. L["LE_MATCHES"] .. "|r"
+      sub = L["LE_MATCHES_SUB"]
     else
-      text = GREY .. "Does not match here|r"
-      sub = "Use Preview to see it."
+      text = GREY .. L["LE_NO_MATCH"] .. "|r"
+      sub = L["LE_NO_MATCH_SUB"]
     end
     nowText:SetText(text)
     nowSub:SetText(sub)
@@ -778,7 +780,7 @@ function E.Create(parent, hooks)
     look.when = look.when or {}
     look.values = look.values or {}
     snapshot = deepCopy(look)
-    if key then from:SetText("from " .. ns.PlaceUI.placeName(key)) else from:SetText("") end
+    if key then from:SetText(L["LE_FROM"]:format(ns.PlaceUI.placeName(key))) else from:SetText("") end
     self:Show()
     refreshAll()
     if hooks.onOpen then ns.Safe(hooks.onOpen, "editor open", look) end

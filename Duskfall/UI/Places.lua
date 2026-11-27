@@ -1,6 +1,6 @@
 -- Duskfall UI/Places.lua: the Places tab (B-04b). This file is Advanced mode; simple mode (the
 -- default) is UI/Simple.lua, and the switch is W.SetAdvanced (title bar).
---   left:  search, "Active" filter, "Here" jump, and the place list: Instances (the five instance
+--   left:  search, L["PL_ACTIVE"] filter, L["PL_HERE"] jump, and the place list: Instances (the five instance
 --          types first, then every instance visited) and Zones with their subzones. The number is
 --          how many Looks of the active Style use the place (green = one of them is in effect now),
 --          grey = no Looks (off). A blue bar marks where you are. Right-click: Forget place.
@@ -10,6 +10,7 @@
 -- A flat list with open / closed zones, not Blizzard's tree view (untested on Forever).
 local ADDON, ns = ...
 local UI, W, C, S, D, R = ns.UI, ns.Window, ns.Channels, ns.Situations, ns.Detect, ns.Resolver
+local L = ns.L
 
 local LEFT_W = 270
 local ROW_H = 20
@@ -17,20 +18,21 @@ local LOOK_H = 34
 local GREY = "|cff9d9d9d"
 
 local ITYPES = {
-  { key = "itype:party", name = "All dungeons" },
-  { key = "itype:raid", name = "All raids" },
-  { key = "itype:pvp", name = "All battlegrounds" },
-  { key = "itype:arena", name = "All arenas" },
-  { key = "itype:scenario", name = "All scenarios" },
+  { key = "itype:party", name = L["ITYPE_PARTY"] },
+  { key = "itype:raid", name = L["ITYPE_RAID"] },
+  { key = "itype:pvp", name = L["ITYPE_PVP"] },
+  { key = "itype:arena", name = L["ITYPE_ARENA"] },
+  { key = "itype:scenario", name = L["ITYPE_SCENARIO"] },
 }
 local ITYPE_NAME = {}
 for _, it in ipairs(ITYPES) do ITYPE_NAME[it.key] = it.name end
 
-local KIND_TEXT = { sub = "Subzone", zone = "Zone", instance = "Instance", itype = "Instance type" }
+local KIND_TEXT = { sub = L["KIND_SUB"], zone = L["KIND_ZONE"], instance = L["KIND_INSTANCE"], itype = L["KIND_ITYPE"] }
 
 local WHEN_TEXT = {
-  indoors = "indoors", outdoors = "outdoors", resting = "resting", combat = "in combat",
-  mounted = "mounted", swimming = "swimming", underwater = "underwater", ghost = "ghost",
+  indoors = L["WHEN_INDOORS"], outdoors = L["WHEN_OUTDOORS"], resting = L["WHEN_RESTING"], combat = L["WHEN_COMBAT"],
+  mounted = L["WHEN_MOUNTED"], swimming = L["WHEN_SWIMMING"], underwater = L["WHEN_UNDERWATER"], ghost = L["WHEN_GHOST"],
+  ["time:dawn"] = L["WHEN_DAWN"], ["time:day"] = L["WHEN_DAY"], ["time:dusk"] = L["WHEN_DUSK"], ["time:night"] = L["WHEN_NIGHT"],
 }
 
 -- Helpers ----------------------------------------------------------------------------------------
@@ -150,8 +152,8 @@ local function whenText(s)
   if neg then s = s:sub(2) end
   local t
   local tm = s:match("^time:(.+)$")
-  if tm then t = tm else t = WHEN_TEXT[s] or s end
-  if neg then t = "not " .. t end
+  if WHEN_TEXT[s] then t = WHEN_TEXT[s] elseif tm then t = tm else t = s end
+  if neg then t = L["WHEN_NOT"]:format(t) end
   return t
 end
 
@@ -165,7 +167,7 @@ local function valuesText(look)
       out[#out + 1] = ch.short .. " " .. s
     end
   end
-  if #out == 0 then return GREY .. "no values yet|r" end
+  if #out == 0 then return GREY .. L["PL_NO_VALUES"] .. "|r" end
   return "|cffffffff" .. table.concat(out, "  ") .. "|r"
 end
 
@@ -180,13 +182,13 @@ local function detailText(look, key)
   for _, s in ipairs(look.where or {}) do
     if stripOff(s) ~= key then others = others + 1 end
   end
-  if others > 0 then parts[#parts + 1] = string.format("+%d other place%s", others, others == 1 and "" or "s") end
+  if others > 0 then parts[#parts + 1] = others == 1 and L["PL_OTHER_ONE"] or L["PL_OTHER_MANY"]:format(others) end
   local scope = look.scope
   if type(scope) == "table" and not scope.global and type(scope.chars) == "table" and next(scope.chars) then
     local names = {}
     for guid in pairs(scope.chars) do names[#names + 1] = ns.CharName(guid) end
     table.sort(names)
-    local s = "for " .. table.concat(names, ", ")
+    local s = L["PL_FOR"]:format(table.concat(names, ", "))
     if not ns.ScopeOf(scope, ns.charKey) then s = GREY .. s .. "|r" end
     parts[#parts + 1] = s
   end
@@ -209,7 +211,7 @@ end
 
 -- The tab --------------------------------------------------------------------------------------
 -- The tab holds two pages: simple mode (UI/Simple.lua, the default) and this one, Advanced mode.
-W.AddTab("places", "Places", function(tab)
+W.AddTab("places", L["TAB_PLACES"], function(tab)
   UI.Glow(tab, nil, 0.8)
   local page = CreateFrame("Frame", nil, tab)
   page:SetAllPoints()
@@ -228,12 +230,12 @@ W.AddTab("places", "Places", function(tab)
   left:SetWidth(LEFT_W)
 
   -- The same search box as simple mode (own rounded box, round clear X; Kim)
-  local search = UI.SearchBox(left, 160, { placeholder = "Search", height = 24,
+  local search = UI.SearchBox(left, 160, { placeholder = L["PL_SEARCH"], height = 24,
     onChange = function() if refreshAll then refreshAll() end end })
   search:SetPoint("TOPLEFT", left, "TOPLEFT", 10, -8)
 
-  local active = UI.Check(left, { label = "Active",
-    tip = "Only places with Looks.",
+  local active = UI.Check(left, { label = L["PL_ACTIVE"],
+    tip = L["PL_ACTIVE_TIP"],
     get = function() return activeOnly end,
     set = function(v) activeOnly = v refreshAll() end })
   active:SetPoint("LEFT", search, "RIGHT", 10, 0)
@@ -249,7 +251,7 @@ W.AddTab("places", "Places", function(tab)
   here.text:SetPoint("LEFT", here, "LEFT", 4, 0)
   here.text:SetPoint("RIGHT", here, "RIGHT", -4, 0)
   here.text:SetWordWrap(false)
-  UI.Tooltip(here, "Here", "Jump to the place you are in.")
+  UI.Tooltip(here, L["PL_HERE"], L["PL_HERE_TIP"])
 
   local treeBox = CreateFrame("Frame", nil, left)
   treeBox:SetPoint("TOPLEFT", left, "TOPLEFT", 8, -60)
@@ -273,8 +275,8 @@ W.AddTab("places", "Places", function(tab)
     end
     MenuUtil.CreateContextMenu(owner, function(_, root)
       root:CreateTitle(e.name)
-      local label = "Forget place"
-      if used > 0 then label = string.format("Forget place (used by %d Look%s)", used, used == 1 and "" or "s") end
+      local label = L["PL_FORGET"]
+      if used == 1 then label = L["PL_FORGET_USED_ONE"] elseif used > 1 then label = L["PL_FORGET_USED_MANY"]:format(used) end
       local b = root:CreateButton(label, function()
         local places = ns.db.places
         places[e.key] = nil
@@ -331,7 +333,7 @@ W.AddTab("places", "Places", function(tab)
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
         GameTooltip:AddLine(d.name, 1, 1, 1)
         GameTooltip:AddLine(KIND_TEXT[kindOf(d.key)] or "", 0.8, 0.8, 0.8)
-        if not d.fixed then GameTooltip:AddLine("Right-click: forget place", 0.6, 0.6, 0.6) end
+        if not d.fixed then GameTooltip:AddLine(L["PL_FORGET_TIP"], 0.6, 0.6, 0.6) end
         GameTooltip:Show()
       end)
       row:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -474,11 +476,11 @@ W.AddTab("places", "Places", function(tab)
 
     local filtering = activeOnly or q ~= ""
     if #inst > 0 or not filtering then
-      rows[#rows + 1] = { row = "group", key = "g:inst", name = "Instances", depth = 0, open = not collapsed["g:inst"] }
+      rows[#rows + 1] = { row = "group", key = "g:inst", name = L["PL_INSTANCES"], depth = 0, open = not collapsed["g:inst"] }
       if not collapsed["g:inst"] then for _, e in ipairs(inst) do rows[#rows + 1] = e end end
     end
     if #zrows > 0 or not filtering then
-      rows[#rows + 1] = { row = "group", key = "g:zones", name = "Zones", depth = 0, open = not collapsed["g:zones"] }
+      rows[#rows + 1] = { row = "group", key = "g:zones", name = L["PL_ZONES"], depth = 0, open = not collapsed["g:zones"] }
       if not collapsed["g:zones"] then for _, e in ipairs(zrows) do rows[#rows + 1] = e end end
     end
     return rows
@@ -505,7 +507,7 @@ W.AddTab("places", "Places", function(tab)
       elseif env.sub then text = (env.zoneName or "?") .. " > " .. env.sub
       elseif env.zoneName then text = env.zoneName end
     end
-    here.text:SetText("|cff9fb4ffHere:|r " .. text)
+    here.text:SetText("|cff9fb4ff" .. L["PL_HERE_LABEL"] .. "|r " .. text)
   end
 
   -- Right --------------------------------------------------------------------------------------
@@ -513,7 +515,7 @@ W.AddTab("places", "Places", function(tab)
   right:SetPoint("TOPLEFT", page, "TOPLEFT", LEFT_W + 14, 0)
   right:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -8, 0)
 
-  local empty = UI.Label(right, "Pick a place on the left.", "GameFontHighlight")
+  local empty = UI.Label(right, L["PL_PICK"], "GameFontHighlight")
   empty:SetPoint("CENTER")
 
   local detail = CreateFrame("Frame", nil, right)
@@ -528,7 +530,7 @@ W.AddTab("places", "Places", function(tab)
   kindLine:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -4)
   kindLine:SetTextColor(0.7, 0.7, 0.7)
 
-  local listHead = UI.Header(detail, "Looks using this place")
+  local listHead = UI.Header(detail, L["PL_LOOKS_HEAD"])
   listHead:SetPoint("TOPLEFT", detail, "TOPLEFT", 4, -60)
 
   local lookArea = CreateFrame("Frame", nil, detail)
@@ -540,7 +542,7 @@ W.AddTab("places", "Places", function(tab)
   local lookScroll = CreateFrame("EventFrame", nil, detail, "MinimalScrollBar")
   lookScroll:SetPoint("TOPLEFT", lookArea, "TOPRIGHT", 4, 0)
   lookScroll:SetPoint("BOTTOMLEFT", lookArea, "BOTTOMRIGHT", 4, 0)
-  local noLooks = UI.Label(lookArea, "No Looks here, so this place is off. Add one below to switch it on.")
+  local noLooks = UI.Label(lookArea, L["PL_NO_LOOKS"])
   noLooks:SetPoint("CENTER")
   noLooks:SetTextColor(0.7, 0.7, 0.7)
 
@@ -557,8 +559,8 @@ W.AddTab("places", "Places", function(tab)
       hl:SetColorTexture(1, 1, 1, 0.08)
       row.on = UI.Switch(row, {})
       row.on:SetPoint("LEFT", row, "LEFT", 6, 0)
-      UI.Tooltip(row.on, "On / off", "An off Look is kept but never used.")
-      row.del = UI.Button(row, "Delete", 64, nil, 20)
+      UI.Tooltip(row.on, L["ON_OFF"], L["LOOK_OFF_TIP"])
+      row.del = UI.Button(row, L["BTN_DELETE"], 64, nil, 20)
       row.del:SetKind("danger")
       row.del:SetPoint("RIGHT", row, "RIGHT", -6, 0)
       row.tag = UI.Label(row, "", "GameFontHighlightSmall")
@@ -576,14 +578,14 @@ W.AddTab("places", "Places", function(tab)
     end
     local look = e.look
     local name = look.name or "?"
-    if e.placeOff then name = name .. GREY .. "  (this place is switched off in it)|r" end
+    if e.placeOff then name = name .. GREY .. "  " .. L["PL_PLACE_OFF"] .. "|r" end
     row.name:SetText(name)
     if look.on == false then row.name:SetTextColor(0.6, 0.6, 0.6) else row.name:SetTextColor(1, 1, 1) end
     row.info:SetText(detailText(look, selKey))
     local tag = ""
-    if look.on == false then tag = GREY .. "off|r"
-    elseif e.active then tag = "|cff40ff40active|r"
-    elseif e.matching then tag = GREY .. "matches, outranked|r" end
+    if look.on == false then tag = GREY .. L["PL_TAG_OFF"] .. "|r"
+    elseif e.active then tag = "|cff40ff40" .. L["PL_TAG_ACTIVE"] .. "|r"
+    elseif e.matching then tag = GREY .. L["PL_TAG_MATCHES"] .. "|r" end
     row.tag:SetText(tag)
     row.sel:SetShown(look == selLook)
     row.on:SetChecked(look.on ~= false, true)
@@ -592,7 +594,7 @@ W.AddTab("places", "Places", function(tab)
       changed("places")
     end
     row.del:SetScript("OnClick", function()
-      UI.Confirm("Delete the Look \"" .. (look.name or "?") .. "\"?", function()
+      UI.Confirm(L["LOOK_DELETE_CONFIRM"]:format(look.name or "?"), function()
         local style = R.ActiveStyle()
         for i, l in ipairs(style.looks) do
           if l == look then table.remove(style.looks, i) break end
@@ -607,12 +609,12 @@ W.AddTab("places", "Places", function(tab)
   UI.AutoHideScroll(lookBox, lookScroll)
 
   -- Quick-add: values = what is on screen where it differs from what Duskfall shows (as /dusk save).
-  local function quickAdd(when, suffix)
+  local function quickAdd(when, nameKey)
     if not selKey then return end
     local style = R.ActiveStyle()
     local existing = ns.FindLook(style, selKey, when)
     if existing then
-      ns.Print("Look \"%s\" already exists, opened it.", existing.name or "?")
+      ns.Print(L["PL_EXISTS"], existing.name or "?")
       openEditor(existing)
       return
     end
@@ -628,26 +630,26 @@ W.AddTab("places", "Places", function(tab)
         end
       end
     end
-    local name = placeName(selKey) .. suffix
+    local name = nameKey and L[nameKey]:format(placeName(selKey)) or placeName(selKey)
     local look = { id = ns.NewID("l"), name = name, on = true, scope = { global = true }, absolute = false,
                    where = { selKey }, when = when, values = values }
     table.insert(style.looks, look)
-    if n > 0 then ns.Print("added Look \"%s\" with the values on screen.", name) end
+    if n > 0 then ns.Print(L["PL_ADDED"], name) end
     changed("places")
     openEditor(look)
   end
 
-  local addAny = UI.Button(detail, "+ Look here", 120, function() quickAdd({}, "") end)
+  local addAny = UI.Button(detail, L["PL_ADD_ANY"], 120, function() quickAdd({}, nil) end)
   addAny:SetPoint("BOTTOMLEFT", detail, "BOTTOMLEFT", 0, 10)
-  UI.Tooltip(addAny, "+ Look here", "A Look for this place with no conditions. Takes the values on screen where you changed them.")
-  local addIn = UI.Button(detail, "+ Indoors here", 120, function() quickAdd({ "indoors" }, " (indoors)") end)
+  UI.Tooltip(addAny, L["PL_ADD_ANY"], L["PL_ADD_ANY_TIP"])
+  local addIn = UI.Button(detail, L["PL_ADD_IN"], 120, function() quickAdd({ "indoors" }, "PL_NAME_INDOORS") end)
   addIn:SetPoint("LEFT", addAny, "RIGHT", 8, 0)
-  UI.Tooltip(addIn, "+ Indoors here", "A Look for this place that only counts indoors.")
-  local addNight = UI.Button(detail, "+ Night here", 120, function() quickAdd({ "time:night" }, " (night)") end)
+  UI.Tooltip(addIn, L["PL_ADD_IN"], L["PL_ADD_IN_TIP"])
+  local addNight = UI.Button(detail, L["PL_ADD_NIGHT"], 120, function() quickAdd({ "time:night" }, "PL_NAME_NIGHT") end)
   addNight:SetPoint("LEFT", addIn, "RIGHT", 8, 0)
-  UI.Tooltip(addNight, "+ Night here", "A Look for this place that only counts at night.")
+  UI.Tooltip(addNight, L["PL_ADD_NIGHT"], L["PL_ADD_NIGHT_TIP"])
 
-  local clickTip = UI.Label(detail, "Click a Look to edit it.")
+  local clickTip = UI.Label(detail, L["PL_CLICK_TIP"])
   clickTip:SetPoint("LEFT", listHead, "RIGHT", 10, 0)
   clickTip:SetTextColor(0.65, 0.65, 0.65)
 
@@ -662,9 +664,9 @@ W.AddTab("places", "Places", function(tab)
     title:SetText(placeName(selKey))
     local k = kindOf(selKey)
     local kind = KIND_TEXT[k] or ""
-    if k == "sub" then kind = kind .. " of " .. zoneName(zoneKeyOf(selKey)) end
+    if k == "sub" then kind = L["PL_SUB_OF"]:format(kind, zoneName(zoneKeyOf(selKey))) end
     local style = R.ActiveStyle()
-    kindLine:SetText(kind .. "     Style: |cffffffff" .. (style.name or "?") .. "|r")
+    kindLine:SetText(kind .. "     " .. L["PL_STYLE"]:format("|cffffffff" .. (style.name or "?") .. "|r"))
 
     local activeL, matching = liveSets()
     local rows = {}

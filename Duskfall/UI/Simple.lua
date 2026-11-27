@@ -12,6 +12,7 @@
 -- Public: ns.SimplePlaces.Create(parent, hooks) -> frame; hooks = { openAdvanced = fn(look) }
 local ADDON, ns = ...
 local UI, C, S, D, R = ns.UI, ns.Channels, ns.Situations, ns.Detect, ns.Resolver
+local L = ns.L
 local SP = {}
 ns.SimplePlaces = SP
 
@@ -27,30 +28,29 @@ local GREEN = "|cff40ff40"
 
 local SLIDERS = {
   { key = "gamma", min = -1, max = 1, step = 0.05,
-    tip = "How light the dark parts of the picture are. The strongest of the four." },
+    tip = L["SP_TIP_GAMMA"] },
   { key = "brightness", min = -50, max = 50, step = 1,
-    tip = "The whole picture lighter or darker." },
+    tip = L["SP_TIP_BRIGHTNESS"] },
   { key = "contrast", min = -50, max = 50, step = 1,
-    tip = "Flat and soft, or deep and punchy." },
+    tip = L["SP_TIP_CONTRAST"] },
   { key = "bloom", min = -1, max = 1, step = 0.05,
-    tip = "The glow around bright light (the game's Bloom Intensity)." },
+    tip = L["SP_TIP_BLOOM"] },
 }
 
 local PERIODS = { "dawn", "day", "dusk", "night" }
-local PLACE_KIND = { sub = "Part of a zone", zone = "Zone", instance = "Instance", itype = "Every instance of a kind" }
-local PERIOD_NAME = { dawn = "Dawn", day = "Day", dusk = "Dusk", night = "Night" }
-local PERIOD_PHRASE = { dawn = " at dawn", day = " by day", dusk = " at dusk", night = " at night" }
-local ITYPE_NAME = { party = "All dungeons", raid = "All raids", pvp = "All battlegrounds", arena = "All arenas",
-                     scenario = "All scenarios" }
+local PLACE_KIND = { sub = L["SP_KIND_SUB"], zone = L["KIND_ZONE"], instance = L["KIND_INSTANCE"], itype = L["SP_KIND_ITYPE"] }
+local PERIOD_NAME = { dawn = L["PERIOD_DAWN"], day = L["PERIOD_DAY"], dusk = L["PERIOD_DUSK"], night = L["PERIOD_NIGHT"] }
+local ITYPE_NAME = { party = L["ITYPE_PARTY"], raid = L["ITYPE_RAID"], pvp = L["ITYPE_PVP"], arena = L["ITYPE_ARENA"],
+                     scenario = L["ITYPE_SCENARIO"] }
 
 -- What a Look is in simple terms -------------------------------------------------------------------
 -- { key = place key or nil (everywhere), time = period or nil, io = "indoors" / "outdoors" / "underwater" / nil },
 -- or nil when it needs Advanced mode.
 -- Before / after (Kim, 2026-11-27): hold to see your own settings, let go for this place again.
 -- icon = true: a narrow button with the before / after symbol (Assets/Buttons/compare), where the
--- word does not fit (Places' button row; Kim keeps "Mini panel" as it is).
+-- word does not fit (Places' button row; Kim keeps L["SP_MINI"] as it is).
 local function compareButton(parent, w, icon)
-  local b = UI.Button(parent, icon and "" or "Compare", w or 96)
+  local b = UI.Button(parent, icon and "" or L["BTN_COMPARE"], w or 96)
   if icon then
     local sym = b:CreateTexture(nil, "OVERLAY")
     sym:SetSize(18, 18)
@@ -65,8 +65,7 @@ local function compareButton(parent, w, icon)
     b:HookScript("OnMouseDown", function() b.sym:SetPoint("CENTER", 1, -1) end)
     b:HookScript("OnMouseUp", function() b.sym:SetPoint("CENTER", 0, 0) end)
   end
-  UI.Tooltip(b, "Compare", "Hold to see your own settings (before); let go to see this place again (after). " ..
-    "There is a key binding for it too (Options > Keybindings > AddOns).")
+  UI.Tooltip(b, L["BTN_COMPARE"], L["SP_COMPARE_TIP"])
   return b
 end
 
@@ -114,7 +113,7 @@ end
 -- "Canals" or, when two zones have a part called that, "Canals, Undercity" (lists; long).
 -- force: always add the zone (the Place picker, when a part has the zone's own name).
 local function placeLabel(key, long, force)
-  if not key then return "Everywhere" end
+  if not key then return L["EVERYWHERE"] end
   local P = ns.PlaceUI
   if long and P.kindOf(key) == "sub" and (force or sharedName(key)) then
     return P.placeName(key) .. ", " .. P.zoneName(P.zoneKeyOf(key))
@@ -124,8 +123,8 @@ end
 
 local function describe(sh, long)
   local s = placeLabel(sh.key, long)
-  if sh.io then s = s .. " " .. sh.io end
-  if sh.time then s = s .. PERIOD_PHRASE[sh.time] end
+  if sh.io then s = L["SP_IO_" .. sh.io:upper()]:format(s) end
+  if sh.time then s = L["SP_AT_" .. sh.time:upper()]:format(s) end
   return s
 end
 
@@ -145,16 +144,16 @@ local function valuesLine(look)
       out[#out + 1] = ch.label .. " " .. s
     end
   end
-  if #out == 0 then return "nothing set" end
+  if #out == 0 then return L["SP_NOTHING_SET"] end
   return table.concat(out, ", ")
 end
 
 local function whyAdvanced(look)
-  if look.on == false then return "It is switched off." end
-  if look.absolute then return "It uses fixed values, not changes." end
-  if not UI.ScopeIsGlobal(look.scope) then return "It is only for some characters." end
-  if #(look.where or {}) > 1 then return "It is for several places." end
-  return "It uses conditions simple mode doesn't show."
+  if look.on == false then return L["SP_WHY_OFF"] end
+  if look.absolute then return L["SP_WHY_ABSOLUTE"] end
+  if not UI.ScopeIsGlobal(look.scope) then return L["SP_WHY_CHARS"] end
+  if #(look.where or {}) > 1 then return L["SP_WHY_PLACES"] end
+  return L["SP_WHY_WHEN"]
 end
 
 local function newLook(sh)
@@ -323,17 +322,17 @@ function SP.Create(parent, hooks)
       local env = D.state.env or S.Snapshot()
       local out = {}
       if env.instance then
-        out[#out + 1] = { "instance:" .. env.instance, env.instanceName or "This instance", nil, "Only this instance." }
+        out[#out + 1] = { "instance:" .. env.instance, env.instanceName or L["SP_THIS_INSTANCE"], nil, L["SP_ONLY_INSTANCE"] }
         if ITYPE_NAME[env.itype] then
-          out[#out + 1] = { "itype:" .. env.itype, ITYPE_NAME[env.itype], nil, "Every instance of this kind." }
+          out[#out + 1] = { "itype:" .. env.itype, ITYPE_NAME[env.itype], nil, L["SP_EVERY_KIND"] }
         end
       else
         local sk = S.PlaceKey("sub", env)
-        if sk then out[#out + 1] = { sk, env.sub, nil, "Only this part of " .. (env.zoneName or "the zone") .. "." } end
+        if sk then out[#out + 1] = { sk, env.sub, nil, L["SP_ONLY_PART"]:format(env.zoneName or L["SP_THE_ZONE"]) } end
         local zk = S.PlaceKey("zone", env)
-        if zk then out[#out + 1] = { zk, env.zoneName or "This zone", nil, "The whole zone, all of its parts." } end
+        if zk then out[#out + 1] = { zk, env.zoneName or L["SP_THIS_ZONE"], nil, L["SP_WHOLE_ZONE"] } end
       end
-      out[#out + 1] = { EVERYWHERE, "Everywhere", nil, "Everywhere you go. A place's own setting wins over this one." }
+      out[#out + 1] = { EVERYWHERE, L["EVERYWHERE"], nil, L["SP_EVERYWHERE_TIP"] }
       -- A setting picked in Your places for somewhere else comes first
       local mine = sel.key or EVERYWHERE
       local found = false
@@ -342,7 +341,7 @@ function SP.Create(parent, hooks)
         -- Two places can share a name (Ruins of Lordaeron in Undercity and in Tirisfal): add the zone
         local label = placeLabel(sel.key)
         for _, it in ipairs(out) do if it[2] == label then label = placeLabel(sel.key, true, true) end end
-        table.insert(out, 1, { mine, label, nil, "The place you picked in Your places." })
+        table.insert(out, 1, { mine, label, nil, L["SP_PICKED"] })
       end
       return out
     end,
@@ -357,15 +356,13 @@ function SP.Create(parent, hooks)
     local q = UI.HelpIcon(left, topic, title, text)
     q:SetPoint("LEFT", label, "RIGHT", 3, 0)
   end
-  tip(row("Place", placeSeg), "wins", "Place", "Where the setting counts: this part of the zone, the whole zone, or " ..
-    "everywhere. The most specific one wins.")
+  tip(row(L["SP_PLACE"], placeSeg), "wins", L["SP_PLACE"], L["SP_PLACE_TIP"])
 
   local timeSeg = UI.Segmented(left, SEG_W, {
     items = function()
-      local out = { { "any", "Any time", nil, "Day and night." } }
+      local out = { { "any", L["SP_ANY_TIME"], nil, L["SP_ANY_TIME_TIP"] } }
       for _, p in ipairs(PERIODS) do
-        out[#out + 1] = { p, PERIOD_NAME[p], UI.ART .. "Day\\ui-" .. p, "Only " .. PERIOD_PHRASE[p]:sub(2) ..
-          ". The hours are on Settings > Time of day." }
+        out[#out + 1] = { p, PERIOD_NAME[p], UI.ART .. "Day\\ui-" .. p, L["SP_TIME_" .. p:upper()] }
       end
       return out
     end,
@@ -374,17 +371,17 @@ function SP.Create(parent, hooks)
       if v == "any" then v = nil end
       pick({ key = sel.key, time = v, io = sel.io }, picked and "list" or "row")
     end })
-  tip(row("Time", timeSeg), "time", "Time", "Only at one part of the day, or any time.")
+  tip(row(L["SP_TIME"], timeSeg), "time", L["SP_TIME"], L["SP_TIME_TIP"])
 
   local ioSeg = UI.Segmented(left, SEG_W, {
     items = function()
       -- Underwater as a fourth choice (Kim, 2026-11-27); dungeons have no indoors / outdoors, but water
-      local out = { { "any", "In and out", nil, "Indoors, outdoors and underwater." } }
+      local out = { { "any", L["SP_IN_AND_OUT"], nil, L["SP_IN_AND_OUT_TIP"] } }
       if not noIndoors(sel.key) then
-        out[#out + 1] = { "indoors", "Indoors", nil, "Inside buildings and caves the game counts as indoors." }
-        out[#out + 1] = { "outdoors", "Outdoors", nil, "Under the open sky." }
+        out[#out + 1] = { "indoors", L["INDOORS"], nil, L["SP_INDOORS_TIP"] }
+        out[#out + 1] = { "outdoors", L["OUTDOORS"], nil, L["SP_OUTDOORS_TIP"] }
       end
-      out[#out + 1] = { "underwater", "Underwater", nil, "With your head under water." }
+      out[#out + 1] = { "underwater", L["UNDERWATER"], nil, L["SP_UNDERWATER_TIP"] }
       return out
     end,
     get = function() return sel.io or "any" end,
@@ -392,8 +389,7 @@ function SP.Create(parent, hooks)
       if v == "any" then v = nil end
       pick({ key = sel.key, time = sel.time, io = v }, picked and "list" or "row")
     end })
-  tip(row("Inside", ioSeg), "wins", "Inside", "Only indoors, only outdoors, only underwater, or all. The game "
-    .. "decides what counts as indoors; inside dungeons it never does, so there it is only underwater or not.")
+  tip(row(L["SP_INSIDE"], ioSeg), "wins", L["SP_INSIDE"], L["SP_INSIDE_TIP"])
 
   -- Left: the sliders --------------------------------------------------------------------------
   y = y - 18
@@ -465,10 +461,10 @@ function SP.Create(parent, hooks)
   actions:SetHeight(46)
   UI.RoundBox(actions, { radius = 10, bottom = { 0, 0, 0, 0.5 }, top = { 0.22, 0.17, 0.1, 0.4 },
     border = { 1, 0.82, 0, 0.12 } })   -- soft: strong gold is for controls (Kim)
-  local reset = UI.Button(actions, "Reset", 76, function()
+  local reset = UI.Button(actions, L["BTN_RESET"], 76, function()
     local look = current()
     if not look then return end
-    UI.Confirm("Remove the setting \"" .. lookLabel(look) .. "\"?", function()
+    UI.Confirm(L["SP_REMOVE_CONFIRM"]:format(lookLabel(look)), function()
       removeLook(look)
       stopPreview()
       evaluate()
@@ -477,7 +473,7 @@ function SP.Create(parent, hooks)
   end)
   reset:SetKind("danger")
   reset:SetPoint("LEFT", actions, "LEFT", 10, 0)
-  UI.Tooltip(reset, "Reset", "Remove this setting: the screen goes back to normal for it.")
+  UI.Tooltip(reset, L["BTN_RESET"], L["SP_RESET_TIP"])
   -- Mini panel (Kim): the window steps aside for a small panel with only the sliders, so the
   -- whole screen shows the change. Back (or closing it) brings the window back.
   local mini, miniSliders, miniTitle, miniHint = nil, {}, nil, nil
@@ -488,9 +484,9 @@ function SP.Create(parent, hooks)
     for _, sl in ipairs(miniSliders) do sl:Refresh() end
     local look = current()
     local env = S.Snapshot()
-    if not look then miniHint:SetText(GREY .. "Nothing set yet.|r")
-    elseif wins(look, env) then miniHint:SetText(GREEN .. "In effect here now.|r")
-    else miniHint:SetText(GREY .. "Not in effect here: a preview shows while you drag.|r") end
+    if not look then miniHint:SetText(GREY .. L["SP_MINI_NOTHING"] .. "|r")
+    elseif wins(look, env) then miniHint:SetText(GREEN .. L["SP_IN_EFFECT_HERE"] .. "|r")
+    else miniHint:SetText(GREY .. L["SP_MINI_NOT"] .. "|r") end
   end
   local function buildMini()
     local m = CreateFrame("Frame", "DuskfallMiniPanel", UIParent)
@@ -523,13 +519,13 @@ function SP.Create(parent, hooks)
     miniTitle:SetPoint("TOPLEFT", m, "TOPLEFT", 46, -16)
     miniTitle:SetPoint("RIGHT", m, "RIGHT", -96, 0)
     miniTitle:SetWordWrap(false)
-    local back = UI.Button(m, "Back", 76, function()
+    local back = UI.Button(m, L["BTN_BACK"], 76, function()
       keepSel = true
       m:FadeHide()
       ns.OpenWindow("places", true)
     end, 22)
     back:SetPoint("TOPRIGHT", m, "TOPRIGHT", -12, -12)
-    UI.Tooltip(back, "Back", "Back to the Duskfall window.")
+    UI.Tooltip(back, L["BTN_BACK"], L["SP_BACK_TIP"])
     local yy = -48
     for _, def in ipairs(SLIDERS) do
       local sl = UI.LightSlider(m, 446, sliderOpts(def, 36))
@@ -549,31 +545,29 @@ function SP.Create(parent, hooks)
     m:Hide()
     mini = m
   end
-  local miniBtn = UI.Button(actions, "Mini panel", 104, function()
+  local miniBtn = UI.Button(actions, L["SP_MINI"], 104, function()
     if not mini then buildMini() end
     if ns.Window.frame then ns.Window.frame:FadeHide() end
     mini:Show()
     refreshMini()
   end)
   miniBtn:SetPoint("LEFT", reset, "RIGHT", 8, 0)
-  UI.Tooltip(miniBtn, "Mini panel", "Swap this window for a small panel with only the sliders, so you see the " ..
-    "whole screen while you adjust. Back brings the window back.")
+  UI.Tooltip(miniBtn, L["SP_MINI"], L["SP_MINI_TIP"])
   ns.Listen("EVALUATED", function() refreshMini() end)
 
   local pasteBtn
-  local copyBtn = UI.Button(actions, "Copy", 76, function()
+  local copyBtn = UI.Button(actions, L["BTN_COPY"], 76, function()
     local look = current()
     if not look then return end
     copyValues(look)
     if pasteBtn then pasteBtn:SetEnabled(true) end
   end)
   copyBtn:SetPoint("LEFT", miniBtn, "RIGHT", 8, 0)
-  UI.Tooltip(copyBtn, "Copy values", "Remember these values, to paste them into another setting.")
-  pasteBtn = UI.Button(actions, "Paste", 76, function() pasteValues(current()) end)
+  UI.Tooltip(copyBtn, L["COPY_VALUES"], L["SP_COPY_TIP"])
+  pasteBtn = UI.Button(actions, L["BTN_PASTE"], 76, function() pasteValues(current()) end)
   pasteBtn:SetKind("main")
   pasteBtn:SetPoint("LEFT", copyBtn, "RIGHT", 8, 0)
-  UI.Tooltip(pasteBtn, "Paste values", "Put the copied values here: this place, time and inside / outside. " ..
-    "Replaces what is set here.")
+  UI.Tooltip(pasteBtn, L["PASTE_VALUES"], L["SP_PASTE_TIP"])
   compareButton(actions, 40, true):SetPoint("LEFT", pasteBtn, "RIGHT", 8, 0)
 
   local hint = UI.Label(left, "")
@@ -585,26 +579,25 @@ function SP.Create(parent, hooks)
   local right = CreateFrame("Frame", nil, f)
   right:SetPoint("TOPLEFT", f, "TOPLEFT", LEFT_W + 36, 0)
   right:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -8, 0)
-  local head = UI.Header(right, "Your places")
+  local head = UI.Header(right, L["SP_YOUR_PLACES"])
   head:SetFontObject("GameFontNormalLarge")
   head:SetPoint("TOPLEFT", right, "TOPLEFT", 4, -14)
-  local headSub = UI.Label(right, "Click one to adjust it.")
+  local headSub = UI.Label(right, L["SP_CLICK_ONE"])
   headSub:SetPoint("TOPLEFT", head, "BOTTOMLEFT", 0, -6)
   headSub:SetTextColor(0.7, 0.7, 0.7)
 
-  local import = UI.Button(right, "Import", 90, function()
+  local import = UI.Button(right, L["BTN_IMPORT"], 90, function()
     ns.Share.ImportDialog(function() evaluate() refresh(true) end)
   end)
   import:SetPoint("TOPRIGHT", right, "TOPRIGHT", -16, -16)
-  UI.Tooltip(import, "Import", "Paste a setting or a Style someone exported (right-click a place > Export).")
-  local headHelp = UI.HelpIcon(right, "start", "Your places", "Everything you have set. Click one to adjust it; " ..
-    "right-click to copy, paste, export or remove it. Search finds every place you have been.")
+  UI.Tooltip(import, L["BTN_IMPORT"], L["SP_IMPORT_TIP"])
+  local headHelp = UI.HelpIcon(right, "start", L["SP_YOUR_PLACES"], L["SP_YOUR_PLACES_TIP"])
   headHelp:SetPoint("LEFT", head, "RIGHT", 6, 0)
 
   -- Search: empty = your places; typed = your places and every place you have been that match
   local query = ""
   -- 32 high: its bottom lines up with the Here card's on the left (Kim)
-  local search = UI.SearchBox(right, 300, { placeholder = "Search all places", height = 32,
+  local search = UI.SearchBox(right, 300, { placeholder = L["SP_SEARCH"], height = 32,
     onChange = function(t)
       query = (t or ""):lower():gsub("^%s+", ""):gsub("%s+$", "")
       if refresh then refresh(false) end
@@ -621,7 +614,7 @@ function SP.Create(parent, hooks)
   local scroll = CreateFrame("EventFrame", nil, right, "MinimalScrollBar")
   scroll:SetPoint("TOPLEFT", area, "TOPRIGHT", 4, 0)
   scroll:SetPoint("BOTTOMLEFT", area, "BOTTOMRIGHT", 4, 0)
-  local empty = UI.Label(area, "Nothing set yet.\n\nMove a slider on the left and the place shows up here.")
+  local empty = UI.Label(area, L["SP_EMPTY"])
   empty:SetPoint("CENTER")
   empty:SetWidth(220)
   empty:SetJustifyH("CENTER")
@@ -632,15 +625,15 @@ function SP.Create(parent, hooks)
     MenuUtil.CreateContextMenu(owner, function(_, root)
       root:CreateTitle(lookLabel(look))
       -- The same clipboard as the Look editor's Copy / Paste values (ns.valueClip)
-      root:CreateButton("Copy values", function() copyValues(look) end)
-      local paste = root:CreateButton("Paste values", function() pasteValues(look) end)
+      root:CreateButton(L["COPY_VALUES"], function() copyValues(look) end)
+      local paste = root:CreateButton(L["PASTE_VALUES"], function() pasteValues(look) end)
       if not ns.valueClip and paste and paste.SetEnabled then pcall(paste.SetEnabled, paste, false) end
-      root:CreateButton("Export", function()
+      root:CreateButton(L["BTN_EXPORT"], function()
         UI.Copy(lookLabel(look), ns.Share.ExportLook(look), owner)
       end)
       root:CreateDivider()
-      root:CreateButton("Remove", function()
-        UI.Confirm("Remove the setting \"" .. lookLabel(look) .. "\"?", function()
+      root:CreateButton(L["BTN_REMOVE"], function()
+        UI.Confirm(L["SP_REMOVE_CONFIRM"]:format(lookLabel(look)), function()
           removeLook(look)
           stopPreview()
           evaluate()
@@ -684,19 +677,19 @@ function SP.Create(parent, hooks)
         if d.place then
           GameTooltip:AddLine(d.label, 1, 1, 1)
           GameTooltip:AddLine(d.kind, 0.8, 0.8, 0.8)
-          GameTooltip:AddLine("Click to adjust it.", 0.62, 0.71, 1)
+          GameTooltip:AddLine(L["SP_CLICK_ADJUST"], 0.62, 0.71, 1)
           GameTooltip:Show()
           return
         end
         GameTooltip:AddLine(lookLabel(d.look), 1, 1, 1)
         GameTooltip:AddLine(valuesLine(d.look), 0.8, 0.8, 0.8, true)
-        if d.live then GameTooltip:AddLine("In effect where you are now.", 0.25, 1, 0.25) end
+        if d.live then GameTooltip:AddLine(L["SP_LIVE"], 0.25, 1, 0.25) end
         if not d.shape then
           GameTooltip:AddLine(" ")
-          GameTooltip:AddLine("Set up in Advanced mode. " .. whyAdvanced(d.look), 0.62, 0.71, 1, true)
-          GameTooltip:AddLine("Click to open it there.", 0.62, 0.71, 1)
+          GameTooltip:AddLine(L["SP_ADVANCED_WHY"]:format(whyAdvanced(d.look)), 0.62, 0.71, 1, true)
+          GameTooltip:AddLine(L["SP_OPEN_THERE"], 0.62, 0.71, 1)
         end
-        GameTooltip:AddLine("Right-click: copy, paste, export or remove", 0.6, 0.6, 0.6)
+        GameTooltip:AddLine(L["SP_RIGHT_CLICK"], 0.6, 0.6, 0.6)
         GameTooltip:Show()
       end)
       r:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -717,7 +710,7 @@ function SP.Create(parent, hooks)
     end
     r.name:SetText(lookLabel(e.look))
     r.vals:SetText(valuesLine(e.look))
-    r.tag:SetText(e.shape and "" or "Advanced")
+    r.tag:SetText(e.shape and "" or L["SP_ADVANCED"])
     r.dot:SetShown(e.live)
     r.sel:SetShown(e.shape ~= nil and sameShape(e.shape, sel))
     if e.look.on == false then r.name:SetTextColor(0.6, 0.6, 0.6) else r.name:SetTextColor(1, 1, 1) end
@@ -769,8 +762,8 @@ function SP.Create(parent, hooks)
     local ok = pcall(box.SetDataProvider, box, CreateDataProvider(rows), ScrollBoxConstants and ScrollBoxConstants.RetainScrollPosition)
     if not ok then box:SetDataProvider(CreateDataProvider(rows)) end
     empty:SetShown(#rows == 0)
-    if query ~= "" then empty:SetText("Nothing found.")
-    else empty:SetText("Nothing set yet.\n\nMove a slider on the left and the place shows up here.") end
+    if query ~= "" then empty:SetText(L["SP_NOTHING_FOUND"])
+    else empty:SetText(L["SP_EMPTY"]) end
   end
 
   -- Refresh ------------------------------------------------------------------------------------
@@ -779,13 +772,13 @@ function SP.Create(parent, hooks)
     local parts = {}
     if not env.instance then
       if env.sub then parts[#parts + 1] = env.sub end
-      parts[#parts + 1] = env.indoors and "Indoors" or "Outdoors"
+      parts[#parts + 1] = env.indoors and L["INDOORS"] or L["OUTDOORS"]
     end
     parts[#parts + 1] = "|T" .. UI.ART .. "Day\\ui-" .. env.period .. ":16|t " .. PERIOD_NAME[env.period] ..
       " " .. ns.FormatHour(env.hour, env.min)
     subText:SetText(table.concat(parts, GREY .. "   /   |r"))
     if not ns.cfg.enabled then
-      nowText:SetText("|cffff4040Duskfall is switched off.|r")
+      nowText:SetText("|cffff4040" .. L["SP_OFF"] .. "|r")
       return
     end
     local names, seen = {}, {}
@@ -796,24 +789,24 @@ function SP.Create(parent, hooks)
         names[#names + 1] = lookLabel(look)
       end
     end
-    if #names == 0 then nowText:SetText("In effect: " .. GREY .. "your normal settings|r")
-    else nowText:SetText("In effect: " .. GREEN .. table.concat(names, ", ") .. "|r") end
+    if #names == 0 then nowText:SetText(L["SP_IN_EFFECT"]:format(GREY .. L["SP_NORMAL"] .. "|r"))
+    else nowText:SetText(L["SP_IN_EFFECT"]:format(GREEN .. table.concat(names, ", ") .. "|r")) end
   end
 
   local function refreshHint(env)
     local look = current()
     if not look then
-      hint:SetText(GREY .. "Nothing set for this yet. Move a slider to change it.|r")
+      hint:SetText(GREY .. L["SP_HINT_NOTHING"] .. "|r")
       return
     end
     local won, matches = wins(look, env)
     local pv = previewEnd and D.state.preview and GetTime() < previewEnd
     if won then
-      hint:SetText(GREEN .. "In effect here now.|r Changes show at once.")
+      hint:SetText(GREEN .. L["SP_IN_EFFECT_HERE"] .. "|r " .. L["SP_HINT_AT_ONCE"])
     elseif matches then
-      hint:SetText("|cffffb040Something more specific wins here.|r" .. (pv and " Showing a preview." or ""))
+      hint:SetText("|cffffb040" .. L["SP_HINT_MORE"] .. "|r" .. (pv and (" " .. L["SP_HINT_PREVIEW"]) or ""))
     else
-      hint:SetText(GREY .. "Not in effect where you are now." .. (pv and "|r Showing a preview." or "|r"))
+      hint:SetText(GREY .. L["SP_HINT_NOT_HERE"] .. "|r" .. (pv and (" " .. L["SP_HINT_PREVIEW"]) or ""))
     end
   end
 
