@@ -9,14 +9,15 @@
 -- fine = a transition step: written with `fine` decimals and no eps skip. The game keeps fractions
 -- (Brightness 48.5, Gamma 1.1234 read back, Kim 2026-11-26), and whole steps showed in fades.
 local ADDON, ns = ...
+local L = ns.L
 local C = {}
 ns.Channels = C
 
 C.list = {
-  { key = "gamma",      cvar = "Gamma",         label = "Gamma",      short = "G",  min = 0.3, max = 2.8, eps = 0.011, decimals = 2, fine = 3, fade = true, overshoot = true },
-  { key = "brightness", cvar = "Brightness",    label = "Brightness", short = "B",  min = 0,   max = 100, eps = 0.6,   decimals = 0, fine = 2, fade = true, overshoot = true },
-  { key = "contrast",   cvar = "Contrast",      label = "Contrast",   short = "C",  min = 0,   max = 100, eps = 0.6,   decimals = 0, fine = 2, fade = true },
-  { key = "bloom",      cvar = "bloomUserMult", label = "Bloom",      short = "Bl", min = 0,   max = 1,   eps = 0.011, decimals = 2, fine = 3, fade = true, overshoot = "light" },
+  { key = "gamma",      cvar = "Gamma",         label = L["CH_GAMMA"],      short = L["CH_GAMMA_SHORT"],  min = 0.3, max = 2.8, eps = 0.011, decimals = 2, fine = 3, fade = true, overshoot = true },   --noloc
+  { key = "brightness", cvar = "Brightness",    label = L["CH_BRIGHTNESS"], short = L["CH_BRIGHTNESS_SHORT"],  min = 0,   max = 100, eps = 0.6,   decimals = 0, fine = 2, fade = true, overshoot = true },   --noloc
+  { key = "contrast",   cvar = "Contrast",      label = L["CH_CONTRAST"],   short = L["CH_CONTRAST_SHORT"],  min = 0,   max = 100, eps = 0.6,   decimals = 0, fine = 2, fade = true },   --noloc
+  { key = "bloom",      cvar = "bloomUserMult", label = L["CH_BLOOM"],      short = L["CH_BLOOM_SHORT"], min = 0,   max = 1,   eps = 0.011, decimals = 2, fine = 3, fade = true, overshoot = "light" },   --noloc
 }
 C.byKey, C.byCVar = {}, {}
 for _, ch in ipairs(C.list) do

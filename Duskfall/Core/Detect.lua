@@ -86,14 +86,14 @@ function D.Preview(target, seconds, opts)
   state.preview = pv
   D.ClearHolds()
   state.target = nil
-  D.Evaluate(pv and pv.why or "preview end")
+  D.Evaluate(pv and pv.why or "preview end")   --noloc
   if pv then
     C_Timer.After(seconds or 10, function()
       if state.preview ~= pv then return end
       state.preview = nil
       D.ClearHolds()
       state.target = nil
-      D.Evaluate("preview end")
+      D.Evaluate("preview end")   --noloc
     end)
   end
 end
@@ -240,7 +240,7 @@ ns.On("CVAR_UPDATE", function(name, value)
   ns.Debug("held %s = %s", ch.key, tostring(v))
   if not state.hinted then
     state.hinted = true
-    ns.Print("kept your %s change while you are here. |cffffd100/dusk save|r (sub, zone or instance) keeps it for this place, |cffffd100/dusk baseline|r makes it your default.", ch.label)
+    ns.Print(ns.L["DETECT_HELD_HINT"], ch.label)
   end
 end)
 
@@ -250,7 +250,7 @@ ns.On("PLAYER_ENTERING_WORLD", function(isInitialLogin, isReloadingUi)
   ns.inCombat = UnitAffectingCombat("player") and true or false
   local cur = C.ReadAll()
   if not cur then
-    ns.Print("can't read Gamma, Brightness or Contrast on this client, so Duskfall stays idle.")
+    ns.Print(ns.L["DETECT_NO_CVARS"])
     return
   end
   local db = ns.db
@@ -263,14 +263,14 @@ ns.On("PLAYER_ENTERING_WORLD", function(isInitialLogin, isReloadingUi)
   end
   if not db.baseline then
     db.baseline = cur
-    ns.Print("your current settings (gamma %.2f, brightness %d, contrast %d, bloom %.2f) are now your baseline. Type |cffffd100/dusk|r for status.",
+    ns.Print(ns.L["DETECT_FIRST_BASELINE"],
       cur.gamma, cur.brightness, cur.contrast, cur.bloom)
   elseif isInitialLogin and not C.SameAll(cur, db.baseline) then
     if C.SameAll(cur, db.lastApplied) then
-      ns.Print("the last session did not log out cleanly; your baseline is kept.")
+      ns.Print(ns.L["DETECT_UNCLEAN"])
     else
       db.baseline = cur
-      ns.Print("your settings changed while Duskfall was away; they are your new baseline.")
+      ns.Print(ns.L["DETECT_CHANGED_AWAY"])
     end
   end
   state.started = true
@@ -294,7 +294,7 @@ ns.On("PLAYER_REGEN_DISABLED", function()
 end)
 ns.On("PLAYER_REGEN_ENABLED", function()
   ns.inCombat = false
-  D.Now("combat ended")
+  D.Now("combat ended")   --noloc
 end)
 
 -- Leaving: the game's own settings go back to the player's baseline.

@@ -28,9 +28,9 @@ local MAX_MAP = 3000   -- the map scan's upper id
 -- Sources ----------------------------------------------------------------------------------------
 local SOURCES = {
   {
-    folder = "Iris", name = "Iris",
+    folder = "Iris", name = "Iris",   --noloc
     entries = function()
-      local db = rawget(_G, "IrisDB")
+      local db = rawget(_G, "IrisDB")   --noloc
       if type(db) ~= "table" or type(db.contexts) ~= "table" then return nil end
       local out = {}
       for key, e in pairs(db.contexts) do
@@ -133,7 +133,7 @@ function AI.Run(src)
   local list = src and src.entries()
   if not list or #list == 0 then return nil, 0, {} end
   local base = ns.db.baseline or {}
-  local st = ns.NewStyle(src.styleName or ("From " .. src.name))
+  local st = ns.NewStyle(src.styleName or ns.L["AI_FROM"]:format(src.name))
   st.scope = { chars = {} }   -- not in use until the player says so
   local seen, matched, skipped = {}, 0, {}
   for _, e in ipairs(list) do
@@ -151,7 +151,7 @@ function AI.Run(src)
         key = "zone:" .. id
       end
     end
-    local name = e.everywhere and "Everywhere" or (sub ~= "" and (sub .. ", " .. zone)) or zone or "?"
+    local name = e.everywhere and ns.L["EVERYWHERE"] or (sub ~= "" and (sub .. ", " .. zone)) or zone or "?"
     if key == nil then
       skipped[#skipped + 1] = name
     else
@@ -182,8 +182,9 @@ function AI.Run(src)
         seen[shapeKey] = true
         matched = matched + 1
         local label = name
-        if place == "indoor" then label = label .. " indoors" elseif place == "outdoor" then label = label .. " outdoors" end
-        if PERIODS[time] then label = label .. " (" .. time .. ")" end
+        if place == "indoor" then label = ns.L["AI_LOOK_INDOORS"]:format(label)
+        elseif place == "outdoor" then label = ns.L["AI_LOOK_OUTDOORS"]:format(label) end
+        if PERIODS[time] then label = ns.L["AI_LOOK_TIME"]:format(label, ns.L["PERIOD_" .. time:upper()]) end
         st.looks[#st.looks + 1] = { id = ns.NewID("l"), name = label, on = true, scope = { global = true },
           absolute = false, where = key and { key } or {}, when = when, values = values }
       end
@@ -209,13 +210,17 @@ end
 -- Chat summary, then "Use it now?".
 function AI.Report(st, matched, skipped, from)
   if not st then
-    ns.Print("nothing from %s could be matched to a place%s.", from or "the other addon",
-      #skipped > 0 and (": " .. table.concat(skipped, "; ")) or "")
+    if #skipped > 0 then
+      ns.Print(ns.L["AI_NOTHING_MATCHED_LIST"], from or ns.L["AI_OTHER_ADDON"], table.concat(skipped, "; "))
+    else
+      ns.Print(ns.L["AI_NOTHING_MATCHED"], from or ns.L["AI_OTHER_ADDON"])
+    end
     return
   end
-  ns.Print("imported %d setting%s into the Style \"%s\".", matched, matched == 1 and "" or "s", st.name)
-  if #skipped > 0 then ns.Print("skipped (no matching place): %s.", table.concat(skipped, "; ")) end
-  ns.UI.Confirm("Use \"" .. st.name .. "\" now?", function() AI.Use(st) end)
+  if matched == 1 then ns.Print(ns.L["AI_IMPORTED_ONE"], st.name)
+  else ns.Print(ns.L["AI_IMPORTED_MANY"], matched, st.name) end
+  if #skipped > 0 then ns.Print(ns.L["AI_SKIPPED"], table.concat(skipped, "; ")) end
+  ns.UI.Confirm(ns.L["AI_USE_NOW"]:format(st.name), function() AI.Use(st) end)
 end
 
 -- Starter Style (Kim, 2026-11-27): our own values for places that are too dark, as changes from
@@ -224,11 +229,12 @@ end
 local DARK = { g = 0.15, b = 4, c = 3 }
 local NIGHT = { g = 0.08, b = 2, c = 1 }
 local STARTER = {
-  name = "Starter", styleName = "Dark Places",
+  name = ns.L["AI_STARTER"], styleName = ns.L["AI_DARK_PLACES"],
   entries = function()
     local out = {}
-    for _, z in ipairs({ { 1431, "Duskwood" }, { 1430, "Deadwind Pass" }, { 1448, "Felwood" },
-                         { 1435, "Swamp of Sorrows" } }) do
+    -- English names are only the fallback when a map id is missing (ids work in every language)
+    for _, z in ipairs({ { 1431, "Duskwood" }, { 1430, "Deadwind Pass" }, { 1448, "Felwood" },   --noloc
+                         { 1435, "Swamp of Sorrows" } }) do   --noloc
       out[#out + 1] = { mapID = z[1], zone = z[2], relative = true, g = DARK.g, b = DARK.b, c = DARK.c }
     end
     out[#out + 1] = { everywhere = true, time = "night", relative = true, g = NIGHT.g, b = NIGHT.b, c = NIGHT.c }
@@ -240,15 +246,15 @@ local STARTER = {
 function AI.AddStarter(ask)
   local st, matched, skipped = AI.Run(STARTER)
   if not st then
-    ns.Print("the starter Style found none of its places.")
+    ns.Print(ns.L["AI_STARTER_NONE"])
     return
   end
   if ask then
     AI.Report(st, matched, skipped, STARTER.name)
   else
     AI.Use(st)
-    ns.Print("using the Style \"%s\": dark places and nights are a little brighter. Change it on the Styles tab.", st.name)
-    if #skipped > 0 then ns.Print("skipped (no matching place): %s.", table.concat(skipped, "; ")) end
+    ns.Print(ns.L["AI_STARTER_USED"], st.name)
+    if #skipped > 0 then ns.Print(ns.L["AI_SKIPPED"], table.concat(skipped, "; ")) end
   end
   return st
 end

@@ -9,18 +9,19 @@
 -- Sounds come from LibSharedMedia-3.0 (other addons' sounds too); ours are registered there.
 -- Public: ns.Sound.Play(name), ns.Sound.List(), ns.Sound.CHANNELS
 local ADDON, ns = ...
+local L = ns.L
 local SND = {}
 ns.Sound = SND
 
 local DIR = "Interface\\AddOns\\Duskfall\\Assets\\Sounds\\"
 local OWN = {   -- name -> file, in the order the dropdown lists them
-  { "Duskfall: New place", DIR .. "new-zone.ogg" },
-  { "Duskfall: Setting starts", DIR .. "active-zone.ogg" },
+  { "Duskfall: New place", DIR .. "new-zone.ogg" },   -- names are saved keys --noloc
+  { "Duskfall: Setting starts", DIR .. "active-zone.ogg" },   --noloc
 }
 local SETTLE = 1.5
 local GAP = 5
 
-local LSM = LibStub and LibStub("LibSharedMedia-3.0", true)
+local LSM = LibStub and LibStub("LibSharedMedia-3.0", true)   --noloc
 local ownFile = {}
 for _, s in ipairs(OWN) do
   ownFile[s[1]] = s[2]
@@ -29,8 +30,8 @@ end
 
 -- { value, label } in the order the dropdown shows them
 SND.CHANNELS = {
-  { "SFX", "Sound effects" }, { "Master", "Master" }, { "Ambience", "Ambience" },
-  { "Music", "Music" }, { "Dialog", "Dialog" },
+  { "SFX", L["SND_CH_SFX"] }, { "Master", L["SND_CH_MASTER"] }, { "Ambience", L["SND_CH_AMBIENCE"] },   --noloc
+  { "Music", L["SND_CH_MUSIC"] }, { "Dialog", L["SND_CH_DIALOG"] },   --noloc
 }
 
 -- Every sound name: ours first, then LibSharedMedia's (without its "None"), sorted.
@@ -39,7 +40,7 @@ function SND.List()
   for _, s in ipairs(OWN) do out[#out + 1] = s[1] end
   if LSM then
     for _, name in ipairs(LSM:List("sound")) do
-      if not ownFile[name] and name ~= "None" then out[#out + 1] = name end
+      if not ownFile[name] and name ~= "None" then out[#out + 1] = name end   --noloc
     end
   end
   return out

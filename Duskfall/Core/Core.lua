@@ -34,9 +34,9 @@ ns.DEFAULTS = {
   cursorLight = true,           -- a soft light follows the mouse over Duskfall's windows (UI/CursorLight.lua)
   cursorLightStrength = 1,      -- its brightness, 0.25 - 3 (1 = the built-in WIDE_A / CORE_A)
   soundNew = true,              -- a sound the first time you walk into a place (Core/Sound.lua)
-  soundNewName = "Duskfall: New place",       -- LibSharedMedia sound names (ours: Assets/Sounds)
+  soundNewName = "Duskfall: New place",       -- LibSharedMedia sound names (ours: Assets/Sounds) --noloc
   soundActive = false,          -- a sound when walking into a place makes a setting take effect
-  soundActiveName = "Duskfall: Setting starts",
+  soundActiveName = "Duskfall: Setting starts",   --noloc
   soundChannel = "SFX",         -- PlaySoundFile channel
   peekLift = 0.5,               -- Hold to brighten: 0 - 1 (Core/Detect.lua LIFT at 1)
 }
@@ -50,11 +50,11 @@ local function fmt(s, ...)
 end
 
 function ns.Print(s, ...)
-  print("|cff9fb4ffDuskfall|r " .. fmt(s, ...))
+  print("|cff9fb4ffDuskfall|r " .. fmt(s, ...))   --noloc
 end
 
 function ns.Debug(s, ...)
-  if ns.cfg and ns.cfg.debug then print("|cff7f7f7fDuskfall|r " .. fmt(s, ...)) end
+  if ns.cfg and ns.cfg.debug then print("|cff7f7f7fDuskfall|r " .. fmt(s, ...)) end   --noloc
 end
 
 -- An error inside a handler is printed once per place, never stops the other handlers.
@@ -62,7 +62,7 @@ local reported = {}
 local function report(where, err)
   if reported[where] then return end
   reported[where] = true
-  ns.Print("error in %s: %s", tostring(where), tostring(err))
+  ns.Print(ns.L["CORE_ERROR"], tostring(where), tostring(err))
 end
 
 function ns.Safe(fn, where, ...)
@@ -237,7 +237,7 @@ ns.On("ADDON_LOADED", function(name)
   db.places = db.places or {}
   db.lastApplied = db.lastApplied or {}
   db.styles = db.styles or {}
-  if #db.styles == 0 then db.styles[1] = newStyle("My Style") end
+  if #db.styles == 0 then db.styles[1] = newStyle(ns.L["MY_STYLE"]) end
   ns.cfg = db.settings
   ns.Fire("READY")
 end)
