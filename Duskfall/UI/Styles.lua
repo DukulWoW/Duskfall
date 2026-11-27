@@ -220,9 +220,13 @@ W.AddTab("styles", L["TAB_STYLES"], function(tab)
 
   local nameLbl = UI.Label(right, L["LE_NAME"], "GameFontNormalSmall")
   nameLbl:SetPoint("TOPLEFT", right, "TOPLEFT", 4, -48)
+  local scopeLbl = UI.Label(right, L["LE_SCOPE"], "GameFontNormalSmall")
+  scopeLbl:SetPoint("TOPLEFT", right, "TOPLEFT", 4, -80)
+  -- Name and Scope boxes start after the longer label (German "Geltungsbereich" was cut off)
+  local boxX = math.max(50, math.ceil(math.max(nameLbl:GetUnboundedStringWidth(), scopeLbl:GetUnboundedStringWidth())) + 10)
   local name = CreateFrame("EditBox", nil, right, "InputBoxTemplate")
   name:SetSize(240, 20)
-  name:SetPoint("LEFT", nameLbl, "LEFT", 50, 0)
+  name:SetPoint("LEFT", nameLbl, "LEFT", boxX, 0)
   name:SetAutoFocus(false)
   name:SetMaxLetters(40)
   name:SetScript("OnTextChanged", function(self, user)
@@ -239,8 +243,6 @@ W.AddTab("styles", L["TAB_STYLES"], function(tab)
   name:SetScript("OnEditFocusLost", function(self) if sel then self:SetText(sel.name or "") end end)
 
   local note
-  local scopeLbl = UI.Label(right, L["LE_SCOPE"], "GameFontNormalSmall")
-  scopeLbl:SetPoint("TOPLEFT", right, "TOPLEFT", 4, -80)
   local scopeDD = add(UI.ScopeDropdown(right, 240, { style = true,
     tip = L["ST_SCOPE_TIP"],
     get = function() return sel and sel.scope end,
@@ -254,7 +256,7 @@ W.AddTab("styles", L["TAB_STYLES"], function(tab)
       refreshList()
       refreshUse()
     end }))
-  scopeDD:SetPoint("LEFT", scopeLbl, "LEFT", 50, 0)
+  scopeDD:SetPoint("LEFT", scopeLbl, "LEFT", boxX, 0)
 
   note = UI.Label(right, "")
   note:SetPoint("TOPLEFT", right, "TOPLEFT", 4, -104)

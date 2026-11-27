@@ -2,7 +2,9 @@
 -- Loads first. Other languages (Locales/<code>.lua) load after it, return at once unless they are
 -- the active language, and set only the keys they translate; the rest stays English.
 -- Public: ns.L[key] (a missing key shows its own name, "!!KEY" in debug mode), ns.HasL(key),
---         ns.locale (the active language code), ns.LANGS (codes /dusk lang accepts)
+--         ns.locale (the active language code), ns.LANGS (codes /dusk lang accepts),
+--         ns.LANG_NAMES (each in its own name), ns.LANG_READY (shipped), ns.LANG_FONT (see below)
+-- Players pick a language in Settings (the menu left of Refresh), which saves DuskfallDB.lang too.
 -- Testing (Kim): /dusk lang <code> shows another language on any client (DuskfallDB.lang);
 -- /dusk pseudo mark puts "@@" before every string, so text that skips ns.L stands out;
 -- /dusk pseudo long also makes every word about 30% longer (overflow, pages never scroll).
@@ -12,15 +14,20 @@ local ADDON, ns = ...
 
 local db = type(DuskfallDB) == "table" and DuskfallDB or nil
 ns.LANGS = { "enUS", "zhCN", "zhTW", "deDE", "frFR", "esES", "ruRU", "koKR" }
+ns.LANG_NAMES = { enUS = "English", zhCN = "简体中文", zhTW = "繁體中文", deDE = "Deutsch", frFR = "Français",
+                  esES = "Español", ruRU = "Русский", koKR = "한국어" }
+-- The languages with a file in Locales (and the TOC): add a code here when its file ships
+ns.LANG_READY = { enUS = true, zhCN = true, zhTW = true, deDE = true }
 ns.locale = (db and type(db.lang) == "string" and db.lang ~= "") and db.lang or GetLocale()
 if ns.locale == "enGB" then ns.locale = "enUS" end
 if ns.locale == "esMX" then ns.locale = "esES" end
 local PSEUDO = db and db.pseudo
 
--- /dusk lang on a client of another script: its fonts lack the letters, so while testing every
--- font object gets one that has them (whole UI). Files verified on an enUS Forever client (S6).
+-- A language picked on a client of another script (Settings, or /dusk lang): its fonts lack the
+-- letters, so every font object gets one that has them (the whole game UI). Files verified on an enUS Forever client (S6).
 local TEST_FONTS = { zhCN = "Fonts\\ARKai_T.ttf", zhTW = "Fonts\\bKAI00M.TTF", koKR = "Fonts\\2002.TTF",
                      ruRU = "Fonts\\FRIZQT___CYR.TTF" }
+ns.LANG_FONT = TEST_FONTS   -- Settings warns that a pick with an entry here changes the game's font
 local swap = ns.locale ~= GetLocale() and TEST_FONTS[ns.locale]
 if swap and GetFonts then
   for _, entry in ipairs(GetFonts() or {}) do
@@ -455,6 +462,8 @@ L["ST_TRY_OFF"] = "Duskfall is off; switch it on to try a transition."
 
 -- Widgets: sliders, scope, search, copy box ----------------------------------------------------
 L["W_DEFAULT"] = "Default: %s"
+L["W_RESET_TIP"] = "Back to the default (right-clicking the slider does the same)."
+L["W_RCLICK_MID"] = "Right-click the slider: back to the middle mark."
 L["W_COPY_SCOPE"] = "Copy scope"
 L["W_PASTE_SCOPE"] = "Paste scope"
 L["W_NO_CHANGE"] = "No change"
@@ -584,6 +593,12 @@ L["TAB_SETTINGS"] = "Settings"
 L["SET_ON_TIP"] = "Off puts your baseline back and leaves the sliders to you."
 L["SET_REFRESH"] = "Refresh"
 L["SET_REFRESH_TIP"] = "Puts the settings for here back on screen, at once. Use it if the screen ever seems stuck (after a Compare, a preview or a slider moved by hand). Also |cffffd100/dusk refresh|r."
+L["SET_LANG"] = "Language"
+L["SET_LANG_TIP"] = "Duskfall follows your game's language. Pick another one here; the interface reloads."
+L["SET_LANG_CLIENT"] = "Game language"
+L["SET_LANG_SOON"] = "(coming soon)"
+L["SET_LANG_Q"] = "Show Duskfall in %s? The interface reloads."
+L["SET_LANG_FONT"] = "Your game's font has no letters for this language, so all of the game's text switches to one that has them, until you pick the game language again."
 L["SET_GENERAL"] = "General"
 L["SET_GENERAL_DESC"] = "On or off, sounds, doorway delay and timing."
 L["SET_SWITCHED_OFF"] = "Switched off"
@@ -813,6 +828,8 @@ L["PN_120_02"] = "Duskfall speaks Chinese, Simplified and Traditional. More lang
 L["PN_120_01"] = "About ends with a line of solidarity: LGBTQIA+ Pride, Trans Rights, Slava Ukraini and Free Palestine."
 L["PN_120_03"] = "Patch note dates are written as numbers (2026-11-27), the same in every language."
 L["PN_120_04"] = "The About tab shows the solidarity line where the status line was; the status line stays on every other tab."
+L["PN_120_05"] = "Settings: pick Duskfall's language in the menu next to Refresh, or let it follow your game."
+L["PN_120_06"] = "Reset next to the sliders and Play next to the sounds are small icons now, and long labels shrink to fit their buttons."
 L["PN_110_01"] = "Patch notes: this page. Find it on About and in Help; after an update a short note by the minimap points to it."
 L["PN_110_02"] = "Compare: hold the Compare button (Places, mini panel) or its key binding to see your own settings; let go to see Duskfall's again."
 L["PN_110_03"] = "HDR tab: turn HDR on and set peak brightness, paper white and strength, for HDR screens. The game's own options have none of these."

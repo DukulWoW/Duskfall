@@ -89,6 +89,14 @@ local function build()
     top:SetFrameLevel(inner:GetFrameLevel() + 2)
     b.text = UI.Label(top, t[1], "GameFontNormal")
     b.text:SetPoint("LEFT", b, "LEFT", 12, 0)
+    b.text:SetPoint("RIGHT", b, "RIGHT", -8, 0)
+    b.text:SetWordWrap(false)
+    -- A long translated topic gets a smaller font, then two lines
+    local _, base = b.text:GetFont()
+    if UI.FitText(b.text, 164, base) then
+      b.text:SetWordWrap(true)
+      if b.text.SetMaxLines then b.text:SetMaxLines(2) end
+    end
     b:SetScript("OnClick", function() show(i) end)
     buttons[i] = b
   end

@@ -17,7 +17,7 @@ local SP = {}
 ns.SimplePlaces = SP
 
 local LEFT_W = 440
-local LABEL_W = 62
+local LABEL_W = 62       -- at least; wider when a translated label needs it
 local LIST_ROW_H = 40
 local ROW_GAP = 40       -- Place / Time / Inside rows
 local SLIDER_GAP = 44    -- the sliders (the mini panel keeps 36)
@@ -308,11 +308,21 @@ function SP.Create(parent, hooks)
 
   -- Left: which setting ------------------------------------------------------------------------
   local y = -112
-  local SEG_W = LEFT_W - LABEL_W
+  -- The label column fits the longest label and its help icon (German "Umgebung" ran into it)
+  local labelW = LABEL_W
+  do
+    local m = left:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    for _, k in ipairs({ "SP_PLACE", "SP_TIME", "SP_INSIDE" }) do
+      m:SetText(L[k])
+      labelW = math.max(labelW, math.ceil(m:GetUnboundedStringWidth()) + 3 + 16 + 6)
+    end
+    m:Hide()
+  end
+  local SEG_W = LEFT_W - labelW
   local function row(label, seg)
     local l = UI.Label(left, label, "GameFontNormal")
     l:SetPoint("TOPLEFT", left, "TOPLEFT", 12, y - 5)
-    seg:SetPoint("TOPLEFT", left, "TOPLEFT", 12 + LABEL_W, y)
+    seg:SetPoint("TOPLEFT", left, "TOPLEFT", 12 + labelW, y)
     y = y - ROW_GAP
     return l
   end

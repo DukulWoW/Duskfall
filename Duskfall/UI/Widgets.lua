@@ -69,6 +69,7 @@ end
 
 local function tooltip(frame, title, tip)
   if not title and not tip then return end
+  frame.hasTip = true   -- a fitted button label shows its full text only when there is no tooltip
   frame:HookScript("OnEnter", function(self)
     GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
     if title then GameTooltip:AddLine(title, 1, 1, 1) end
@@ -86,7 +87,10 @@ UI.Tooltip = tooltip
 --   "main"    gold filled, dark text: the one main action on a page (Open Duskfall, Try it, Paste)
 --   "danger"  dark with a faint red edge: Reset, Delete, Remove
 -- Hover brightens it, pressing moves the text 1 px down-right, disabled greys it. :SetText,
--- :SetEnabled, :GetFontString work as on any button.
+-- :SetEnabled, :GetFontString work as on any button. A label too wide for its button (long
+-- translations) gets a smaller font, down to FIT_MIN of its size; still too wide, it ends in "..."
+-- and the hover shows the whole text (BNB's button fit). b:SetGlyph(name) shows an icon
+-- (Assets/Buttons/glyph-<name>, white, tinted like the text) instead of a label.
 local BUTTON_LOOK = {
   normal = { bottom = { 0.09, 0.06, 0.03, 0.92 }, top = { 0.26, 0.19, 0.1, 0.92 }, border = { 1, 0.82, 0, 0.55 },
              text = { 1, 0.82, 0 }, shadow = true },
@@ -109,6 +113,19 @@ local BUTTON_HOT = {
              text = { 1, 0.94, 0.88 } },
 }
 local HOVER_FADE = 0.15
+local FIT_MIN, FIT_PAD = 0.8, 6
+
+-- Shrinks fs (a label anchored left and right inside its frame) to fit width w, down to FIT_MIN of
+-- base; returns true when it is still cut. fs must be shown in its font at base size or smaller.
+function UI.FitText(fs, w, base)
+  local path, cur, flags = fs:GetFont()
+  if not path or not cur or cur <= 0 or not w or w <= 0 then return false end
+  local need = fs:GetUnboundedStringWidth() * base / cur
+  local size = base
+  if need > w then size = math.max(math.ceil(base * FIT_MIN * 2) / 2, math.floor(base * w / need * 2) / 2) end
+  if size ~= cur then fs:SetFont(path, size, flags or "") end
+  return need * size / base > w + 0.5
+end
 
 function UI.Button(parent, text, w, onClick, h)
   local b = CreateFrame("Button", nil, parent)
@@ -124,10 +141,35 @@ function UI.Button(parent, text, w, onClick, h)
     hots[k]:SetShown(false)
   end
   local fs = b:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-  fs:SetPoint("CENTER", b, "CENTER", 0, 0)
+  fs:SetPoint("LEFT", b, "LEFT", FIT_PAD, 0)
+  fs:SetPoint("RIGHT", b, "RIGHT", -FIT_PAD, 0)
   fs:SetWordWrap(false)
   b:SetFontString(fs)
   b:SetPushedTextOffset(1, -1)
+  local _, baseSize = fs:GetFont()
+  local cut = false
+  local function fit()
+    local t = fs:GetText()
+    if not t or t == "" then cut = false return end
+    cut = UI.FitText(fs, b:GetWidth() - 2 * FIT_PAD, baseSize)
+  end
+  local setText = b.SetText
+  function b:SetText(t)
+    setText(self, t)
+    fit()
+  end
+  b:HookScript("OnSizeChanged", fit)
+  local glyph
+  function b:SetGlyph(name, size)
+    glyph = glyph or b:CreateTexture(nil, "OVERLAY")
+    glyph:SetSize(size or 14, size or 14)
+    glyph:SetPoint("CENTER")
+    glyph:SetTexture(UI.ART .. "Buttons\\glyph-" .. name)
+    setText(self, "")
+    cut = false
+  end
+  b:HookScript("OnMouseDown", function() if glyph then glyph:SetPoint("CENTER", 1, -1) end end)
+  b:HookScript("OnMouseUp", function() if glyph then glyph:SetPoint("CENTER", 0, 0) end end)
   local kind, heat, want = "normal", 0, 0
   local function paint()
     local on = b:IsEnabled()
@@ -141,6 +183,7 @@ function UI.Button(parent, text, w, onClick, h)
     local e = on and heat or 0
     local t1, t2 = L.text, H.text
     fs:SetTextColor(t1[1] + (t2[1] - t1[1]) * e, t1[2] + (t2[2] - t1[2]) * e, t1[3] + (t2[3] - t1[3]) * e)
+    if glyph then glyph:SetVertexColor(t1[1] + (t2[1] - t1[1]) * e, t1[2] + (t2[2] - t1[2]) * e, t1[3] + (t2[3] - t1[3]) * e) end
     local shadow = L.shadow and e < 0.5
     fs:SetShadowOffset(shadow and 1 or 0, shadow and -1 or 0)
   end
@@ -158,8 +201,18 @@ function UI.Button(parent, text, w, onClick, h)
     kind = BUTTON_HOT[k] and k or "normal"
     paint()
   end
-  b:SetScript("OnEnter", function() hover(true) end)
-  b:SetScript("OnLeave", function() hover(false) end)
+  b:SetScript("OnEnter", function(self)
+    hover(true)
+    if cut and not self.hasTip then
+      GameTooltip:SetOwner(self, "ANCHOR_TOP")
+      GameTooltip:AddLine(fs:GetText(), 1, 1, 1, true)
+      GameTooltip:Show()
+    end
+  end)
+  b:SetScript("OnLeave", function(self)
+    hover(false)
+    if cut and not self.hasTip and GameTooltip:IsOwned(self) then GameTooltip:Hide() end
+  end)
   b:SetScript("OnEnable", paint)
   b:SetScript("OnDisable", function(self)
     want, heat = 0, 0
@@ -452,8 +505,12 @@ function UI.Slider(parent, width, o)
   if o.default ~= nil then text = text .. "  |cff888888" .. L["W_DEFAULT"]:format(fmt(o.default)) .. "|r" end
   lbl:SetText(text)
 
-  local reset = UI.Button(h, L["BTN_RESET"], 52, nil, 20)
+  -- Reset as an icon (Kim, 1.2.0: the word ran out of the button in German, and the icon leaves the
+  -- slider more room); the tooltip names it
+  local reset = UI.Button(h, "", 24, nil, 20)
+  reset:SetGlyph("reset")
   reset:SetPoint("TOPRIGHT", h, "TOPRIGHT", 0, -16)
+  tooltip(reset, L["BTN_RESET"], L["W_RESET_TIP"])
 
   -- Our own slider (Kim): gold track, the diamond, < > steppers; the mark is the default
   local enabled = true
@@ -523,7 +580,7 @@ function UI.Dropdown(parent, width, o)
   local dd = CreateFrame("DropdownButton", nil, h, "WowStyle1DropdownTemplate")
   dd:SetPoint("TOPLEFT", h, "TOPLEFT", 0, -16)
   dd:SetWidth(width)
-  tooltip(dd, o.label, o.tip)
+  tooltip(dd, o.tipTitle or o.label, o.tip)
   local function items()
     if type(o.items) == "function" then return o.items() end
     return o.items
@@ -534,10 +591,11 @@ function UI.Dropdown(parent, width, o)
       -- Long lists (other addons' sounds) scroll inside the menu instead of running off the screen
       if #list > 20 and root.SetScrollMode then pcall(root.SetScrollMode, root, 20 * 20) end
       for _, it in ipairs(list) do
-        root:CreateRadio(it[2],
+        local r = root:CreateRadio(it[2],
           function(v) return o.get() == v end,
           function(v) ns.Safe(o.set, "dropdown", v) end,
           it[1])
+        if it[3] and r and r.SetEnabled then r:SetEnabled(false) end   -- it[3]: shown, not pickable
       end
     end)
   end
@@ -1033,10 +1091,10 @@ function UI.Segmented(parent, width, o)
     end)
     b:SetScript("OnEnter", function(self)
       local it = items[self.index]
-      if not it or not it[4] then return end
+      if not it or not (it[4] or self.text:IsTruncated()) then return end
       GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
       GameTooltip:AddLine(it[2], 1, 1, 1)
-      GameTooltip:AddLine(it[4], 0.8, 0.8, 0.8, true)
+      if it[4] then GameTooltip:AddLine(it[4], 0.8, 0.8, 0.8, true) end
       GameTooltip:Show()
     end)
     b:SetScript("OnLeave", function(self) if GameTooltip:IsOwned(self) then GameTooltip:Hide() end end)
@@ -1047,12 +1105,26 @@ function UI.Segmented(parent, width, o)
   function f:Refresh()
     items = o.items() or {}
     local cur = o.get()
-    local need, total = {}, 0
+    -- Each choice gets room by the length of its label; when the labels need more than the row has
+    -- (long translations), they all get a smaller font first, down to FIT_MIN (then "...")
+    local need, total, textW, fixed = {}, 0, 0, 0
+    local font, base, flags
     for i, it in ipairs(items) do
       local b = buttons[i] or button(i)
       b.index = i
+      if not font then font, base, flags = GameFontHighlightSmall:GetFont() end
+      b.text:SetFont(font, base, flags or "")
       b.text:SetText(it[2])
-      need[i] = b.text:GetStringWidth() + 22 + (it[3] and 17 or 0)
+      need[i] = b.text:GetUnboundedStringWidth()
+      textW = textW + need[i]
+      fixed = fixed + 22 + (it[3] and 17 or 0)
+    end
+    local scale = 1
+    if textW + fixed > width and textW > 0 then scale = math.max(FIT_MIN, (width - fixed) / textW) end
+    local size = base and math.floor(base * scale * 2) / 2
+    for i, it in ipairs(items) do
+      if scale < 1 then buttons[i].text:SetFont(font, size, flags or "") end
+      need[i] = need[i] * scale + 22 + (it[3] and 17 or 0)
       total = total + need[i]
     end
     local x = 0
@@ -1136,7 +1208,7 @@ function UI.LightSlider(parent, width, o)
     hot:SetPoint("LEFT", h, "LEFT", 0, 0)
     hot:SetSize(LABEL_W, H)
     hot:EnableMouse(true)
-    tooltip(hot, o.label, o.tip .. "\n\nRight-click the slider: back to the middle mark.")
+    tooltip(hot, o.label, o.tip .. "\n\n" .. L["W_RCLICK_MID"])
   end
 
   local STEP_W = o.steppers and 16 or 0

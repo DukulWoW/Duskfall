@@ -128,7 +128,9 @@ local function buildGeneral(p)
       set = function(v) ns.cfg[nameKey] = v SND.Play(v) end })
     dd:SetPoint("TOPRIGHT", sc, "TOPRIGHT", -14, y + 16)
     controls[#controls + 1] = dd
-    local play = UI.Button(p, L["GEN_PLAY"], 52, function() SND.Play(ns.cfg[nameKey]) end, 22)
+    -- Play as an icon in every language (Kim, 1.2.0: "Abspielen" ran into the switch's label)
+    local play = UI.Button(p, "", 26, function() SND.Play(ns.cfg[nameKey]) end, 22)
+    play:SetGlyph("play", 12)
     play:SetPoint("RIGHT", dd._dd, "LEFT", -6, 0)
     UI.Tooltip(play, L["GEN_PLAY"], L["GEN_PLAY_TIP"])
   end
@@ -631,6 +633,47 @@ W.AddTab("settings", L["TAB_SETTINGS"], function(page)
   end, 24)
   refresh:SetPoint("RIGHT", quick, "LEFT", -28, 0)
   UI.Tooltip(refresh, L["SET_REFRESH"], L["SET_REFRESH_TIP"])
+  -- Language, left of Refresh (Kim, 1.2.0; BNB's selector): the game's language first, then each
+  -- language in its own name with its flag; the ones not shipped yet greyed. A pick asks, saves
+  -- db.lang (as /dusk lang) and reloads. On a client of another script the whole game's font changes
+  -- (Locales/enUS.lua), and the question says so. Away from English, "Game language" keeps its
+  -- English name too, so a player who cannot read the language finds the way back.
+  local FLAG = UI.ART .. "Flags\\flag-"
+  local LANG_FLAG = { enUS = "en", zhCN = "cn", zhTW = "tw", deDE = "de", frFR = "fr", esES = "es", koKR = "ko" }
+  local function langText(code)
+    local f = LANG_FLAG[code]
+    return (f and ("|T" .. FLAG .. f .. ":14:20:0:0:32:32|t ") or "") .. ns.LANG_NAMES[code]   --noloc
+  end
+  local lang
+  lang = UI.Dropdown(overview, 150, { tipTitle = L["SET_LANG"], tip = L["SET_LANG_TIP"],
+    items = function()
+      local client = L["SET_LANG_CLIENT"]
+      if ns.locale ~= "enUS" then client = client .. " (Game language)" end   --noloc
+      local out = { { "client", client } }
+      for _, code in ipairs(ns.LANGS) do
+        if ns.LANG_READY[code] then
+          out[#out + 1] = { code, langText(code) }
+        else
+          out[#out + 1] = { code, "|cff888888" .. langText(code) .. "  " .. L["SET_LANG_SOON"] .. "|r", true }
+        end
+      end
+      return out
+    end,
+    get = function() return ns.db.lang or "client" end,
+    set = function(v)
+      if v == (ns.db.lang or "client") then return end
+      local code = v ~= "client" and v or nil
+      local q = L["SET_LANG_Q"]:format(code and ns.LANG_NAMES[code] or L["SET_LANG_CLIENT"])
+      if code and code ~= GetLocale() and ns.LANG_FONT[code] then q = q .. "\n\n" .. L["SET_LANG_FONT"] end
+      UI.Confirm(q, function()
+        ns.db.lang = code
+        ReloadUI()
+      end)
+      lang:Refresh()
+    end })
+  lang:SetPoint("RIGHT", refresh, "LEFT", -10, 0)
+  lang._dd:ClearAllPoints()
+  lang._dd:SetPoint("RIGHT", refresh, "LEFT", -10, 0)
   local tiles = {}
   -- Layout (Kim): General across the top, then Time of day | Baseline, then Display | Characters,
   -- tall enough to fill the page. TILE_SPOT = key -> { column (0, 1 or "full"), row }.
