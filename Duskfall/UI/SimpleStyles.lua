@@ -10,6 +10,7 @@
 -- this character only (ns.StyleClaim takes it out of the others, as the Advanced scope does).
 -- Public: ns.SimpleStyles.Create(parent) -> frame
 local ADDON, ns = ...
+local L = ns.L
 local UI, R = ns.UI, ns.Resolver
 local SS = {}
 ns.SimpleStyles = SS
@@ -24,10 +25,9 @@ local BASE = { fade = 1.5, dark = 4.0, light = 1.0 }
 local K = 1.3
 
 local CARDS = {
-  { mode = "instant", name = "Instant", desc = "The new look is there at once. Nothing to wait for." },
-  { mode = "fade", name = "Smooth", desc = "A soft fade from one look to the next." },
-  { mode = "adapt", name = "Like your eyes",
-    desc = "Into the dark slowly, with a short dip, out into the light quickly, with a short glare. As real eyes adjust." },
+  { mode = "instant", name = L["SS_INSTANT"], desc = L["SS_INSTANT_DESC"] },
+  { mode = "fade", name = L["SS_SMOOTH"], desc = L["SS_SMOOTH_DESC"] },
+  { mode = "adapt", name = L["SS_EYES"], desc = L["SS_EYES_DESC"] },
 }
 
 -- Light over time for a step from bright to dark at t = 0.3 (0 .. 1).
@@ -88,7 +88,7 @@ end
 ns.UseStyle = use
 
 StaticPopupDialogs["DUSKFALL_RENAME_STYLE"] = {
-  text = "New name for the Style:",
+  text = L["SS_RENAME"],
   button1 = OKAY,
   button2 = CANCEL,
   hasEditBox = true,
@@ -131,24 +131,21 @@ function SS.Create(parent)
   local function style() return R.ActiveStyle() end
   local function tr() return ns.StyleTransition(style()) end
 
-  local title = UI.Label(f, "How should changes feel?", "GameFontNormalHuge")
+  local title = UI.Label(f, L["SS_TITLE"], "GameFontNormalHuge")
   title:SetPoint("TOPLEFT", f, "TOPLEFT", 14, -14)
-  local titleHelp = UI.HelpIcon(f, "feel", "How changes feel", "Instant, a soft fade, or like your eyes. Speed " ..
-    "makes it quicker or slower; Try it shows it.")
+  local titleHelp = UI.HelpIcon(f, "feel", L["SS_TITLE_HELP"], L["SS_TITLE_HELP_TIP"])
   titleHelp:SetPoint("LEFT", title, "RIGHT", 8, 0)
-  local sub = UI.Label(f, "When the screen changes, for example when you walk from the sun into a cave.", "GameFontHighlight")
+  local sub = UI.Label(f, L["SS_SUB"], "GameFontHighlight")
   sub:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -8)
   sub:SetTextColor(0.7, 0.7, 0.7)
 
   -- The Style dropdown, top right
-  local ddLabel = UI.Label(f, "Style", "GameFontNormal")
+  local ddLabel = UI.Label(f, L["STYLE_DEFAULT"], "GameFontNormal")
   local dd = CreateFrame("DropdownButton", nil, f, "WowStyle1DropdownTemplate")
   dd:SetWidth(220)
   dd:SetPoint("TOPRIGHT", f, "TOPRIGHT", -14, -18)
   ddLabel:SetPoint("RIGHT", dd, "LEFT", -8, 0)
-  UI.Tooltip(dd, "Style", "A Style is your places and how changes feel, under one name. Picking one uses it " ..
-    "(for every character, or only this one once characters have their own). New, Duplicate, Rename and " ..
-    "Delete are in the list too.")
+  UI.Tooltip(dd, L["STYLE_DEFAULT"], L["SS_STYLE_TIP"])
   local function ddText() pcall(dd.OverrideText, dd, style().name or "?") end
   local function deleteStyle(st)
     if #ns.db.styles <= 1 then return end
@@ -173,7 +170,7 @@ function SS.Create(parent)
   -- Style, and the X and its hover hooks are made once per line frame.
   local function rowX(button, st)
     if not button.duskX then
-      local x = UI.ClearX(button, 14, nil, "Delete this Style")
+      local x = UI.ClearX(button, 14, nil, L["SS_DELETE_STYLE"])
       x:SetPoint("RIGHT", button, "RIGHT", -4, 0)
       x:SetFrameLevel(button:GetFrameLevel() + 5)
       x:Hide()
@@ -209,23 +206,23 @@ function SS.Create(parent)
       if line.AddInitializer then line:AddInitializer(function(button) rowX(button, st) end) end
     end
     root:CreateDivider()
-    local nb = root:CreateButton("New Style", function()
-      local st = ns.NewStyle("Style " .. (#ns.db.styles + 1))
+    local nb = root:CreateButton(L["SS_NEW_STYLE"], function()
+      local st = ns.NewStyle(L["SL_STYLE_NEW_NAME"]:format(#ns.db.styles + 1))
       st.scope = { chars = {} }
       table.insert(ns.db.styles, st)
       use(st)
       refresh()
     end)
-    local db = root:CreateButton("Duplicate this Style", function()
+    local db = root:CreateButton(L["SS_DUP_STYLE"], function()
       local c = ns.StyleCopy(style())
       table.insert(ns.db.styles, c)
       use(c)
       refresh()
     end)
-    local rb = root:CreateButton("Rename...", function()
+    local rb = root:CreateButton(L["SS_RENAME_MENU"], function()
       StaticPopup_Show("DUSKFALL_RENAME_STYLE", nil, nil, { st = style(), done = function() refresh() end })
     end)
-    local del = root:CreateButton("Delete this Style", function() deleteStyle(style()) end)
+    local del = root:CreateButton(L["SS_DELETE_STYLE"], function() deleteStyle(style()) end)
     noX(nb) noX(db) noX(rb) noX(del)
     if #ns.db.styles <= 1 and del and del.SetEnabled then pcall(del.SetEnabled, del, false) end
   end)
@@ -296,8 +293,8 @@ function SS.Create(parent)
   local function summary(sp)
     local t = tr()
     local x = 2 ^ (sp * K)
-    if t.mode == "fade" then return string.format("%.1f s", round1(BASE.fade * x)) end
-    return string.format("%.1f s / %.1f s", round1(BASE.dark * x), round1(BASE.light * x))
+    if t.mode == "fade" then return L["SECS_FMT"]:format(round1(BASE.fade * x)) end
+    return L["SECS_PAIR"]:format(round1(BASE.dark * x), round1(BASE.light * x))
   end
   -- Speed and Try it in a rounded box at the bottom, above Share / Import (Kim)
   local speedBox = CreateFrame("Frame", nil, f)
@@ -306,9 +303,9 @@ function SS.Create(parent)
   speedBox:SetHeight(SPEED_H)
   UI.RoundBox(speedBox, { radius = 10, bottom = { 0, 0, 0, 0.5 }, top = { 0.22, 0.17, 0.1, 0.4 },
     border = { 1, 0.82, 0, 0.12 } })   -- soft: strong gold is for controls (Kim)
-  local speed = UI.LightSlider(speedBox, 550, { label = "Speed", min = -1, max = 1, step = 0.1,
+  local speed = UI.LightSlider(speedBox, 550, { label = L["SS_SPEED"], min = -1, max = 1, step = 0.1,
     from = { 1, 0.84, 0.45 }, to = { 0.2, 0.24, 0.5 },
-    tip = "Left: quicker. Right: slower. The middle is the default pace.",
+    tip = L["SS_SPEED_TIP"],
     fmt = function(v) return summary(v) end,
     zero = function() return GREY .. summary(0) .. "|r" end,
     get = function() return speedOf() end,
@@ -326,7 +323,7 @@ function SS.Create(parent)
   speedNote:SetTextColor(0.6, 0.6, 0.6)
 
   local tryBtn
-  tryBtn = UI.Button(speedBox, "Try it", 120, function()
+  tryBtn = UI.Button(speedBox, L["TRY_IT"], 120, function()
     local total = ns.TryStyle(style())
     if not total then return end
     tryBtn:SetEnabled(false)
@@ -334,18 +331,18 @@ function SS.Create(parent)
   end, 26)
   tryBtn:SetKind("main")
   tryBtn:SetPoint("RIGHT", speedBox, "RIGHT", -16, 0)
-  UI.Tooltip(tryBtn, "Try it", "Goes darker, waits, and comes back, the way you picked, wherever you are.")
+  UI.Tooltip(tryBtn, L["TRY_IT"], L["SS_TRY_TIP"])
 
   -- Share --------------------------------------------------------------------------------------
   local share
-  share = UI.Button(f, "Share this Style", 150, function()
+  share = UI.Button(f, L["SS_SHARE"], 150, function()
     UI.Copy(style().name, ns.Share.ExportStyle(style()), share)
   end)
   share:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", 12, 8)
-  UI.Tooltip(share, "Share this Style", "Copies the Style, with every place you set, as a line of text to give to a friend.")
-  local import = UI.Button(f, "Import", 100, function() ns.Share.ImportDialog(function() refresh() end) end)
+  UI.Tooltip(share, L["SS_SHARE"], L["SS_SHARE_TIP"])
+  local import = UI.Button(f, L["BTN_IMPORT"], 100, function() ns.Share.ImportDialog(function() refresh() end) end)
   import:SetPoint("LEFT", share, "RIGHT", 8, 0)
-  UI.Tooltip(import, "Import", "Paste a Style or a setting someone exported.")
+  UI.Tooltip(import, L["BTN_IMPORT"], L["SS_IMPORT_TIP"])
   -- Import from another lighting addon (Core/AddonImport.lua), only while its data is loaded
   local fromAddon = UI.Button(f, "", 170, function()
     local AI = ns.AddonImport
@@ -356,16 +353,14 @@ function SS.Create(parent)
     refresh()
   end)
   -- The starter Style (Core/AddonImport.lua): our own values for dark places, as a new Style
-  local starter = UI.Button(f, "Starter Style", 120, function()
+  local starter = UI.Button(f, L["SS_STARTER"], 120, function()
     if ns.AddonImport then ns.AddonImport.AddStarter(true) end
     refresh()
   end)
   starter:SetPoint("LEFT", import, "RIGHT", 8, 0)
-  UI.Tooltip(starter, "Starter Style", "Adds the Style \"Dark Places\": a little more light in the darkest zones (Duskwood, "
-    .. "Deadwind Pass, Felwood, Swamp of Sorrows) and at night everywhere. Your own Style stays as it is.")
+  UI.Tooltip(starter, L["SS_STARTER"], L["SS_STARTER_TIP"])
   fromAddon:SetPoint("LEFT", starter, "RIGHT", 8, 0)
-  UI.Tooltip(fromAddon, "Import from another addon", "Brings that addon's settings into a new Style, as changes from "
-    .. "your own settings. Places Duskfall can't find are skipped and named in chat.")
+  UI.Tooltip(fromAddon, L["SS_FROM_ADDON"], L["SS_FROM_ADDON_TIP"])
   fromAddon:Hide()
   local foot = UI.Label(f, "")
   foot:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -12, 14)
@@ -378,16 +373,16 @@ function SS.Create(parent)
     for _, c in ipairs(cards) do c.picked:SetShown(c.def.mode == mode) end
     speed:Refresh()
     speed:SetEnabled(mode ~= "instant")
-    if mode == "instant" then speedNote:SetText("Instant has no speed.")
-    elseif mode == "fade" then speedNote:SetText("How long a fade takes.")
-    else speedNote:SetText("Into the dark / out into the light.") end
+    if mode == "instant" then speedNote:SetText(L["SS_NO_SPEED"])
+    elseif mode == "fade" then speedNote:SetText(L["SS_FADE_SPEED"])
+    else speedNote:SetText(L["SS_ADAPT_SPEED"]) end
     ddText()
     local src = ns.AddonImport and ns.AddonImport.FirstAvailable()
     fromAddon:SetShown(src ~= nil)
-    if src then fromAddon:SetText("Import from " .. src.name) end
+    if src then fromAddon:SetText(L["SS_FROM_NAME"]:format(src.name)) end
     foot:SetShown(src == nil)   -- no room for both on the row
-    if perCharacter() then foot:SetText(GREY .. "Characters have their own Styles: picking one sets it for this character.|r")
-    else foot:SetText(GREY .. "Picking a Style uses it for every character.|r") end
+    if perCharacter() then foot:SetText(GREY .. L["SS_PER_CHAR"] .. "|r")
+    else foot:SetText(GREY .. L["SS_FOR_ALL"] .. "|r") end
   end
 
   f:SetScript("OnShow", function() refresh() end)

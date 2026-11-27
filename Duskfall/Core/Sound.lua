@@ -7,7 +7,7 @@
 -- plays once at most; "setting starts" only when the settings in effect then differ from the last
 -- time; never two sounds within GAP seconds. If both apply, "setting starts" plays.
 -- Sounds come from LibSharedMedia-3.0 (other addons' sounds too); ours are registered there.
--- Public: ns.Sound.Play(name), ns.Sound.List(), ns.Sound.CHANNELS
+-- Public: ns.Sound.Play(name), ns.Sound.List(), ns.Sound.Label(name), ns.Sound.CHANNELS
 local ADDON, ns = ...
 local L = ns.L
 local SND = {}
@@ -45,6 +45,10 @@ function SND.List()
   end
   return out
 end
+
+-- The name a dropdown shows: ours translated (their saved names stay English), others as they are
+local OWN_LABEL = { ["Duskfall: New place"] = L["SND_OWN_NEW"], ["Duskfall: Setting starts"] = L["SND_OWN_ACTIVE"] }   --noloc
+function SND.Label(name) return OWN_LABEL[name] or name end
 
 local function fileOf(name)
   if ownFile[name] then return ownFile[name] end

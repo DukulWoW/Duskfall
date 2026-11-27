@@ -8,6 +8,7 @@
 -- dragged only when always shown or after "Move" on the Display page. Position: settings.statusPos.
 -- Public: ns.StatusDisplay.Refresh(), .Unlock(seconds), .ResetPosition(), .Test(), .Place(f)
 local ADDON, ns = ...
+local L = ns.L
 local UI, D = ns.UI, ns.Detect
 local SD = {}
 ns.StatusDisplay = SD
@@ -38,8 +39,8 @@ end
 local function fill()
   local state = ns.StateText()
   local color = "|cffffd100"
-  if state == "Off" then color = "|cffff4040"
-  elseif state == "Baseline" or D.state.comparing == "before" then color = "|cffffffff" end
+  if state == L["WIN_OFF"] then color = "|cffff4040"
+  elseif state == L["BR_BASELINE"] or D.state.comparing == "before" then color = "|cffffffff" end
   frame.look:SetText(color .. state .. "|r")
   frame.values:SetText(ns.ValuesText())
 end
@@ -114,7 +115,7 @@ local function build()
   bar:Hide()
   bar.track = track
   f.bar = bar
-  f.hint = UI.Label(f, "Drag to move", "GameFontDisableSmall")
+  f.hint = UI.Label(f, L["SD_DRAG"], "GameFontDisableSmall")
   f.hint:SetPoint("TOP", f, "BOTTOM", 0, -2)
   f.hint:Hide()
   place(f)
@@ -236,7 +237,7 @@ ns.Listen("EVALUATED", function(why)
   local changed = lastKey ~= nil and key ~= lastKey
   lastKey = key
   -- Not while editing or trying a transition: the editor shows it already
-  if why == "edit" or why == "demo" or why == "preview end" then changed = false end
+  if why == "edit" or why == "demo" or why == "preview end" then changed = false end   --noloc
   SD.Refresh(changed)
 end)
 ns.Listen("COMPARE", function() SD.Refresh(true) end)

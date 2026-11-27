@@ -9,10 +9,11 @@
 -- (BNB's ui-dawn / day / dusk / night) and from - to. Reset puts back 5, 8, 17, 20.
 -- Public: UI.DayBar(parent, width) -> holder with :Refresh()
 local ADDON, ns = ...
+local L = ns.L
 local UI = ns.UI
 
 local ORDER = { "dawn", "day", "dusk", "night" }
-local NAME = { dawn = "Dawn", day = "Day", dusk = "Dusk", night = "Night" }
+local NAME = { dawn = L["PERIOD_DAWN"], day = L["PERIOD_DAY"], dusk = L["PERIOD_DUSK"], night = L["PERIOD_NIGHT"] }
 local COLOR = {
   night = { 0.13, 0.17, 0.42 },
   dawn  = { 0.86, 0.47, 0.52 },
@@ -153,7 +154,7 @@ function UI.DayBar(parent, width)
     local env = ns.Situations.Snapshot()
     now:ClearAllPoints()
     now:SetPoint("CENTER", bar, "LEFT", x(env.hour + env.min / 60), 0)
-    nowText:SetText(string.format("Now %s - %s", ns.FormatHour(env.hour, env.min), NAME[env.period]))
+    nowText:SetText(L["DAY_NOW"]:format(ns.FormatHour(env.hour, env.min), NAME[env.period]))
   end
 
   -- Handles on the four inner edges
@@ -177,8 +178,8 @@ function UI.DayBar(parent, width)
       line:SetColorTexture(1, 1, 1, 1)
       knob:SetColorTexture(1, 1, 1, 1)
       GameTooltip:SetOwner(self, "ANCHOR_TOP")
-      GameTooltip:AddLine(NAME[key] .. " starts at " .. ns.FormatHour(buckets()[key]), 1, 1, 1)
-      GameTooltip:AddLine("Drag to move it.", 0.8, 0.8, 0.8)
+      GameTooltip:AddLine(L["DAY_STARTS"]:format(NAME[key], ns.FormatHour(buckets()[key])), 1, 1, 1)
+      GameTooltip:AddLine(L["DAY_DRAG"], 0.8, 0.8, 0.8)
       GameTooltip:Show()
     end)
     hd:SetScript("OnLeave", function()
@@ -227,7 +228,7 @@ function UI.DayBar(parent, width)
         placeHandles()
         if GameTooltip:IsShown() then
           GameTooltip:ClearLines()
-          GameTooltip:AddLine(NAME[dragging] .. " starts at " .. ns.FormatHour(hour), 1, 1, 1)
+          GameTooltip:AddLine(L["DAY_STARTS"]:format(NAME[dragging], ns.FormatHour(hour)), 1, 1, 1)
           GameTooltip:Show()
         end
       end
@@ -239,7 +240,7 @@ function UI.DayBar(parent, width)
     end
   end)
 
-  local reset = UI.Button(h, "Reset to default", 140, function()
+  local reset = UI.Button(h, L["DAY_RESET"], 140, function()
     for k, v in pairs(DEFAULT) do ns.cfg.buckets[k] = v end
     h:Refresh()
     ns.Detect.Evaluate("settings")

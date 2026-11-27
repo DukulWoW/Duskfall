@@ -81,17 +81,17 @@ local function describe(f)
   local name = f.GetName and f:GetName()
   local parent = f.GetParent and f:GetParent()
   local pname = parent and parent.GetName and parent:GetName()
-  return string.format("%s (parent %s, %s %d, mouse %s, shown %s)", name or "anonymous", pname or "anonymous",
+  return string.format("%s (parent %s, %s %d, mouse %s, shown %s)", name or "anonymous", pname or "anonymous",   --noloc
     f.GetFrameStrata and f:GetFrameStrata() or "?", f.GetFrameLevel and f:GetFrameLevel() or -1,
     tostring(f.IsMouseEnabled and f:IsMouseEnabled()), tostring(f.IsVisible and f:IsVisible()))
 end
 
 -- /dusk moon: what Duskfall knows about the moon, then (after 3 s, hover the moon) what is under the mouse.
 function M.Report()
-  ns.Print("moon: searched %s, found %s, usable %s, setting %s.", tostring(searched), tostring(moon ~= nil),
+  ns.Print("moon: searched %s, found %s, usable %s, setting %s.", tostring(searched), tostring(moon ~= nil),   --noloc
     tostring(M.Usable()), tostring(on()))
-  if moon then ns.Print("moon frame: %s", describe(moon)) end
-  if catcher then ns.Print("click catcher: %s", describe(catcher)) end
+  if moon then ns.Print("moon frame: %s", describe(moon)) end   --noloc
+  if catcher then ns.Print("click catcher: %s", describe(catcher)) end   --noloc
   local host = MinimapCluster and MinimapCluster.MinimapContainer
   if host and host.GetChildren then
     local n = 0
@@ -99,17 +99,17 @@ function M.Report()
       n = n + 1
       local bg = child.Background
       local atlas = bg and bg.GetAtlas and bg:GetAtlas()
-      if atlas then ns.Print("  container child %d: .Background atlas %s", n, tostring(atlas)) end
+      if atlas then ns.Print("  container child %d: .Background atlas %s", n, tostring(atlas)) end   --noloc
     end
-    ns.Print("  MinimapContainer has %d children.", n)
+    ns.Print("  MinimapContainer has %d children.", n)   --noloc
   else
-    ns.Print("  no MinimapCluster.MinimapContainer.")
+    ns.Print("  no MinimapCluster.MinimapContainer.")   --noloc
   end
-  ns.Print("hover the moon now: in 3 seconds the frames under the mouse are listed.")
+  ns.Print("hover the moon now: in 3 seconds the frames under the mouse are listed.")   --noloc
   C_Timer.After(3, function()
     local foci = GetMouseFoci and GetMouseFoci() or {}
-    if #foci == 0 then ns.Print("under the mouse: nothing that takes the mouse.") end
-    for i, f in ipairs(foci) do ns.Print("under the mouse %d: %s", i, describe(f)) end
+    if #foci == 0 then ns.Print("under the mouse: nothing that takes the mouse.") end   --noloc
+    for i, f in ipairs(foci) do ns.Print("under the mouse %d: %s", i, describe(f)) end   --noloc
   end)
 end
 

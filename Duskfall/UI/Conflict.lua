@@ -10,17 +10,18 @@
 -- "Don't warn again" remembers it (db.conflictOk["*"]).
 -- Public: ns.Conflict.Check()
 local ADDON, ns = ...
+local L = ns.L
 local UI = ns.UI
 local CF = {}
 ns.Conflict = CF
 
 -- Addons that change the same settings, lower case: folder names and titles.
 local KNOWN = {
-  "iris", "forever bright", "foreverbright", "adaptive brightness", "adaptivebrightness",
-  "dynamic ambiance", "dynamicambiance", "earendil", "advanced graphics tuner", "advancedgraphicstuner",
-  "panorama forever", "panoramaforever", "mac-ever", "macever", "hdr tuner", "hdr tuner (forever)", "hdrtuner",
-  "forever visuals", "forevervisuals", "lighternights", "lighter nights", "lighter_nights",
-  "dynamic light", "true-night", "truenight", "az set map", "azsetmap", "nightlight",
+  "iris", "forever bright", "foreverbright", "adaptive brightness", "adaptivebrightness",   --noloc
+  "dynamic ambiance", "dynamicambiance", "earendil", "advanced graphics tuner", "advancedgraphicstuner",   --noloc
+  "panorama forever", "panoramaforever", "mac-ever", "macever", "hdr tuner", "hdr tuner (forever)", "hdrtuner",   --noloc
+  "forever visuals", "forevervisuals", "lighternights", "lighter nights", "lighter_nights",   --noloc
+  "dynamic light", "true-night", "truenight", "az set map", "azsetmap", "nightlight",   --noloc
 }
 local isKnown = {}
 for _, k in ipairs(KNOWN) do isKnown[k] = true end
@@ -136,7 +137,7 @@ function CF.Next()
 end
 ns.On("PLAYER_REGEN_ENABLED", function() CF.Next() end)
 
-local WHAT = "Gamma, Brightness and Contrast"
+local WHAT = L["CF_WHAT"]
 
 -- For this character, then saved: the addon list only keeps a change after SaveAddOns (the
 -- game's AddOns window does the same on Okay; without it the reload forgot it, Kim). Reloads.
@@ -156,41 +157,37 @@ local function knownWarning(name)
   local AI = ns.AddonImport
   local src = AI and AI.For(name)
   local canImport = src and AI.Available(src)
-  local body = title .. " also changes " .. WHAT .. ". Two addons changing the same settings fight over them, "
-    .. "and the screen can flicker or jump. Use only one of them."
+  local body = L["CF_BODY"]:format(title, WHAT)
   if canImport then
-    body = body .. "\n\nDuskfall can bring " .. title .. "'s settings along first, as a new Style. Turning "
-      .. title .. " off reloads the interface."
+    body = body .. "\n\n" .. L["CF_CAN_IMPORT"]:format(title, title)
   else
-    body = body .. "\n\nTurning " .. title .. " off reloads the interface."
+    body = body .. "\n\n" .. L["CF_RELOADS"]:format(title)
   end
   local buttons = {}
   if canImport then
-    buttons[#buttons + 1] = { "Import, then turn off " .. title, 230, function()
+    buttons[#buttons + 1] = { L["CF_IMPORT_OFF"]:format(title), 230, function()
       AI.RunBeforeReload(src)
       turnOff(name)
     end }
-    buttons[#buttons + 1] = { "Turn off " .. title, 150, function() turnOff(name) end }
+    buttons[#buttons + 1] = { L["CF_TURN_OFF"]:format(title), 150, function() turnOff(name) end }
   else
-    buttons[#buttons + 1] = { "Turn off " .. title .. " and reload", 220, function() turnOff(name) end }
+    buttons[#buttons + 1] = { L["CF_TURN_OFF_RELOAD"]:format(title), 220, function() turnOff(name) end }
   end
-  buttons[#buttons + 1] = { "Keep both", 110, function() setOk(name) end }
+  buttons[#buttons + 1] = { L["CF_KEEP"], 110, function() setOk(name) end }
   return {
-    title = title .. " is on too",
+    title = L["CF_TITLE"]:format(title),
     body = body,
     buttons = buttons,
-    chat = Y .. title .. "|r also changes " .. WHAT .. "; the two will fight over them. Use only one.",
+    chat = L["CF_CHAT"]:format(Y .. title .. "|r", WHAT),
   }
 end
 
 local function unknownWarning()
   return {
-    title = "Another addon is changing your screen",
-    body = "Something besides Duskfall keeps changing " .. WHAT .. ", most likely another addon. Two addons "
-      .. "changing the same settings fight over them, and the screen can flicker or jump.\n\nIf you use "
-      .. "another lighting or graphics addon, turn one of them off.",
-    buttons = { { "OK", 110 }, { "Don't warn again", 150, function() setOk("*") end } },
-    chat = "something besides Duskfall keeps changing " .. WHAT .. ", most likely another addon.",
+    title = L["CF_UNKNOWN_TITLE"],
+    body = L["CF_UNKNOWN_BODY"]:format(WHAT),
+    buttons = { { L["CF_OK"], 110 }, { L["CF_DONT_WARN"], 150, function() setOk("*") end } },
+    chat = L["CF_UNKNOWN_CHAT"]:format(WHAT),
   }
 end
 

@@ -8,6 +8,7 @@
 -- Save keeps the new baseline, Cancel (or closing) puts the old one back.
 -- Public: ns.Calibrate.Open()
 local ADDON, ns = ...
+local L = ns.L
 local UI, W, C, D = ns.UI, ns.Window, ns.Channels, ns.Detect
 local CB = {}
 ns.Calibrate = CB
@@ -52,27 +53,26 @@ local function writeBaseline()
 end
 
 local function build()
-  local f = W.NewOverlay("Calibrate")
-  f.closeBtn:SetText("Cancel")
+  local f = W.NewOverlay(L["BL_CALIBRATE"])
+  f.closeBtn:SetText(L["BTN_CANCEL"])
 
-  local save = UI.Button(f, "Save as baseline", 150, function()
+  local save = UI.Button(f, L["CAL_SAVE"], 150, function()
     kept = true
     f:FadeHide()
   end)
   save:SetKind("main")
   save:SetPoint("RIGHT", f.closeBtn, "LEFT", -8, 0)
-  UI.Tooltip(save, "Save as baseline", "Keeps these values as your own look, which every setting in Places changes from.")
+  UI.Tooltip(save, L["CAL_SAVE"], L["CAL_SAVE_TIP"])
 
-  local intro = UI.Label(f, "Your baseline shows while this is open. Set each slider by its strip, top to bottom, "
-    .. "in a room lit as when you play.")
+  local intro = UI.Label(f, L["CAL_INTRO"])
   intro:SetPoint("TOPLEFT", f, "TOPLEFT", 22, -50)
   intro:SetTextColor(0.7, 0.7, 0.7)
 
-  strip(f, -82, "Black level", "Brightness: raise until square 2 is just visible; square 1 stays black.",
+  strip(f, -82, L["CAL_BLACK"], L["CAL_BLACK_TIP"],
     10, 0, function(i) return (i - 1) * 2 / 255 end, true)
-  strip(f, -180, "White level", "Contrast: square 9 should still differ from square 10.",
+  strip(f, -180, L["CAL_WHITE"], L["CAL_WHITE_TIP"],
     10, 1, function(i) return (237 + (i - 1) * 2) / 255 end, true)
-  strip(f, -278, "Grey steps", "Gamma: every step should look about as far from the next; none merge.",
+  strip(f, -278, L["CAL_GREY"], L["CAL_GREY_TIP"],
     21, -1, function(i) return (i - 1) / 20 end, false)
 
   -- The sliders, one under the other
@@ -83,7 +83,7 @@ local function build()
     local sl = UI.LightSlider(f, 724, { label = ch.label, labelW = 90, valueW = 70, min = ch.min, max = ch.max,
       step = STEP[k], mid = GAME_DEFAULT[k], from = g.from, to = g.to,
       fmt = function(v) return C.Format(k, v) end, zero = function() return C.Format(k, GAME_DEFAULT[k]) end,
-      tip = "Right-click: the game default.",
+      tip = L["CAL_RIGHT_CLICK"],
       get = function() return ns.db.baseline and ns.db.baseline[k] or GAME_DEFAULT[k] end,
       set = function(v)
         if not ns.db.baseline then return end

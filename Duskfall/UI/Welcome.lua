@@ -3,6 +3,7 @@
 -- before v3 count as welcomed (Core.lua migration). /dusk welcome shows it again.
 -- Public: ns.Welcome.Show()
 local ADDON, ns = ...
+local L = ns.L
 local UI = ns.UI
 local WL = {}
 ns.Welcome = WL
@@ -43,13 +44,9 @@ local function build()
   icon:SetAllPoints()
   icon:SetTexture(UI.ART .. "icon")
 
-  local title = UI.Label(f, "Welcome to Duskfall", "GameFontNormalHuge")
+  local title = UI.Label(f, L["WL_TITLE"], "GameFontNormalHuge")
   title:SetPoint("TOPLEFT", f, "TOPLEFT", 52, -16)
-  local body = UI.Label(f, "Duskfall sets Gamma, Brightness, Contrast and Bloom for where you are: a dark "
-    .. "cave, a city at night, a dungeon.\n\n"
-    .. "Nothing changes until you ask. Open Duskfall where you stand, move a slider, and this place "
-    .. "keeps that look.\n\n"
-    .. "Find it later on the minimap's moon, or type " .. Y .. "/dusk|r.", "GameFontHighlight")
+  local body = UI.Label(f, L["WL_BODY"], "GameFontHighlight")
   body:SetPoint("TOPLEFT", f, "TOPLEFT", 20, -58)
   body:SetPoint("RIGHT", f, "RIGHT", -20, 0)
   body:SetJustifyV("TOP")
@@ -57,9 +54,7 @@ local function build()
   body:SetTextColor(0.9, 0.88, 0.84)
 
   -- The starter Style (Kim): off unless ticked; used when the welcome is closed either way
-  local starter = UI.Check(f, { label = "Start with a little more light in dark places",
-    tip = "Adds the starter Style and uses it: the darkest zones and the nights a little brighter. "
-      .. "Change or remove it on the Styles tab." })
+  local starter = UI.Check(f, { label = L["WL_STARTER"], tip = L["WL_STARTER_TIP"] })
   starter:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", 18, 50)
   local function takeStarter()
     if starter:GetChecked() and ns.AddonImport then
@@ -67,14 +62,14 @@ local function build()
       ns.AddonImport.AddStarter(false)
     end
   end
-  local open = UI.Button(f, "Open Duskfall", 140, function()
+  local open = UI.Button(f, L["WL_OPEN"], 140, function()
     takeStarter()
     f:FadeHide()
     if ns.OpenWindow then ns.OpenWindow("places", true) end
   end, 26)
   open:SetKind("main")
   open:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -16, 14)
-  local later = UI.Button(f, "Later", 90, function() takeStarter() f:FadeHide() end, 26)
+  local later = UI.Button(f, L["WL_LATER"], 90, function() takeStarter() f:FadeHide() end, 26)
   later:SetPoint("RIGHT", open, "LEFT", -8, 0)
 
   -- The About tab's link buttons (sites and bug reports), bottom left (Kim)
@@ -83,7 +78,7 @@ local function build()
   for _, l in ipairs(ns.LINKS or {}) do
     if l.url then
       local b = UI.IconButton(f, SZ, l.key, {
-        tip = l.name, tipSub = l.sub or ("Copy the " .. l.name .. " link"),
+        tip = l.name, tipSub = l.sub or L["LINK_COPY"]:format(l.name),
         onClick = function(self) UI.Copy(l.name, l.url, self) end,
       })
       b:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", 16 + n * (SZ + GAP), 13)

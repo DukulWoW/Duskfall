@@ -5,14 +5,15 @@
 -- left-click opens the notes, right-click closes it.
 -- Public: ns.PatchNotes.Open(version), ns.PatchNotes.Toggle()
 local ADDON, ns = ...
+local L = ns.L
 local UI, W = ns.UI, ns.Window
 local PN = {}
 ns.PatchNotes = PN
 
 local CHIP = {   -- BNB's chip colours (HelpBook CHIP_KINDS, skin)
-  new = { "NEW", { 0.40, 0.80, 0.42 } },
-  change = { "CHANGE", { 0.42, 0.65, 1.00 } },
-  fix = { "FIX", { 0.95, 0.38, 0.35 } },
+  new = { L["PN_NEW"], { 0.40, 0.80, 0.42 } },
+  change = { L["PN_CHANGE"], { 0.42, 0.65, 1.00 } },
+  fix = { L["PN_FIX"], { 0.95, 0.38, 0.35 } },
 }
 local CHIP_W, CHIP_H, CHIP_GAP, ROW_GAP = 60, 16, 10, 10
 local TOAST_SECONDS = 10
@@ -46,8 +47,8 @@ local function show(i)
   local e = ns.PATCH_NOTES[i]
   if not e then return end
   current = i
-  heading:SetText("Duskfall " .. e.version)
-  sub:SetText(e.date or "Not released yet")
+  heading:SetText("Duskfall " .. e.version)   --noloc
+  sub:SetText(e.date or L["PN_NOT_RELEASED"])
   for n, b in ipairs(buttons) do
     b.pick:SetShown(n == i)
     if n == i then
@@ -71,9 +72,9 @@ local function show(i)
 end
 
 local function build()
-  local f = W.NewOverlay("Patch Notes")
+  local f = W.NewOverlay(L["AB_PATCH"])
   -- Help next to Close, as Help has Patch Notes there (Kim)
-  local help = UI.Button(f, "Help", 120, function() if ns.Help then ns.Help.Open() end end)
+  local help = UI.Button(f, L["BTN_HELP"], 120, function() if ns.Help then ns.Help.Open() end end)
   help:SetPoint("RIGHT", f.closeBtn, "LEFT", -8, 0)
 
   -- Versions
@@ -97,9 +98,9 @@ local function build()
     local top = CreateFrame("Frame", nil, b)
     top:SetAllPoints()
     top:SetFrameLevel(inner:GetFrameLevel() + 2)
-    b.text = UI.Label(top, "Version " .. e.version, "GameFontNormal")
+    b.text = UI.Label(top, L["VERSION_FMT"]:format(e.version), "GameFontNormal")
     b.text:SetPoint("LEFT", b, "LEFT", 12, 0)
-    b.date = UI.Label(top, e.date or "next", "GameFontHighlightSmall")
+    b.date = UI.Label(top, e.date or L["PN_NEXT"], "GameFontHighlightSmall")
     b.date:SetPoint("RIGHT", b, "RIGHT", -10, 0)
     b:SetScript("OnClick", function() show(i) end)
     buttons[i] = b
@@ -206,7 +207,7 @@ local function buildToast()
   icon:SetSize(34, 34)
   icon:SetPoint("LEFT", t, "LEFT", 6, 0)
   icon:SetTexture(UI.ART .. "icon")
-  local line = UI.Label(t, "Check out what's new in Duskfall!", "GameFontNormal")
+  local line = UI.Label(t, L["PN_TOAST"], "GameFontNormal")
   line:SetPoint("TOPLEFT", icon, "TOPRIGHT", 8, -2)
   line:SetPoint("RIGHT", t, "RIGHT", -8, 0)
   line:SetWordWrap(false)
@@ -220,8 +221,8 @@ local function buildToast()
   -- What the clicks do, on hover (Kim: the line itself stays short)
   t:SetScript("OnEnter", function(self)
     GameTooltip:SetOwner(self, "ANCHOR_TOP")
-    GameTooltip:AddLine("Patch Notes", 1, 1, 1)
-    GameTooltip:AddLine("Click to read what's new. Right-click to close.", 0.78, 0.78, 0.78, true)
+    GameTooltip:AddLine(L["AB_PATCH"], 1, 1, 1)
+    GameTooltip:AddLine(L["PN_TOAST_TIP"], 0.78, 0.78, 0.78, true)
     GameTooltip:Show()
   end)
   t:SetScript("OnLeave", function(self) if GameTooltip:IsOwned(self) then GameTooltip:Hide() end end)
@@ -234,7 +235,7 @@ end
 function PN.Toast()
   if not toast then buildToast() end
   if ns.StatusDisplay and ns.StatusDisplay.Place then ns.StatusDisplay.Place(toast) end
-  toast.sub:SetText("Version " .. ns.VERSION)
+  toast.sub:SetText(L["VERSION_FMT"]:format(ns.VERSION))
   toast:Show()
   local shown = toast
   C_Timer.After(TOAST_SECONDS, function() if shown:IsOpen() then shown:FadeHide(0.6) end end)

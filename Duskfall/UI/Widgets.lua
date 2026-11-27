@@ -13,6 +13,7 @@
 --         UI.Border(f, r, g, b, a), UI.RoundBox(f, o), UI.AutoHideScroll(box, bar), UI.ClearX(parent, size, onClick, tip),
 --         UI.SearchBox(parent, width, o), UI.HelpIcon(parent, topic, title, text), UI.Segmented(parent, width, o), UI.LightSlider(parent, width, o)
 local ADDON, ns = ...
+local L = ns.L
 local UI = {}
 ns.UI = UI
 
@@ -448,10 +449,10 @@ function UI.Slider(parent, width, o)
   lbl:SetJustifyH("LEFT")
   lbl:SetWordWrap(false)
   local text = o.label or ""
-  if o.default ~= nil then text = text .. "  |cff888888Default: " .. fmt(o.default) .. "|r" end
+  if o.default ~= nil then text = text .. "  |cff888888" .. L["W_DEFAULT"]:format(fmt(o.default)) .. "|r" end
   lbl:SetText(text)
 
-  local reset = UI.Button(h, "Reset", 52, nil, 20)
+  local reset = UI.Button(h, L["BTN_RESET"], 52, nil, 20)
   reset:SetPoint("TOPRIGHT", h, "TOPRIGHT", 0, -16)
 
   -- Our own slider (Kim): gold track, the diamond, < > steppers; the mark is the default
@@ -584,10 +585,10 @@ function UI.ScopeIsGlobal(scope, style)
 end
 
 function UI.ScopeText(scope, style)
-  if UI.ScopeIsGlobal(scope, style) then return "Global" end
+  if UI.ScopeIsGlobal(scope, style) then return L["SCOPE_GLOBAL"] end
   local names = {}
   for guid in pairs(scopeChars(scope) or {}) do names[#names + 1] = ns.CharName(guid) end
-  if #names == 0 then return "Unused" end
+  if #names == 0 then return L["SCOPE_UNUSED"] end
   table.sort(names)
   return table.concat(names, ", ")
 end
@@ -595,7 +596,7 @@ end
 function UI.ScopeDropdown(parent, width, o)
   local dd = CreateFrame("DropdownButton", nil, parent, "WowStyle1DropdownTemplate")
   dd:SetWidth(width)
-  if o.tip then tooltip(dd, "Scope", o.tip) end
+  if o.tip then tooltip(dd, L["LE_SCOPE"], o.tip) end
   local function refreshText() pcall(dd.OverrideText, dd, UI.ScopeText(o.get(), o.style)) end
   local function done(sc)
     ns.Safe(o.set, "scope", sc)
@@ -603,7 +604,7 @@ function UI.ScopeDropdown(parent, width, o)
     return MenuResponse and MenuResponse.Refresh
   end
   dd:SetupMenu(function(_, root)
-    root:CreateCheckbox("Global", function() return UI.ScopeIsGlobal(o.get(), o.style) end, function()
+    root:CreateCheckbox(L["SCOPE_GLOBAL"], function() return UI.ScopeIsGlobal(o.get(), o.style) end, function()
       if UI.ScopeIsGlobal(o.get(), o.style) then
         if o.style then return done({ chars = {} }) end
         return MenuResponse and MenuResponse.Refresh
@@ -626,8 +627,8 @@ function UI.ScopeDropdown(parent, width, o)
       end)
     end
     root:CreateDivider()
-    root:CreateButton("Copy scope", function() UI.scopeClip = UI.DeepCopy(o.get() or { global = true }) end)
-    local paste = root:CreateButton("Paste scope", function()
+    root:CreateButton(L["W_COPY_SCOPE"], function() UI.scopeClip = UI.DeepCopy(o.get() or { global = true }) end)
+    local paste = root:CreateButton(L["W_PASTE_SCOPE"], function()
       if not UI.scopeClip then return end
       local sc = UI.DeepCopy(UI.scopeClip)
       if not o.style and UI.ScopeIsGlobal(sc) then sc = { global = true } end
@@ -1212,7 +1213,7 @@ function UI.LightSlider(parent, width, o)
     return INSET + (v - o.min) / (o.max - o.min) * w
   end
   local function show()
-    if math.abs(cur - MID) < o.step / 2 then val:SetText(o.zero and o.zero() or "|cff9d9d9dNo change|r")
+    if math.abs(cur - MID) < o.step / 2 then val:SetText(o.zero and o.zero() or ("|cff9d9d9d" .. L["W_NO_CHANGE"] .. "|r"))
     else val:SetText(o.fmt and o.fmt(cur) or tostring(cur)) end
     local x0, x1 = xOf(MID), xOf(cur)
     mark:ClearAllPoints()
@@ -1361,11 +1362,11 @@ function UI.SearchBox(parent, width, o)
   eb:SetTextInsets(inset, o.height and 24 or 22, 0, 0)
   local ph = eb:CreateFontString(nil, "OVERLAY", "GameFontDisable")
   ph:SetPoint("LEFT", eb, "LEFT", inset, 0)
-  ph:SetText(o.placeholder or "Search")
+  ph:SetText(o.placeholder or L["PL_SEARCH"])
   local x = UI.ClearX(eb, 16, function()
     eb:SetText("")
     eb:ClearFocus()
-  end, "Clear")
+  end, L["W_CLEAR"])
   x:SetPoint("RIGHT", eb, "RIGHT", o.height and -7 or -2, 0)
   x:Hide()
   local function sync()
@@ -1399,7 +1400,7 @@ function UI.HelpIcon(parent, topic, title, text)
     GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
     GameTooltip:AddLine(title, 1, 1, 1)
     if text then GameTooltip:AddLine(text, 0.8, 0.8, 0.8, true) end
-    GameTooltip:AddLine("Click: more in Help.", 0.62, 0.71, 1)
+    GameTooltip:AddLine(L["W_MORE_HELP"], 0.62, 0.71, 1)
     GameTooltip:Show()
   end)
   b:SetScript("OnLeave", function(self)
@@ -1457,11 +1458,11 @@ local function buildCopy()
   lbl:SetPoint("TOPLEFT", f, "TOPLEFT", 46, -10)
   lbl:SetPoint("RIGHT", f, "RIGHT", -10, 0)
   lbl:SetJustifyH("LEFT")
-  lbl:SetText("Press |cff66bb6aCtrl+C|r to copy")
+  lbl:SetText(L["W_CTRL_C"])
   local sub = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
   sub:SetPoint("TOPLEFT", lbl, "BOTTOMLEFT", 0, -3)
   sub:SetTextColor(0.55, 0.55, 0.55)
-  sub:SetText("Press Esc to cancel")
+  sub:SetText(L["W_ESC_CANCEL"])
   local prev = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
   prev:SetPoint("TOPLEFT", sub, "BOTTOMLEFT", 0, -4)
   prev:SetPoint("RIGHT", f, "RIGHT", -10, 0)

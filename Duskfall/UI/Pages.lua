@@ -3,26 +3,26 @@
 --   right: Settings (an overview of sub-pages, like BigNoteBox's Modules tab: General, Time of day,
 --          Baseline, Characters), About (logo, version, links, commands)
 local ADDON, ns = ...
+local L = ns.L
 local UI, W, C, D = ns.UI, ns.Window, ns.Channels, ns.Detect
 
 ns.LINKS = {
-  { key = "dukul", name = "Dukul.net", url = "https://dukul.net", sub = "Dukul's other addons" },
-  { key = "github", name = "GitHub", url = "https://github.com/DukulWoW/Duskfall" },
-  { key = "curseforge", name = "CurseForge", url = "https://www.curseforge.com/wow/addons/duskfall" },
-  { key = "wago", name = "Wago", url = "https://addons.wago.io/addons/duskfall" },
-  { key = "bugs", name = "Report a bug", url = "https://github.com/DukulWoW/Duskfall/issues/new/choose", sub = "Copy the link to report a bug" },
+  { key = "dukul", name = "Dukul.net", url = "https://dukul.net", sub = L["LINK_DUKUL_SUB"] },   --noloc
+  { key = "github", name = "GitHub", url = "https://github.com/DukulWoW/Duskfall" },   --noloc
+  { key = "curseforge", name = "CurseForge", url = "https://www.curseforge.com/wow/addons/duskfall" },   --noloc
+  { key = "wago", name = "Wago", url = "https://addons.wago.io/addons/duskfall" },   --noloc
+  { key = "bugs", name = L["LINK_BUGS"], url = "https://github.com/DukulWoW/Duskfall/issues/new/choose", sub = L["LINK_BUGS_SUB"] },
 }
 
 -- An hour in the chosen clock format: 21 -> "21:00" or "9 PM".
 function ns.FormatHour(h, m)
   m = m or 0
   if ns.cfg.clock24 then return string.format("%02d:%02d", h, m) end
-  local suffix = "AM"
-  if h >= 12 then suffix = "PM" end
+  local pm = h >= 12
   local h12 = h % 12
   if h12 == 0 then h12 = 12 end
-  if m == 0 then return h12 .. " " .. suffix end
-  return string.format("%d:%02d %s", h12, m, suffix)
+  if m == 0 then return (pm and L["TIME_PM"] or L["TIME_AM"]):format(h12) end
+  return (pm and L["TIME_PM_MIN"] or L["TIME_AM_MIN"]):format(h12, m)
 end
 
 -- Settings: sub-page builders ----------------------------------------------------------------------
@@ -89,19 +89,19 @@ local function buildGeneral(p)
   local controls = {}
   -- Top row (Kim, 2026-11-27): Duskfall on the left, Sound on the right
   local HALF = math.floor((FULL_W - 12) / 2)
-  local _, top = card(p, 12, -50, HALF, 108, "Duskfall", nil, controls)
-  top(UI.Check(p, { label = "Duskfall on", tip = "Off puts your baseline back and leaves the sliders to you.",
+  local _, top = card(p, 12, -50, HALF, 108, "Duskfall", nil, controls)   --noloc
+  top(UI.Check(p, { label = L["GEN_ON"], tip = L["SET_ON_TIP"],
     get = function() return ns.cfg.enabled end,
     set = function(v) D.SetEnabled(v) W.UpdateStatus() end }), 26, 4)
-  top(UI.Check(p, { label = "Debug output", tip = "Prints what Duskfall does in chat.",
+  top(UI.Check(p, { label = L["GEN_DEBUG"], tip = L["GEN_DEBUG_TIP"],
     get = function() return ns.cfg.debug end,
     set = function(v) ns.cfg.debug = v end }), 26, 4)
 
   -- Sound (Core/Sound.lua): two sounds, each on / off with its own choice and a Play button; the
   -- channel on the title line
   local SND = ns.Sound
-  local sc = card(p, 12 + HALF + 12, -50, HALF, 108, "Sound", nil, controls)
-  local chan = UI.Dropdown(p, 132, { tip = "Which of the game's volume sliders the sounds follow.",
+  local sc = card(p, 12 + HALF + 12, -50, HALF, 108, L["GEN_SOUND"], nil, controls)
+  local chan = UI.Dropdown(p, 132, { tip = L["GEN_CHANNEL_TIP"],
     items = function()
       local out = {}
       for _, c in ipairs(SND.CHANNELS) do out[#out + 1] = { c[1], c[2] } end
@@ -118,46 +118,44 @@ local function buildGeneral(p)
     sw:SetPoint("TOPLEFT", sc, "TOPLEFT", 16, y)
     controls[#controls + 1] = sw
     -- The sound dropdowns line up with the channel's on the right, Play to their left (Kim)
-    local dd = UI.Dropdown(p, 132, { tip = "The sound. Sounds from other addons (LibSharedMedia) are listed too.",
+    local dd = UI.Dropdown(p, 132, { tip = L["GEN_SOUND_TIP"],
       items = function()
         local out = {}
-        for _, n in ipairs(SND.List()) do out[#out + 1] = { n, n } end
+        for _, n in ipairs(SND.List()) do out[#out + 1] = { n, SND.Label(n) } end
         return out
       end,
       get = function() return ns.cfg[nameKey] end,
       set = function(v) ns.cfg[nameKey] = v SND.Play(v) end })
     dd:SetPoint("TOPRIGHT", sc, "TOPRIGHT", -14, y + 16)
     controls[#controls + 1] = dd
-    local play = UI.Button(p, "Play", 52, function() SND.Play(ns.cfg[nameKey]) end, 22)
+    local play = UI.Button(p, L["GEN_PLAY"], 52, function() SND.Play(ns.cfg[nameKey]) end, 22)
     play:SetPoint("RIGHT", dd._dd, "LEFT", -6, 0)
-    UI.Tooltip(play, "Play", "Hear the sound picked here.")
+    UI.Tooltip(play, L["GEN_PLAY"], L["GEN_PLAY_TIP"])
   end
-  soundRow(-42, "New place", "The first time you walk into a place Duskfall has not seen before.",
+  soundRow(-42, L["GEN_NEW_PLACE"], L["GEN_NEW_PLACE_TIP"],
     "soundNew", "soundNewName")
-  soundRow(-72, "Setting starts", "When you walk into a place where one of your settings takes effect.",
+  soundRow(-72, L["GEN_SETTING_STARTS"], L["GEN_SETTING_STARTS_TIP"],
     "soundActive", "soundActiveName")
 
   local SL_W = FULL_W - 32
   -- Timing and keys (Kim, 2026-11-27): the two timings side by side, Hold to brighten under them
-  local _, timing = card(p, 12, -170, FULL_W, 166, "Timing and keys",
-    "How quickly Duskfall reacts, and how much Hold to brighten (a key binding) lifts the screen.", controls)
+  local _, timing = card(p, 12, -170, FULL_W, 166, L["GEN_TIMING"], L["GEN_TIMING_DESC"], controls)
   local HALF_SL = math.floor((SL_W - 24) / 2)
-  local door = timing(UI.Slider(p, HALF_SL, { label = "Doorway delay", min = 0, max = 2, step = 0.1, default = 0.5,
-    fmt = function(v) return string.format("%.1f s", v) end,
-    tip = "How long a new state (indoors, mounted...) must hold before Duskfall reacts. Stops flicker in doorways.",
+  local door = timing(UI.Slider(p, HALF_SL, { label = L["GEN_DOORWAY"], min = 0, max = 2, step = 0.1, default = 0.5,
+    fmt = function(v) return L["SECS_FMT"]:format(v) end,
+    tip = L["GEN_DOORWAY_TIP"],
     get = function() return ns.cfg.debounce end,
     onChange = function(v) ns.cfg.debounce = v end }), UI.SLIDER_H, 10)
-  local gap = UI.Slider(p, HALF_SL, { label = "Adapt overshoot gap", min = 0, max = 10, step = 0.5, default = 2,
-    fmt = function(v) return string.format("%.1f s", v) end,
-    tip = "Two Adapt dips or glares never come closer than this. Riding along a zone border dips once.",
+  local gap = UI.Slider(p, HALF_SL, { label = L["GEN_GAP"], min = 0, max = 10, step = 0.5, default = 2,
+    fmt = function(v) return L["SECS_FMT"]:format(v) end,
+    tip = L["GEN_GAP_TIP"],
     get = function() return ns.cfg.adaptGap end,
     onChange = function(v) ns.cfg.adaptGap = v end })
   gap:SetPoint("TOPLEFT", door, "TOPLEFT", HALF_SL + 24, 0)
   controls[#controls + 1] = gap
-  timing(UI.Slider(p, SL_W, { label = "Hold to brighten", min = 0.1, max = 1, step = 0.05, default = 0.5,
-    fmt = function(v) return string.format("%d%%", math.floor(v * 100 + 0.5)) end,
-    tip = "How much brighter the screen gets while you hold the Hold to brighten key (Options > Keybindings > "
-      .. "AddOns > Duskfall). 50% is about Gamma +0.3, Brightness +8, Contrast +4.",
+  timing(UI.Slider(p, SL_W, { label = L["BIND_PEEK"], min = 0.1, max = 1, step = 0.05, default = 0.5,
+    fmt = function(v) return L["PCT_FMT"]:format(math.floor(v * 100 + 0.5)) end,
+    tip = L["GEN_PEEK_TIP"],
     get = function() return ns.cfg.peekLift end,
     onChange = function(v) ns.cfg.peekLift = v end }), UI.SLIDER_H, 10)
 
@@ -169,10 +167,10 @@ local function buildGeneral(p)
   danger:SetFrameLevel(p:GetFrameLevel())
   UI.RoundBox(danger, { radius = 10, bottom = { 0.12, 0.02, 0.01, 0.55 }, top = { 0.3, 0.06, 0.04, 0.45 },
     border = { 0.95, 0.35, 0.22, 0.5 } })
-  local dTitle = UI.Label(danger, "Factory reset", "GameFontNormalLarge")
+  local dTitle = UI.Label(danger, L["GEN_FACTORY"], "GameFontNormalLarge")
   dTitle:SetPoint("TOPLEFT", danger, "TOPLEFT", 16, -14)
   dTitle:SetTextColor(1, 0.55, 0.4)
-  local dDesc = UI.Label(danger, "Each one asks first. None of them can be undone.")
+  local dDesc = UI.Label(danger, L["GEN_FACTORY_DESC"])
   dDesc:SetPoint("LEFT", dTitle, "RIGHT", 12, -1)
   dDesc:SetTextColor(0.75, 0.65, 0.6)
 
@@ -184,8 +182,7 @@ local function buildGeneral(p)
   end
   -- { button, tooltip, question, action, caption under the button }
   local RESETS = {
-    { "Settings", "Every option on the Settings pages back to its default. Your places, Styles and baseline stay.",
-      "Put every Settings option back to its default?", function()
+    { L["TAB_SETTINGS"], L["RS_SETTINGS_TIP"], L["RS_SETTINGS_Q"], function()
         local mm = ns.cfg.minimap   -- the minimap button library keeps this very table
         wipe(ns.cfg)
         for k, v in pairs(ns.DEFAULTS) do ns.cfg[k] = UI.DeepCopy(v) end
@@ -202,43 +199,36 @@ local function buildGeneral(p)
         if ns.StatusDisplay then ns.StatusDisplay.ResetPosition() ns.StatusDisplay.Refresh() end
         if ns.CursorLight then ns.CursorLight.Refresh() end
         after()
-      end, "Options back to default." },
-    { "Place settings", "Remove every setting in the Style you use now: every place goes back to your baseline. " ..
-      "Other Styles, the places found and your options stay.",
-      "Remove every setting in this Style?", function()
+      end, L["RS_SETTINGS_CAP"] },
+    { L["RS_PLACES"], L["RS_PLACES_TIP"], L["RS_PLACES_Q"], function()
         wipe(ns.Resolver.ActiveStyle().looks)
         after()
-      end, "Clears the Style you use." },
-    { "Places found", "Forget the list of places you have been. Settings that use a place keep it.",
-      "Forget every place Duskfall has found?", function()
+      end, L["RS_PLACES_CAP"] },
+    { L["RS_FOUND"], L["RS_FOUND_TIP"], L["RS_FOUND_Q"], function()
         wipe(ns.db.places)
         after()
-      end, "Forgets where you have been." },
-    { "Screen defaults", "Gamma, Brightness, Contrast and Bloom to the game's defaults (1.00, 50, 50, 1.00), " ..
-      "and those become your baseline.",
-      "Set the screen to the game's defaults and make them your baseline?", function()
+      end, L["RS_FOUND_CAP"] },
+    { L["RS_SCREEN"], L["RS_SCREEN_TIP"], L["RS_SCREEN_Q"], function()
         ns.Transition.Cancel()
         C.WriteAll(GAME_DEFAULT)
         D.SaveBaseline()
         after()
-      end, "Game values as your baseline." },
-    { "Everything", "Delete all of Duskfall's saved data and reload the interface, as a new install. " ..
-      "Your own screen values are put back first.",
-      "Delete ALL of Duskfall's data and reload the interface?", function()
+      end, L["RS_SCREEN_CAP"] },
+    { L["RS_ALL"], L["RS_ALL_TIP"], L["RS_ALL_Q"], function()
         ns.Transition.Cancel()
         if ns.db and ns.db.baseline then C.WriteAll(ns.db.baseline) end
         DuskfallDB = nil
         ReloadUI()
-      end, "As a new install." },
+      end, L["RS_ALL_CAP"] },
   }
   local BW = math.floor((FULL_W - 32 - (#RESETS - 1) * 8) / #RESETS)
   for i, r in ipairs(RESETS) do
     local b = UI.Button(danger, r[1], BW, function()
-      UI.Confirm(r[3] .. "\n\nThis can't be undone.", function() ns.Safe(r[4], "reset " .. r[1]) end)
+      UI.Confirm(L["GEN_CANT_UNDO"]:format(r[3]), function() ns.Safe(r[4], "reset " .. r[1]) end)
     end, 24)
     b:SetKind("danger")
     b:SetPoint("TOPLEFT", danger, "TOPLEFT", 16 + (i - 1) * (BW + 8), -54)
-    UI.Tooltip(b, "Reset: " .. r[1], r[2])
+    UI.Tooltip(b, L["GEN_RESET_TIP"]:format(r[1]), r[2])
     local cap = UI.Label(danger, r[5])
     cap:SetPoint("TOP", b, "BOTTOM", 0, -8)
     cap:SetWidth(BW)
@@ -253,23 +243,22 @@ local function buildTime(p)
   -- The two dropdowns as wide as the day cards below and over them (Kim): (FULL_W - 12) / 2, 12 apart
   local DD_W = math.floor((FULL_W - 12) / 2)
   local bar
-  local src = UI.Dropdown(p, DD_W, { label = "Time source",
-    tip = "Server time matches day and night in the world. Local is your computer's clock.",
-    items = { { "server", "Server time (matches the sky)" }, { "local", "Local time (your computer)" } },
+  local src = UI.Dropdown(p, DD_W, { label = L["TM_SOURCE"],
+    tip = L["TM_SOURCE_TIP"],
+    items = { { "server", L["TM_SERVER"] }, { "local", L["TM_LOCAL"] } },
     get = function() return ns.cfg.clock end,
     set = function(v) ns.cfg.clock = v D.Evaluate("settings") if bar then bar:Refresh() end end })
   add(src, UI.DROPDOWN_H, 8)
-  local fmt = UI.Dropdown(p, DD_W, { label = "Clock format",
-    items = { { true, "24 hour (21:00)" }, { false, "12 hour (9 PM)" } },
+  local fmt = UI.Dropdown(p, DD_W, { label = L["TM_FORMAT"],
+    items = { { true, L["TM_24"] }, { false, L["TM_12"] } },
     get = function() return ns.cfg.clock24 end,
     set = function(v) ns.cfg.clock24 = v if bar then bar:Refresh() end end })
   fmt:SetPoint("TOPLEFT", src, "TOPRIGHT", 12, 0)
-  local partsHead = UI.Header(p, "Parts of the day")
+  local partsHead = UI.Header(p, L["TM_PARTS"])
   add(partsHead, 14, 4)
-  local partsHelp = UI.HelpIcon(p, "time", "Parts of the day", "When Dawn, Day, Dusk and Night start. A setting " ..
-    "can be for one of them.")
+  local partsHelp = UI.HelpIcon(p, "time", L["TM_PARTS"], L["TM_PARTS_TIP"])
   partsHelp:SetPoint("LEFT", partsHead, "RIGHT", 6, 0)
-  local help = UI.Label(p, "A Look can be set to one part of the day. Drag the yellow edges to change when each part starts.")
+  local help = UI.Label(p, L["TM_HELP"])
   help:SetWidth(FULL_W)
   add(help, 14, 12)
   bar = UI.DayBar(p, FULL_W)
@@ -278,11 +267,11 @@ local function buildTime(p)
   local tc = UI.Card(p, 12, 0, FULL_W, 96)
   tc:ClearAllPoints()
   tc:SetPoint("TOPLEFT", bar, "BOTTOMLEFT", 0, -12)
-  local tcTitle = UI.Label(tc, "When a part of the day begins", "GameFontNormalLarge")
+  local tcTitle = UI.Label(tc, L["TM_BEGINS"], "GameFontNormalLarge")
   tcTitle:SetPoint("TOPLEFT", tc, "TOPLEFT", 16, -14)
-  local fade = UI.Slider(p, FULL_W - 32, { label = "Time of day fade", min = 0, max = 120, step = 5, default = 45,
-    fmt = function(v) return v .. " s" end,
-    tip = "How long a change caused only by the clock takes, in every mode, so dusk never snaps.",
+  local fade = UI.Slider(p, FULL_W - 32, { label = L["TM_FADE"], min = 0, max = 120, step = 5, default = 45,
+    fmt = function(v) return L["SECS_INT"]:format(v) end,
+    tip = L["TM_FADE_TIP"],
     get = function() return ns.cfg.timeFade end,
     onChange = function(v) ns.cfg.timeFade = v end })
   fade:SetPoint("TOPLEFT", tc, "TOPLEFT", 16, -44)
@@ -290,7 +279,7 @@ local function buildTime(p)
     bar.resetBtn:SetParent(p)
     bar.resetBtn:ClearAllPoints()
     bar.resetBtn:SetPoint("TOPRIGHT", tc, "TOPRIGHT", -16, -12)
-    UI.Tooltip(bar.resetBtn, "Reset to default", "Dawn 05:00, day 08:00, dusk 17:00, night 20:00.")
+    UI.Tooltip(bar.resetBtn, L["DAY_RESET"], L["TM_RESET_TIP"])
   end
   local r = refresh
   return function() r() fmt:Refresh() fade:Refresh() end
@@ -302,8 +291,7 @@ end
 local BASE_STEP = { gamma = 0.01, brightness = 1, contrast = 1, bloom = 0.05 }
 
 local function buildBaseline(p)
-  local text = UI.Label(p, "Your baseline is your own look: Duskfall starts from it, every setting in Places is a "
-    .. "change from it, and logging out or switching Duskfall off puts it back.")
+  local text = UI.Label(p, L["BL_TEXT"])
   text:SetPoint("TOPLEFT", p, "TOPLEFT", 12, -50)
   text:SetWidth(FULL_W)
   text:SetSpacing(2)
@@ -339,7 +327,7 @@ local function buildBaseline(p)
       border = { t[1], t[2], t[3], 0.35 } })
     local name = UI.Label(card, ch.label, "GameFontNormalLarge")
     name:SetPoint("TOPLEFT", card, "TOPLEFT", 16, -14)
-    local def = UI.Label(card, "Game default " .. C.Format(k, GAME_DEFAULT[k]), "GameFontHighlightSmall")
+    local def = UI.Label(card, L["BL_GAME_DEFAULT"]:format(C.Format(k, GAME_DEFAULT[k])), "GameFontHighlightSmall")
     def:SetPoint("TOPLEFT", name, "BOTTOMLEFT", 0, -4)
     def:SetTextColor(0.6, 0.6, 0.6)
     local big = UI.Label(card, "", "GameFontHighlightHuge")
@@ -373,18 +361,17 @@ local function buildBaseline(p)
   actions:SetFrameLevel(p:GetFrameLevel())
   UI.RoundBox(actions, { radius = 10, bottom = { 0, 0, 0, 0.5 }, top = { 0.22, 0.17, 0.1, 0.4 },
     border = { 1, 0.82, 0, 0.12 } })
-  local save = UI.Button(p, "Use what is on screen", 190, function()
-    UI.Confirm("Make the values on screen now your baseline (the ones logging out brings back)?", function()
+  local save = UI.Button(p, L["BL_USE_SCREEN"], 190, function()
+    UI.Confirm(L["BL_USE_SCREEN_Q"], function()
       D.SaveBaseline()
       refreshCards()
       W.UpdateStatus()
     end)
   end)
   save:SetPoint("LEFT", actions, "LEFT", 10, 0)
-  UI.Tooltip(save, "Use what is on screen", "Takes the values on screen now as your baseline. Handy after you set " ..
-    "the game's own sliders with Duskfall switched off.")
-  local reset = UI.Button(p, "Game defaults", 150, function()
-    UI.Confirm("Set your baseline to the game's defaults (Gamma 1.00, Brightness 50, Contrast 50, Bloom 1.00)?", function()
+  UI.Tooltip(save, L["BL_USE_SCREEN"], L["BL_USE_SCREEN_TIP"])
+  local reset = UI.Button(p, L["BL_GAME_DEFAULTS"], 150, function()
+    UI.Confirm(L["BL_GAME_DEFAULTS_Q"], function()
       if not ns.db.baseline then return end
       for k, v in pairs(GAME_DEFAULT) do ns.db.baseline[k] = v end
       refreshCards()
@@ -392,21 +379,21 @@ local function buildBaseline(p)
     end)
   end)
   reset:SetPoint("LEFT", save, "RIGHT", 8, 0)
-  local tip = UI.Label(p, "Drag a slider and the screen follows. Right-click a slider for the game default.")
+  local tip = UI.Label(p, L["BL_TIP"])
   tip:SetPoint("BOTTOMLEFT", actions, "TOPLEFT", 4, 6)
   tip:SetTextColor(0.7, 0.7, 0.7)
   -- Calibrate (Kim, 2026-11-27): grey squares to set the baseline by (UI/Calibrate.lua)
-  local calib = UI.Button(p, "Calibrate", 120, function() if ns.Calibrate then ns.Calibrate.Open() end end)
+  local calib = UI.Button(p, L["BL_CALIBRATE"], 120, function() if ns.Calibrate then ns.Calibrate.Open() end end)
   calib:SetKind("main")
   calib:SetPoint("LEFT", reset, "RIGHT", 8, 0)
-  UI.Tooltip(calib, "Calibrate", "Grey squares to set your baseline by: black level, white level and even grey steps.")
-  local help = UI.HelpIcon(p, "own", "Baseline", "Your own look, which every setting in Places changes from.")
+  UI.Tooltip(calib, L["BL_CALIBRATE"], L["BL_CALIBRATE_TIP"])
+  local help = UI.HelpIcon(p, "own", L["SET_BASELINE"], L["BL_HELP_TIP"])
   help:SetPoint("LEFT", calib, "RIGHT", 10, 0)
   return refreshCards
 end
 
 local function buildCharacters(p)
-  local note = UI.Label(p, "Characters are added when they log in. Remove the ones you deleted; they also leave every scope that names them.")
+  local note = UI.Label(p, L["CH_NOTE"])
   note:SetPoint("TOPLEFT", p, "TOPLEFT", 12, -48)
   note:SetPoint("RIGHT", p, "RIGHT", -12, 0)
 
@@ -431,7 +418,7 @@ local function buildCharacters(p)
       row.info = UI.Label(row, "", "GameFontHighlightSmall")
       row.info:SetPoint("LEFT", row, "LEFT", 250, 0)
       row.info:SetTextColor(0.7, 0.7, 0.7)
-      row.remove = UI.Button(row, "Remove", 80, nil, 20)
+      row.remove = UI.Button(row, L["BTN_REMOVE"], 80, nil, 20)
       row.remove:SetKind("danger")
       row.remove:SetPoint("RIGHT", row, "RIGHT", -6, 0)
     end
@@ -439,18 +426,19 @@ local function buildCharacters(p)
     local name = c.name or "?"
     local col = c.class and RAID_CLASS_COLORS and RAID_CLASS_COLORS[c.class]
     if col and col.colorStr then name = "|c" .. col.colorStr .. name .. "|r" end
-    if e.guid == ns.charKey then name = name .. "  |cff9d9d9d(you)|r" end
+    if e.guid == ns.charKey then name = name .. "  |cff9d9d9d" .. L["SL_YOU"] .. "|r" end
     row.name:SetText(name)
     local styles, looks = ns.CharUse(e.guid)
-    row.info:SetText(string.format("last seen %s   %d Style%s, %d Look%s", date("%Y-%m-%d", c.last or 0),
-      styles, styles == 1 and "" or "s", looks, looks == 1 and "" or "s"))
+    row.info:SetText(L["CH_LAST_SEEN"]:format(date("%Y-%m-%d", c.last or 0),
+      styles == 1 and L["CH_STYLES_ONE"] or L["CH_STYLES_MANY"]:format(styles),
+      looks == 1 and L["CH_LOOKS_ONE"] or L["CH_LOOKS_MANY"]:format(looks)))
     row.shade:SetShown(e.index % 2 == 0)
     row.remove:SetEnabled(e.guid ~= ns.charKey)
     row.remove:SetScript("OnClick", function()
-      UI.Confirm("Remove " .. (c.name or "?") .. " from Duskfall? It also leaves every Style and Look scope that names it.", function()
+      UI.Confirm(L["CH_REMOVE_Q"]:format(c.name or "?"), function()
         local emptied = ns.RemoveCharacter(e.guid)
         if emptied and emptied > 0 then
-          ns.Print("|cffff9f40%d scope(s) named only that character: those Looks are now Global, those Styles unused.|r", emptied)
+          ns.Print("|cffff9f40" .. L["SL_SCOPES_EMPTIED"] .. "|r", emptied)
         end
         D.state.target = nil
         D.Evaluate("chars")
@@ -476,30 +464,30 @@ local function buildDisplay(p)
   local HALF = math.floor((FULL_W - 12) / 2)
   local DD_W = HALF - 32
 
-  local _, mm = card(p, 12, -50, HALF, 262, "Minimap and broker", nil, controls)
-  mm(UI.Check(p, { label = "Minimap moon opens Duskfall",
-    tip = "The day / night moon on the minimap gets the same clicks and tooltip as the minimap button. With this on you may not need the button at all.",
+  local _, mm = card(p, 12, -50, HALF, 262, L["DS_MINIMAP"], nil, controls)
+  mm(UI.Check(p, { label = L["DS_MOON"],
+    tip = L["DS_MOON_TIP"],
     get = function() return ns.cfg.moon ~= false end,
     set = function(v)
       ns.cfg.moon = v
       ns.Moon.Apply()
-      if v and not ns.Moon.Found() then ns.Print("can't find the minimap moon on this client.") end
+      if v and not ns.Moon.Found() then ns.Print(L["DS_NO_MOON"]) end
     end }), 26, 4)
-  mm(UI.Check(p, { label = "Glow where a setting is in effect",
-    tip = "A slow gold ring behind Duskfall's icon on the moon and the minimap button while one of your settings is in effect where you stand.",
+  mm(UI.Check(p, { label = L["DS_GLOW"],
+    tip = L["DS_GLOW_TIP"],
     get = function() return ns.cfg.ringGlow ~= false end,
     set = function(v)
       ns.cfg.ringGlow = v
       ns.Moon.UpdateRings()
     end }), 26, 10)
-  mm(UI.Dropdown(p, DD_W, { label = "Minimap button",
-    tip = "Left-click opens Duskfall, right-click switches it on or off, shift-right-click opens Settings. The same clicks work on the moon, in the addon compartment and on broker bars. Automatic shows the button only when the moon can't be used (switched off above, or hidden by another addon).",
-    items = { { "auto", "Automatic (when the moon can't be used)" }, { "always", "Always" }, { "never", "Never" } },
+  mm(UI.Dropdown(p, DD_W, { label = L["DS_BUTTON"],
+    tip = L["DS_BUTTON_TIP"],
+    items = { { "auto", L["DS_AUTO"] }, { "always", L["DS_ALWAYS"] }, { "never", L["DS_NEVER"] } },
     get = function() return ns.cfg.minimapButton or "auto" end,
     set = function(v) ns.cfg.minimapButton = v ns.UpdateMinimapButton() end }), UI.DROPDOWN_H, 10)
-  mm(UI.Dropdown(p, DD_W, { label = "Broker text",
-    tip = "What broker bars (Titan Panel, ChocolateBar, ElvUI datatexts...) show next to the icon.",
-    items = { { "look", "The setting in effect" }, { "values", "The values on screen" }, { "both", "Setting and values" }, { "none", "Nothing (icon only)" } },
+  mm(UI.Dropdown(p, DD_W, { label = L["DS_BROKER"],
+    tip = L["DS_BROKER_TIP"],
+    items = { { "look", L["DS_BR_LOOK"] }, { "values", L["DS_BR_VALUES"] }, { "both", L["DS_BR_BOTH"] }, { "none", L["DS_BR_NONE"] } },
     get = function() return ns.cfg.brokerText end,
     set = function(v) ns.cfg.brokerText = v ns.UpdateBroker() end }), UI.DROPDOWN_H, 8)
 
@@ -507,44 +495,42 @@ local function buildDisplay(p)
   -- colorblindSimulator 0-3 and colorblindWeaknessFactor 0-1 exist on Forever (Kim, 2026-11-26:
   -- "0 0.5"). Read from the game each time, never stored by Duskfall.
   local function cvarNum(name, d) return tonumber(GetCVar(name)) or d end
-  local _, cb = card(p, 12 + HALF + 12, -50, HALF, 262, "Colorblind filter and light",
-    "The game's own filter (Options > Accessibility). Duskfall only changes it when you do.", controls)
-  cb(UI.Dropdown(p, DD_W, { label = "Filter",
-    items = { { 0, "Off" }, { 1, "Protanopia (red weak)" }, { 2, "Deuteranopia (green weak)" }, { 3, "Tritanopia (blue weak)" } },
+  local _, cb = card(p, 12 + HALF + 12, -50, HALF, 262, L["DS_CB"], L["DS_CB_DESC"], controls)
+  cb(UI.Dropdown(p, DD_W, { label = L["DS_FILTER"],
+    items = { { 0, L["WIN_OFF"] }, { 1, L["DS_PROT"] }, { 2, L["DS_DEUT"] }, { 3, L["DS_TRIT"] } },
     get = function() return cvarNum("colorblindSimulator", 0) end,
     set = function(v) SetCVar("colorblindSimulator", v) end }), UI.DROPDOWN_H, 10)
-  cb(UI.Slider(p, DD_W, { label = "Strength", min = 0, max = 1, step = 0.05, default = 0.5,
-    fmt = function(v) return string.format("%d%%", math.floor(v * 100 + 0.5)) end,
-    tip = "How strongly the filter adjusts the colours.",
+  cb(UI.Slider(p, DD_W, { label = L["DS_STRENGTH"], min = 0, max = 1, step = 0.05, default = 0.5,
+    fmt = function(v) return L["PCT_FMT"]:format(math.floor(v * 100 + 0.5)) end,
+    tip = L["DS_STRENGTH_TIP"],
     get = function() return cvarNum("colorblindWeaknessFactor", 0.5) end,
     onChange = function(v) SetCVar("colorblindWeaknessFactor", v) end }), UI.SLIDER_H, 8)
-  cb(UI.Check(p, { label = "Cursor light in Duskfall's windows",
-    tip = "A soft warm light follows the mouse over Duskfall's windows, and lifts them when your screen is dark.",
+  cb(UI.Check(p, { label = L["DS_CURSOR"],
+    tip = L["DS_CURSOR_TIP"],
     get = function() return ns.cfg.cursorLight ~= false end,
     set = function(v) ns.cfg.cursorLight = v end }), 26, 4)
-  cb(UI.Slider(p, DD_W, { label = "Light strength", min = 0.25, max = 3, step = 0.05, default = 1,
-    fmt = function(v) return string.format("%d%%", math.floor(v * 100 + 0.5)) end,
-    tip = "How bright the cursor light is. Move the mouse over this window to see it.",
+  cb(UI.Slider(p, DD_W, { label = L["DS_LIGHT"], min = 0.25, max = 3, step = 0.05, default = 1,
+    fmt = function(v) return L["PCT_FMT"]:format(math.floor(v * 100 + 0.5)) end,
+    tip = L["DS_LIGHT_TIP"],
     get = function() return tonumber(ns.cfg.cursorLightStrength) or 1 end,
     onChange = function(v)
       ns.cfg.cursorLightStrength = v
       if ns.CursorLight then ns.CursorLight.Refresh() end
     end }), UI.SLIDER_H, 8)
 
-  local _, sd = card(p, 12, -324, FULL_W, 150, "Status display",
-    "A small floating display of the setting in effect and the values on screen.", controls)
-  local show = sd(UI.Dropdown(p, DD_W, { label = "Show it",
-    items = { { "off", "Never" }, { "change", "When the setting changes" }, { "always", "Always" } },
+  local _, sd = card(p, 12, -324, FULL_W, 150, L["DS_STATUS"], L["DS_STATUS_DESC"], controls)
+  local show = sd(UI.Dropdown(p, DD_W, { label = L["DS_SHOW"],
+    items = { { "off", L["DS_NEVER"] }, { "change", L["DS_ON_CHANGE"] }, { "always", L["DS_ALWAYS"] } },
     get = function() return ns.cfg.statusDisplay end,
     set = function(v)
       ns.cfg.statusDisplay = v
       ns.StatusDisplay.Refresh(v == "change")
     end }), UI.DROPDOWN_H, 10)
   -- Stays (Kim, 2026-11-27): as long as the change runs, or some seconds after it
-  local stays = UI.Dropdown(p, DD_W, { label = "Stays",
-    tip = "When the setting changes: how long the display stays. A thin bar on it fills while the change runs.",
-    items = { { "change", "As long as the change" }, { 2, "2 s after the change" }, { 4, "4 s after the change" },
-              { 6, "6 s after the change" }, { 10, "10 s after the change" }, { 15, "15 s after the change" } },
+  local stays = UI.Dropdown(p, DD_W, { label = L["DS_STAYS"],
+    tip = L["DS_STAYS_TIP"],
+    items = { { "change", L["DS_AS_LONG"] }, { 2, L["DS_AFTER"]:format(2) }, { 4, L["DS_AFTER"]:format(4) },
+              { 6, L["DS_AFTER"]:format(6) }, { 10, L["DS_AFTER"]:format(10) }, { 15, L["DS_AFTER"]:format(15) } },
     get = function()
       if ns.cfg.statusStay == "change" then return "change" end
       return tonumber(ns.cfg.statusSeconds) or 4
@@ -559,42 +545,41 @@ local function buildDisplay(p)
     end })
   stays:SetPoint("TOPLEFT", show, "TOPLEFT", HALF + 12, 0)
   controls[#controls + 1] = stays
-  local move = UI.Button(p, "Move it", 120, function() ns.StatusDisplay.Unlock(20) end)
-  UI.Tooltip(move, "Move it", "Shows the display for 20 seconds so you can drag it where you want it.")
+  local move = UI.Button(p, L["DS_MOVE"], 120, function() ns.StatusDisplay.Unlock(20) end)
+  UI.Tooltip(move, L["DS_MOVE"], L["DS_MOVE_TIP"])
   sd(move, 22, 8)
-  local reset = UI.Button(p, "Reset position", 120, function() ns.StatusDisplay.ResetPosition() end)
+  local reset = UI.Button(p, L["DS_RESET_POS"], 120, function() ns.StatusDisplay.ResetPosition() end)
   reset:SetPoint("LEFT", move, "RIGHT", 8, 0)
-  local test = UI.Button(p, "Test", 90, function() ns.StatusDisplay.Test() end)
+  local test = UI.Button(p, L["DS_TEST"], 90, function() ns.StatusDisplay.Test() end)
   test:SetPoint("LEFT", reset, "RIGHT", 8, 0)
-  UI.Tooltip(test, "Test", "Shows the display as it shows when the setting in effect changes: it stays for the time " ..
-    "set above, then fades. Works even when Show it is off.")
+  UI.Tooltip(test, L["DS_TEST"], L["DS_TEST_TIP"])
   return refresher(controls)
 end
 
 local SUBPAGES = {
-  { key = "general", title = "General", build = buildGeneral, icon = "Interface\\Icons\\Trade_Engineering",
-    desc = "On or off, sounds, doorway delay and timing.",
+  { key = "general", title = L["SET_GENERAL"], build = buildGeneral, icon = "Interface\\Icons\\Trade_Engineering",
+    desc = L["SET_GENERAL_DESC"],
     summary = function()
-      if not ns.cfg.enabled then return "|cffff6060Switched off|r" end
-      return string.format("On, doorway delay %.1f s", ns.cfg.debounce or 0.5)
+      if not ns.cfg.enabled then return "|cffff6060" .. L["SET_SWITCHED_OFF"] .. "|r" end
+      return L["SET_GENERAL_SUM"]:format(ns.cfg.debounce or 0.5)
     end },
-  { key = "time", title = "Time of day", build = buildTime,
-    desc = "The clock, and when dawn, day, dusk and night start.",
+  { key = "time", title = L["SET_TIME"], build = buildTime,
+    desc = L["SET_TIME_DESC"],
     iconFn = function() return UI.ART .. "Day\\ui-" .. ns.Situations.Snapshot().period end,
     summary = function()
       local env = ns.Situations.Snapshot()
-      local name = { dawn = "Dawn", day = "Day", dusk = "Dusk", night = "Night" }
-      return string.format("Now %s, %s (%s clock)", ns.FormatHour(env.hour, env.min), name[env.period] or "?",
-        ns.cfg.clock == "local" and "your" or "server")
+      local name = { dawn = L["PERIOD_DAWN"], day = L["PERIOD_DAY"], dusk = L["PERIOD_DUSK"], night = L["PERIOD_NIGHT"] }
+      return L[ns.cfg.clock == "local" and "SET_TIME_SUM_LOCAL" or "SET_TIME_SUM_SERVER"]:format(
+        ns.FormatHour(env.hour, env.min), name[env.period] or "?")
     end },
-  { key = "display", title = "Display", build = buildDisplay, icon = "Interface\\Icons\\INV_Misc_Spyglass_03",
-    desc = "Minimap moon and button, broker, status display, colorblind filter, cursor light.",
+  { key = "display", title = L["SET_DISPLAY"], build = buildDisplay, icon = "Interface\\Icons\\INV_Misc_Spyglass_03",
+    desc = L["SET_DISPLAY_DESC"],
     summary = function()
-      local btn = { auto = "button automatic", always = "button always", never = "no button" }
-      return (ns.cfg.moon ~= false and "Moon on, " or "Moon off, ") .. (btn[ns.cfg.minimapButton or "auto"] or "")
+      local btn = { auto = L["SET_BTN_AUTO"], always = L["SET_BTN_ALWAYS"], never = L["SET_BTN_NEVER"] }
+      return L[ns.cfg.moon ~= false and "SET_MOON_ON" or "SET_MOON_OFF"]:format(btn[ns.cfg.minimapButton or "auto"] or "")
     end },
-  { key = "baseline", title = "Baseline", build = buildBaseline, icon = "Interface\\Icons\\Spell_Holy_HolyBolt",
-    desc = "Your own look, which every setting changes from.",
+  { key = "baseline", title = L["SET_BASELINE"], build = buildBaseline, icon = "Interface\\Icons\\Spell_Holy_HolyBolt",
+    desc = L["SET_BASELINE_DESC"],
     summary = function()
       local b, parts = ns.db.baseline or {}, {}
       for _, ch in ipairs(C.list) do
@@ -602,13 +587,13 @@ local SUBPAGES = {
       end
       return table.concat(parts, "  ")
     end },
-  { key = "chars", title = "Characters", build = buildCharacters, icon = "Interface\\Icons\\INV_Misc_Head_Human_01",
+  { key = "chars", title = L["SET_CHARS"], build = buildCharacters, icon = "Interface\\Icons\\INV_Misc_Head_Human_01",
     portrait = true,   -- the character you play (race and gender), as on the unit frame (Kim)
-    desc = "Characters Duskfall knows. Remove the ones you deleted.",
+    desc = L["SET_CHARS_DESC"],
     summary = function()
       local n = 0
       for _ in pairs(ns.db.chars) do n = n + 1 end
-      return string.format("%d character%s", n, n == 1 and "" or "s")
+      return n == 1 and L["SET_CHARS_ONE"] or L["SET_CHARS_MANY"]:format(n)
     end },
 }
 
@@ -622,7 +607,7 @@ function ns.OpenSettingsPage(key)
 end
 
 -- Settings tab ------------------------------------------------------------------------------------
-W.AddTab("settings", "Settings", function(page)
+W.AddTab("settings", L["TAB_SETTINGS"], function(page)
   UI.Glow(page, nil, 0.8)
   local overview = CreateFrame("Frame", nil, page)
   overview:SetAllPoints()
@@ -631,22 +616,21 @@ W.AddTab("settings", "Settings", function(page)
   -- The overview (Kim: less boring): a header with a quick on / off switch, then one rounded tile
   -- per page in two columns, each with a round icon, its name, what is in it and a live summary.
   -- The whole tile opens the page.
-  local title = UI.Label(overview, "Settings", "GameFontNormalHuge")
+  local title = UI.Label(overview, L["TAB_SETTINGS"], "GameFontNormalHuge")
   title:SetPoint("TOPLEFT", overview, "TOPLEFT", 14, -14)
   -- The main on / off: the big switch with the moon's glow while on (Kim)
-  local quick = UI.Switch(overview, { label = "Duskfall", big = true,
-    tip = "Off puts your baseline back and leaves the sliders to you.",
+  local quick = UI.Switch(overview, { label = "Duskfall", big = true,   --noloc
+    tip = L["SET_ON_TIP"],
     get = function() return ns.cfg.enabled end,
     set = function(v) D.SetEnabled(v) W.UpdateStatus() end })
   quick:SetPoint("TOPRIGHT", overview, "TOPRIGHT", -24, -12)
   -- Refresh, left of the big switch (Kim): clears anything stuck and writes the settings for here
-  local refresh = UI.Button(overview, "Refresh", 96, function()
+  local refresh = UI.Button(overview, L["SET_REFRESH"], 96, function()
     D.Refresh()
     W.UpdateStatus()
   end, 24)
   refresh:SetPoint("RIGHT", quick, "LEFT", -28, 0)
-  UI.Tooltip(refresh, "Refresh", "Puts the settings for here back on screen, at once. Use it if the " ..
-    "screen ever seems stuck (after a Compare, a preview or a slider moved by hand). Also |cffffd100/dusk refresh|r.")
+  UI.Tooltip(refresh, L["SET_REFRESH"], L["SET_REFRESH_TIP"])
   local tiles = {}
   -- Layout (Kim): General across the top, then Time of day | Baseline, then Display | Characters,
   -- tall enough to fill the page. TILE_SPOT = key -> { column (0, 1 or "full"), row }.
@@ -658,7 +642,7 @@ W.AddTab("settings", "Settings", function(page)
     local sub = CreateFrame("Frame", nil, page)
     sub:SetAllPoints()
     sub:Hide()
-    local back = UI.BackButton(sub, 24, { tip = "Back", onClick = function() page.Back() end })
+    local back = UI.BackButton(sub, 24, { tip = L["BTN_BACK"], onClick = function() page.Back() end })
     back:SetPoint("TOPLEFT", sub, "TOPLEFT", 12, -12)
     local h = UI.Header(sub, def.title)
     h:SetFontObject("GameFontNormalLarge")
@@ -780,7 +764,7 @@ end, "right")
 -- About tab ---------------------------------------------------------------------------------------
 -- One calm centred column (Kim: "think Apple"): icon, name, version, one line on what it does, the
 -- links, and the commands folded away behind a button.
-W.AddTab("about", "About", function(page)
+W.AddTab("about", L["TAB_ABOUT"], function(page)
   UI.Glow(page, nil, 0.8)
   local col = CreateFrame("Frame", nil, page)
   col:SetPoint("TOP", page, "TOP", 0, -18)
@@ -797,18 +781,17 @@ W.AddTab("about", "About", function(page)
   if path then name:SetFont(path, 44, flags or "") end
   name:SetPoint("TOP", logo, "BOTTOM", 0, -8)
   name:SetText("|cff3355ccD|cff506ac5u|cff6d7fbes|cff8a94b7k|cffa8a9aff|cffc5bea8a|cffe2d3a1l|cffffe89al|r")
-  local ver = UI.Label(col, "Version " .. ns.VERSION, "GameFontHighlightLarge")
+  local ver = UI.Label(col, L["VERSION_FMT"]:format(ns.VERSION), "GameFontHighlightLarge")
   ver:SetPoint("TOP", name, "BOTTOM", 0, -6)
   ver:SetTextColor(0.75, 0.75, 0.75)
-  local by = UI.Label(col, "by", "GameFontHighlight")
+  local by = UI.Label(col, L["AB_BY"], "GameFontHighlight")
   by:SetPoint("TOP", ver, "BOTTOM", 0, -6)
   by:SetTextColor(0.45, 0.45, 0.45)
   -- "Dukul" in Duskfall blue (UI.RING_BLUE, the blue of the frame and the icon's ring; Kim)
   local who = UI.Label(col, "|cff5c80ffDukul|r", "GameFontNormalLarge")
   who:SetPoint("TOP", by, "BOTTOM", 0, -4)
 
-  local desc = UI.Label(col, "Gamma, brightness, contrast and bloom that follow you through the world, and change "
-    .. "the way your eyes do.", "GameFontHighlight")
+  local desc = UI.Label(col, L["AB_DESC"], "GameFontHighlight")
   desc:SetPoint("TOP", who, "BOTTOM", 0, -18)
   desc:SetWidth(460)
   desc:SetJustifyH("CENTER")
@@ -822,7 +805,7 @@ W.AddTab("about", "About", function(page)
   local rowW = #shown * SZ + (#shown - 1) * GAP
   for i, l in ipairs(shown) do
     local b = UI.IconButton(col, SZ, l.key, {
-      tip = l.name, tipSub = l.sub or ("Copy the " .. l.name .. " link"),
+      tip = l.name, tipSub = l.sub or L["LINK_COPY"]:format(l.name),
       onClick = function(self) UI.Copy(l.name, l.url, self) end,
     })
     b:SetPoint("TOPLEFT", desc, "BOTTOM", -math.floor(rowW / 2) + (i - 1) * (SZ + GAP), -18)
@@ -831,9 +814,9 @@ W.AddTab("about", "About", function(page)
   -- Commands, Help and Patch Notes in one row (Kim): Commands opens Help on its Commands topic
   local BW, BG = 130, 10
   local row = {
-    { "Commands", "Every slash command, in Help.", function() if ns.Help then ns.Help.Open("commands") end end },
-    { "Help", "How Duskfall works.", function() if ns.Help then ns.Help.Open("start") end end },
-    { "Patch Notes", "What changed in each version.", function() if ns.PatchNotes then ns.PatchNotes.Open() end end },
+    { L["AB_COMMANDS"], L["AB_COMMANDS_TIP"], function() if ns.Help then ns.Help.Open("commands") end end },
+    { L["BTN_HELP"], L["WIN_HELP_TIP"], function() if ns.Help then ns.Help.Open("start") end end },
+    { L["AB_PATCH"], L["AB_PATCH_TIP"], function() if ns.PatchNotes then ns.PatchNotes.Open() end end },
   }
   local total = #row * BW + (#row - 1) * BG
   for i, r in ipairs(row) do
@@ -842,7 +825,22 @@ W.AddTab("about", "About", function(page)
     UI.Tooltip(b, r[1], r[2])
   end
 
-  local foot = UI.Label(page, "A free fan project, not affiliated with Blizzard Entertainment. All rights reserved.",
-    "GameFontDisableSmall")
-  foot:SetPoint("BOTTOM", page, "BOTTOM", 0, 8)
+  -- The solidarity line from all of Kim's addons (as BigNoteBox's General tab): a rule, then four
+  -- flags at the very bottom; the fan project note just above the rule. Kept as written in every
+  -- language (as in BigNoteBox).
+  local FLAG = UI.ART .. "Flags\\"
+  local sol = UI.Label(page, "LGBTQIA+ |T" .. FLAG .. "flag-pride:14:20|t Pride  \226\128\148"   --noloc
+    .. "  Trans |T" .. FLAG .. "flag-trans:14:20|t Rights  \226\128\148"   --noloc
+    .. "  Slava |T" .. FLAG .. "flag-ua:14:20|t Ukraini  \226\128\148"   --noloc
+    .. "  Free |T" .. FLAG .. "flag-ps:14:20|t Palestine", "GameFontHighlightSmall")   --noloc
+  sol:SetPoint("BOTTOM", page, "BOTTOM", 0, 10)
+  sol:SetJustifyH("CENTER")
+  sol:SetTextColor(0.85, 0.85, 0.85)
+  local rule = page:CreateTexture(nil, "ARTWORK")
+  rule:SetHeight(1)
+  rule:SetColorTexture(1, 0.82, 0, 0.25)
+  rule:SetPoint("BOTTOMLEFT", page, "BOTTOMLEFT", 24, 32)
+  rule:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -24, 32)
+  local foot = UI.Label(page, L["AB_FOOT"], "GameFontDisableSmall")
+  foot:SetPoint("BOTTOM", rule, "TOP", 0, 6)
 end, "right")

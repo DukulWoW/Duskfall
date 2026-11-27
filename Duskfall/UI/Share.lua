@@ -11,11 +11,12 @@
 -- Public: ns.Share.ExportLook(look), ns.Share.ExportStyle(st), ns.Share.Import(text) ->
 --         ok, message; ns.Share.ImportDialog(onDone)
 local ADDON, ns = ...
+local L = ns.L
 local UI, C, R, D = ns.UI, ns.Channels, ns.Resolver, ns.Detect
 local Share = {}
 ns.Share = Share
 
-local PREFIX = "Duskfall:1:"
+local PREFIX = "Duskfall:1:"   --noloc
 local SHORT = { gamma = "g", brightness = "b", contrast = "c", bloom = "bl" }
 local LONG = { g = "gamma", b = "brightness", c = "contrast", bl = "bloom" }
 local MODES = { instant = true, fade = true, adapt = true }
@@ -64,7 +65,7 @@ function Share.ExportStyle(st)
   local fade = tr.fade or {}
   local a = tr.adapt or {}
   local dk, lt = a.toDark or {}, a.toLight or {}
-  local head = table.concat({ esc(st.name or "Style"), tr.mode or "adapt", num(fade.duration or 1.5),
+  local head = table.concat({ esc(st.name or L["STYLE_DEFAULT"]), tr.mode or "adapt", num(fade.duration or 1.5),
     num(dk.duration or 4), num(dk.strength or 0.3), num(lt.duration or 1), num(lt.strength or 0.3) }, "^")
   local parts = { PREFIX .. "style:" .. head }
   for _, look in ipairs(st.looks or {}) do parts[#parts + 1] = lookBody(look) end
@@ -112,7 +113,7 @@ local function parseLook(body)
     end
   end
   if next(look.values) == nil then return nil end
-  if look.name == "" then look.name = "Imported" end
+  if look.name == "" then look.name = L["SH_IMPORTED_LOOK"] end
   return look
 end
 
@@ -136,29 +137,29 @@ end
 -- Returns ok, message.
 function Share.Import(text)
   text = tostring(text or ""):gsub("^%s+", ""):gsub("%s+$", "")
-  if text:sub(1, #PREFIX) ~= PREFIX then return false, "That is not a Duskfall export." end
+  if text:sub(1, #PREFIX) ~= PREFIX then return false, L["SH_NOT_EXPORT"] end
   local rest = text:sub(#PREFIX + 1)
   local kind, body = rest:match("^(%a+):(.*)$")
   if kind == "look" then
     local look = parseLook(body)
-    if not look then return false, "Nothing in it Duskfall can use." end
+    if not look then return false, L["SH_NOTHING"] end
     local style = R.ActiveStyle()
     for _, l in ipairs(style.looks) do
       if UI.ScopeIsGlobal(l.scope) and (l.absolute and true or false) == look.absolute
         and sameList(l.where or {}, look.where) and sameList(l.when or {}, look.when) then
         l.values = look.values
         changed()
-        return true, string.format("\"%s\" updated.", l.name or "?")
+        return true, L["SH_UPDATED"]:format(l.name or "?")
       end
     end
     table.insert(style.looks, look)
     changed()
-    return true, string.format("\"%s\" added.", look.name)
+    return true, L["SH_ADDED"]:format(look.name)
   elseif kind == "style" then
     local parts = split(body, ";")
     local h = split(parts[1] or "", "^")
-    if #h < 7 then return false, "That Style export is cut short." end
-    local st = ns.NewStyle(unesc(h[1]) .. " (imported)")
+    if #h < 7 then return false, L["SH_CUT_SHORT"] end
+    local st = ns.NewStyle(L["SH_IMPORTED_STYLE"]:format(unesc(h[1])))
     st.scope = { chars = {} }
     local tr = st.transition
     if MODES[h[2]] then tr.mode = h[2] end
@@ -173,9 +174,9 @@ function Share.Import(text)
       if look then st.looks[#st.looks + 1] = look end
     end
     table.insert(ns.db.styles, st)
-    return true, string.format("Style \"%s\" added with %d setting%s.", st.name, #st.looks, #st.looks == 1 and "" or "s"), st
+    return true, (#st.looks == 1 and L["SH_STYLE_ADDED_ONE"]:format(st.name) or L["SH_STYLE_ADDED_MANY"]:format(st.name, #st.looks)), st
   end
-  return false, "That is not a Duskfall export."
+  return false, L["SH_NOT_EXPORT"]
 end
 
 -- Import dialog -----------------------------------------------------------------------------------
@@ -201,9 +202,9 @@ function Share.ImportDialog(onDone)
     f:Hide()
     UI.RoundBox(f, { radius = 12, bottom = { 0.04, 0.03, 0.02, 0.97 }, top = { 0.16, 0.12, 0.08, 0.97 },
       border = { 1, 0.82, 0, 0.45 } })
-    local title = UI.Label(f, "Import", "GameFontNormalLarge")
+    local title = UI.Label(f, L["BTN_IMPORT"], "GameFontNormalLarge")
     title:SetPoint("TOPLEFT", f, "TOPLEFT", 18, -16)
-    local help = UI.Label(f, "Paste a Duskfall export (Ctrl+V): one setting or a whole Style.")
+    local help = UI.Label(f, L["SH_HELP"])
     help:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -8)
     help:SetTextColor(0.7, 0.7, 0.7)
     local eb = CreateFrame("EditBox", nil, f, "InputBoxTemplate")
@@ -214,7 +215,7 @@ function Share.ImportDialog(onDone)
     local msg = UI.Label(f, "")
     msg:SetPoint("TOPLEFT", eb, "BOTTOMLEFT", -6, -8)
     msg:SetTextColor(1, 0.4, 0.4)
-    local go = UI.Button(f, "Import", 110, function()
+    local go = UI.Button(f, L["BTN_IMPORT"], 110, function()
       local ok, text, st = Share.Import(eb:GetText())
       if not ok then msg:SetText(text) return end
       f:FadeHide()
@@ -223,7 +224,7 @@ function Share.ImportDialog(onDone)
       if st then useStyle(st) end
     end)
     go:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -16, 14)
-    local cancel = UI.Button(f, "Cancel", 110, function() f:FadeHide() end)
+    local cancel = UI.Button(f, L["BTN_CANCEL"], 110, function() f:FadeHide() end)
     cancel:SetPoint("RIGHT", go, "LEFT", -8, 0)
     eb:SetScript("OnEnterPressed", function() go:Click() end)
     eb:SetScript("OnEscapePressed", function() eb:ClearFocus() f:FadeHide() end)

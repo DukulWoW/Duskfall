@@ -7,12 +7,13 @@
 -- makes the other Global Style unused; a note under the dropdown says what moved.
 -- Try it: dark, then back, with the selected Style's own transition (D.Preview, why "demo").
 local ADDON, ns = ...
+local L = ns.L
 local UI, W, C, S, D, R = ns.UI, ns.Window, ns.Channels, ns.Situations, ns.Detect, ns.Resolver
 
 local LEFT_W = 270
 local ROW_H = 36
 local GREY = "|cff9d9d9d"
-local MODES = { { "instant", "Instant" }, { "fade", "Fade" }, { "adapt", "Adapt (eye adaptation)" } }
+local MODES = { { "instant", L["SS_INSTANT"] }, { "fade", L["ST_FADE"] }, { "adapt", L["ST_ADAPT"] } }
 
 local function changed(why)
   D.ClearHolds()
@@ -66,7 +67,7 @@ ns.StyleClaim = claim
 -- Try it: darker, a short hold, and back, with st's own transition, wherever you are. Shared
 -- with simple mode (UI/SimpleStyles.lua). Returns the seconds it takes, nil when it can't run.
 function ns.TryStyle(st)
-  if not ns.cfg.enabled then ns.Print("Duskfall is off; switch it on to try a transition.") return nil end
+  if not ns.cfg.enabled then ns.Print(L["ST_TRY_OFF"]) return nil end
   local tr = trOf(st)
   local normal = R.Resolve(D.state.env or S.Snapshot())
   local dark = {}
@@ -93,7 +94,7 @@ ns.StyleTransition = trOf
 local function copyStyle(st)
   local c = UI.DeepCopy(st)
   c.id = ns.NewID("s")
-  c.name = (st.name or "Style") .. " (copy)"
+  c.name = L["ST_COPY_NAME"]:format(st.name or L["STYLE_DEFAULT"])
   c.scope = { chars = {} }
   for _, l in ipairs(c.looks or {}) do l.id = ns.NewID("l") end
   return c
@@ -102,7 +103,7 @@ end
 ns.StyleCopy = copyStyle
 
 -- The tab holds two pages: simple mode (UI/SimpleStyles.lua, the default) and this one, Advanced mode.
-W.AddTab("styles", "Styles", function(tab)
+W.AddTab("styles", L["TAB_STYLES"], function(tab)
   UI.Glow(tab, nil, 0.8)
   local page = CreateFrame("Frame", nil, tab)
   page:SetAllPoints()
@@ -116,7 +117,7 @@ W.AddTab("styles", "Styles", function(tab)
   left:SetPoint("BOTTOMLEFT", page, "BOTTOMLEFT", 0, 0)
   left:SetWidth(LEFT_W)
 
-  local head = UI.Header(left, "Styles")
+  local head = UI.Header(left, L["TAB_STYLES"])
   head:SetPoint("TOPLEFT", left, "TOPLEFT", 12, -12)
 
   local area = CreateFrame("Frame", nil, left)
@@ -150,12 +151,12 @@ W.AddTab("styles", "Styles", function(tab)
       row.info:SetTextColor(0.75, 0.75, 0.75)
     end
     local name = st.name or "?"
-    if st == R.ActiveStyle() then name = name .. "  |cff40ff40(yours)|r" end
+    if st == R.ActiveStyle() then name = name .. "  |cff40ff40" .. L["ST_YOURS"] .. "|r" end
     row.name:SetText(name)
     local who = UI.ScopeText(st.scope, true)
-    if who == "Unused" then who = GREY .. "unused|r" end
+    if who == L["SCOPE_UNUSED"] then who = GREY .. L["SL_UNUSED"] .. "|r" end
     local n = #(st.looks or {})
-    row.info:SetText(string.format("%s   %d Look%s", who, n, n == 1 and "" or "s"))
+    row.info:SetText(n == 1 and L["ST_LOOKS_ONE"]:format(who) or L["ST_LOOKS_MANY"]:format(who, n))
     row.sel:SetShown(st == sel)
     row:SetScript("OnClick", function()
       sel = st
@@ -167,16 +168,16 @@ W.AddTab("styles", "Styles", function(tab)
 
   local styles = function() return ns.db.styles end
 
-  local newBtn = UI.Button(left, "New", 76, function()
-    local st = ns.NewStyle("Style " .. (#styles() + 1))
+  local newBtn = UI.Button(left, L["BTN_NEW"], 76, function()
+    local st = ns.NewStyle(L["SL_STYLE_NEW_NAME"]:format(#styles() + 1))
     st.scope = { chars = {} }
     table.insert(styles(), st)
     sel = st
     refresh(true)
   end)
   newBtn:SetPoint("BOTTOMLEFT", left, "BOTTOMLEFT", 8, 10)
-  UI.Tooltip(newBtn, "New Style", "An empty Style, unused until you pick who uses it in Scope.")
-  local dupBtn = UI.Button(left, "Duplicate", 84, function()
+  UI.Tooltip(newBtn, L["SS_NEW_STYLE"], L["ST_NEW_TIP"])
+  local dupBtn = UI.Button(left, L["LE_DUPLICATE"], 84, function()
     if not sel then return end
     local c = copyStyle(sel)
     local at = #styles() + 1
@@ -186,12 +187,12 @@ W.AddTab("styles", "Styles", function(tab)
     refresh(true)
   end)
   dupBtn:SetPoint("LEFT", newBtn, "RIGHT", 6, 0)
-  UI.Tooltip(dupBtn, "Duplicate", "A copy with all its Looks, unused until you pick who uses it.")
-  local delBtn = UI.Button(left, "Delete", 76, function()
+  UI.Tooltip(dupBtn, L["LE_DUPLICATE"], L["ST_DUP_TIP"])
+  local delBtn = UI.Button(left, L["BTN_DELETE"], 76, function()
     if not sel or #styles() <= 1 then return end
     local st = sel
     local n = #(st.looks or {})
-    UI.Confirm(string.format("Delete Style \"%s\" and its %d Look%s?", st.name or "?", n, n == 1 and "" or "s"), function()
+    UI.Confirm(n == 1 and L["ST_DELETE_ONE"]:format(st.name or "?") or L["ST_DELETE_MANY"]:format(st.name or "?", n), function()
       for i, s in ipairs(styles()) do
         if s == st then table.remove(styles(), i) break end
       end
@@ -202,7 +203,7 @@ W.AddTab("styles", "Styles", function(tab)
   end)
   delBtn:SetKind("danger")
   delBtn:SetPoint("LEFT", dupBtn, "RIGHT", 6, 0)
-  UI.Tooltip(delBtn, "Delete", "The last Style can't be deleted.")
+  UI.Tooltip(delBtn, L["BTN_DELETE"], L["ST_DELETE_TIP"])
 
   -- Right: the selected Style ----------------------------------------------------------------
   local right = CreateFrame("Frame", nil, page)
@@ -217,7 +218,7 @@ W.AddTab("styles", "Styles", function(tab)
   title:SetPoint("RIGHT", right, "RIGHT", -4, 0)
   title:SetWordWrap(false)
 
-  local nameLbl = UI.Label(right, "Name", "GameFontNormalSmall")
+  local nameLbl = UI.Label(right, L["LE_NAME"], "GameFontNormalSmall")
   nameLbl:SetPoint("TOPLEFT", right, "TOPLEFT", 4, -48)
   local name = CreateFrame("EditBox", nil, right, "InputBoxTemplate")
   name:SetSize(240, 20)
@@ -238,10 +239,10 @@ W.AddTab("styles", "Styles", function(tab)
   name:SetScript("OnEditFocusLost", function(self) if sel then self:SetText(sel.name or "") end end)
 
   local note
-  local scopeLbl = UI.Label(right, "Scope", "GameFontNormalSmall")
+  local scopeLbl = UI.Label(right, L["LE_SCOPE"], "GameFontNormalSmall")
   scopeLbl:SetPoint("TOPLEFT", right, "TOPLEFT", 4, -80)
   local scopeDD = add(UI.ScopeDropdown(right, 240, { style = true,
-    tip = "Who uses this Style: Global (every character not named by another Style), or the characters you tick. A character uses one Style; picking it here takes it out of its old one.",
+    tip = L["ST_SCOPE_TIP"],
     get = function() return sel and sel.scope end,
     set = function(sc)
       if not sel then return end
@@ -269,9 +270,9 @@ W.AddTab("styles", "Styles", function(tab)
   rule:SetPoint("TOPLEFT", right, "TOPLEFT", 4, -142)
   rule:SetPoint("TOPRIGHT", right, "TOPRIGHT", -4, -142)
 
-  local trHead = UI.Header(right, "Transition")
+  local trHead = UI.Header(right, L["ST_TRANSITION"])
   trHead:SetPoint("TOPLEFT", right, "TOPLEFT", 4, -152)
-  local trTip = UI.Label(right, "how the screen moves to a new Look")
+  local trTip = UI.Label(right, L["ST_TRANSITION_SUB"])
   trTip:SetPoint("LEFT", trHead, "RIGHT", 8, 0)
   trTip:SetTextColor(0.65, 0.65, 0.65)
 
@@ -284,8 +285,8 @@ W.AddTab("styles", "Styles", function(tab)
     for _, k in ipairs({ "darkD", "darkS", "lightD", "lightS" }) do sliders[k]:SetEnabled(mode == "adapt") end
   end
 
-  local mode = add(UI.Dropdown(right, SW, { label = "Mode", items = MODES,
-    tip = "Instant: at once. Fade: a smooth change. Adapt: like your eyes, a dip past dark or a glare past bright, then settling.",
+  local mode = add(UI.Dropdown(right, SW, { label = L["ST_MODE"], items = MODES,
+    tip = L["ST_MODE_TIP"],
     get = function() return sel and trOf(sel).mode end,
     set = function(v)
       if not sel then return end
@@ -294,35 +295,35 @@ W.AddTab("styles", "Styles", function(tab)
     end }))
   mode:SetPoint("TOPLEFT", right, "TOPLEFT", 4, -172)
 
-  local secs = function(v) return string.format("%.1f s", v) end
+  local secs = function(v) return L["SECS_FMT"]:format(v) end
   local pct = function(v) return math.floor(v * 100 + 0.5) .. "%" end
   local function slider(key, o, x, y)
     local s = add(UI.Slider(right, SW, o))
     s:SetPoint("TOPLEFT", right, "TOPLEFT", 4 + x, y)
     sliders[key] = s
   end
-  slider("fade", { label = "Fade duration", min = 0, max = 10, step = 0.1, default = 1.5, fmt = secs,
+  slider("fade", { label = L["ST_FADE_DURATION"], min = 0, max = 10, step = 0.1, default = 1.5, fmt = secs,
     get = function() return sel and trOf(sel).fade.duration or 1.5 end,
     onChange = function(v) if sel then trOf(sel).fade.duration = v end end }, COL, -172)
 
-  local darkLbl = UI.Label(right, "Adapt, to darker", "GameFontNormal")
+  local darkLbl = UI.Label(right, L["ST_TO_DARKER"], "GameFontNormal")
   darkLbl:SetPoint("TOPLEFT", right, "TOPLEFT", 4, -226)
-  local lightLbl = UI.Label(right, "Adapt, to brighter", "GameFontNormal")
+  local lightLbl = UI.Label(right, L["ST_TO_BRIGHTER"], "GameFontNormal")
   lightLbl:SetPoint("TOPLEFT", right, "TOPLEFT", 4 + COL, -226)
-  slider("darkD", { label = "Duration", min = 0, max = 15, step = 0.5, default = 4.0, fmt = secs,
-    tip = "How long your eyes take to get used to the dark.",
+  slider("darkD", { label = L["ST_DURATION"], min = 0, max = 15, step = 0.5, default = 4.0, fmt = secs,
+    tip = L["ST_DARK_D_TIP"],
     get = function() return sel and trOf(sel).adapt.toDark.duration or 4.0 end,
     onChange = function(v) if sel then trOf(sel).adapt.toDark.duration = v end end }, 0, -246)
-  slider("darkS", { label = "Dip", min = 0, max = 1, step = 0.05, default = 0.3, fmt = pct,
-    tip = "How far past the new value it first goes darker, as a share of the change.",
+  slider("darkS", { label = L["ST_DIP"], min = 0, max = 1, step = 0.05, default = 0.3, fmt = pct,
+    tip = L["ST_DIP_TIP"],
     get = function() return sel and trOf(sel).adapt.toDark.strength or 0.3 end,
     onChange = function(v) if sel then trOf(sel).adapt.toDark.strength = v end end }, 0, -294)
-  slider("lightD", { label = "Duration", min = 0, max = 10, step = 0.5, default = 1.0, fmt = secs,
-    tip = "How long the glare takes to settle when it gets brighter.",
+  slider("lightD", { label = L["ST_DURATION"], min = 0, max = 10, step = 0.5, default = 1.0, fmt = secs,
+    tip = L["ST_LIGHT_D_TIP"],
     get = function() return sel and trOf(sel).adapt.toLight.duration or 1.0 end,
     onChange = function(v) if sel then trOf(sel).adapt.toLight.duration = v end end }, COL, -246)
-  slider("lightS", { label = "Glare", min = 0, max = 1, step = 0.05, default = 0.3, fmt = pct,
-    tip = "How far past the new value it first goes brighter, as a share of the change.",
+  slider("lightS", { label = L["ST_GLARE"], min = 0, max = 1, step = 0.05, default = 0.3, fmt = pct,
+    tip = L["ST_GLARE_TIP"],
     get = function() return sel and trOf(sel).adapt.toLight.strength or 0.3 end,
     onChange = function(v) if sel then trOf(sel).adapt.toLight.strength = v end end }, COL, -294)
 
@@ -341,11 +342,11 @@ W.AddTab("styles", "Styles", function(tab)
     tryBtn:SetEnabled(false)
     C_Timer.After(total, function() tryBtn:SetEnabled(true) end)
   end
-  tryBtn = UI.Button(right, "Try it", 110, tryIt)
+  tryBtn = UI.Button(right, L["TRY_IT"], 110, tryIt)
   tryBtn:SetKind("main")
   tryBtn:SetPoint("TOPLEFT", right, "TOPLEFT", 4, -350)
-  UI.Tooltip(tryBtn, "Try it", "Goes darker, waits, and comes back, with this Style's transition, wherever you are.")
-  local tryTip = UI.Label(right, "Changes save at once. Try it plays them on your screen.")
+  UI.Tooltip(tryBtn, L["TRY_IT"], L["ST_TRY_TIP"])
+  local tryTip = UI.Label(right, L["ST_TRY_SUB"])
   tryTip:SetPoint("LEFT", tryBtn, "RIGHT", 10, 0)
   tryTip:SetPoint("RIGHT", right, "RIGHT", -4, 0)
   tryTip:SetTextColor(0.65, 0.65, 0.65)
@@ -359,9 +360,9 @@ W.AddTab("styles", "Styles", function(tab)
   refreshUse = function()
     local active = R.ActiveStyle()
     if sel == active then
-      useLine:SetText("|cff40ff40This character uses this Style.|r")
+      useLine:SetText("|cff40ff40" .. L["ST_USES_THIS"] .. "|r")
     else
-      useLine:SetText(GREY .. "This character uses \"" .. (active.name or "?") .. "\".|r")
+      useLine:SetText(GREY .. L["ST_USES_OTHER"]:format(active.name or "?") .. "|r")
     end
   end
 

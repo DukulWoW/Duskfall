@@ -7,6 +7,7 @@
 -- Public: ns.OpenWindow(), W.AddTab(id, title, builder, side), W.Select(id), W.UpdateStatus(),
 --         W.SetAdvanced(on) (fires MODE), W.frame
 local ADDON, ns = ...
+local L = ns.L
 local W = {}
 ns.Window = W
 local UI, C = ns.UI, ns.Channels
@@ -83,15 +84,15 @@ local function statusText()
     vals[#vals + 1] = s
   end
   local onoff = ""
-  if not ns.cfg.enabled then onoff = "|cffff4040Off|r   " end
-  return string.format("%sStyle: |cffc0c0c0%s|r     Here: |cffc0c0c0%s|r     %s", onoff, style.name or "?", place,
-    table.concat(vals, "  "))
+  if not ns.cfg.enabled then onoff = "|cffff4040" .. L["WIN_OFF"] .. "|r   " end
+  return onoff .. L["PL_STYLE"]:format("|cffc0c0c0" .. (style.name or "?") .. "|r") .. "     "
+    .. L["WIN_HERE"]:format("|cffc0c0c0" .. place .. "|r") .. "     " .. table.concat(vals, "  ")
 end
 
 function W.UpdateTitle()
   if not frame then return end
-  local t = "Duskfall"
-  if not ns.cfg.enabled then t = "Duskfall  |cffff6060(Off)|r" end
+  local t = "Duskfall"   --noloc
+  if not ns.cfg.enabled then t = "Duskfall  |cffff6060" .. L["WIN_TITLE_OFF"] .. "|r" end   --noloc
   if frame.SetTitle then frame:SetTitle(t)
   elseif frame.TitleContainer and frame.TitleContainer.TitleText then frame.TitleContainer.TitleText:SetText(t) end
 end
@@ -153,7 +154,7 @@ function W.NewOverlay(titleText)
   UI.Glow(f, nil, 0.8)
   f.title = UI.Label(f, titleText, "GameFontNormalHuge")
   f.title:SetPoint("TOPLEFT", f, "TOPLEFT", 22, -16)
-  f.closeBtn = UI.Button(f, "Close", 90, function() f:FadeHide() end)
+  f.closeBtn = UI.Button(f, L["BTN_CLOSE"], 90, function() f:FadeHide() end)
   f.closeBtn:SetPoint("TOPRIGHT", f, "TOPRIGHT", -20, -16)
   win:HookScript("OnHide", function() f:Hide() end)
   UI.Fader(f)   -- ESC: the window's OnKeyDown closes it (before the page)
@@ -265,9 +266,8 @@ local function build()
   local TB = 16   -- the title bar controls (picker, help, close) share one height (Kim)
   local adv = UI.Segmented(f, 132, { height = TB,
     items = function()
-      return { { "simple", "Simple", nil, "Places and Styles in a few plain choices." },
-               { "advanced", "Advanced", nil, "Every place you have been, the full Look editor and every " ..
-                 "condition and option." } }
+      return { { "simple", L["WIN_SIMPLE"], nil, L["WIN_SIMPLE_TIP"] },
+               { "advanced", L["SP_ADVANCED"], nil, L["WIN_ADVANCED_TIP"] } }
     end,
     get = function() return ns.cfg.advanced and "advanced" or "simple" end,
     set = function(v) W.SetAdvanced(v == "advanced") end })
@@ -275,8 +275,7 @@ local function build()
   -- red one (hidden, still the anchor); ESC closes the window as before
   local old = f.CloseButton or _G.DuskfallWindowCloseButton
   -- Right-click: back to the middle of the screen (Kim)
-  local close = UI.TitleButton(f, TB + 2, "x", { tip = "Close", tipSub = "Right-click: move the window back to the "
-    .. "middle of the screen.", onClick = function() f:FadeHide() end,
+  local close = UI.TitleButton(f, TB + 2, "x", { tip = L["BTN_CLOSE"], tipSub = L["WIN_CLOSE_TIP"], onClick = function() f:FadeHide() end,
     onRightClick = function()
       f:ClearAllPoints()
       f:SetPoint("CENTER")
@@ -291,7 +290,7 @@ local function build()
   end
   f.closeBtn = close
   -- Help, between Advanced and the close button: the same round title button with a "?"
-  local help = UI.TitleButton(f, TB + 2, "help", { tip = "Help", tipSub = "How Duskfall works.",
+  local help = UI.TitleButton(f, TB + 2, "help", { tip = L["BTN_HELP"], tipSub = L["WIN_HELP_TIP"],
     onClick = function() if ns.Help then ns.Help.Toggle() end end })
   help:SetPoint("RIGHT", close, "LEFT", -4, 0)
   f.helpBtn = help
@@ -435,7 +434,7 @@ end
 
 -- tabID: open on that tab (closes it if it is already showing, unless keepOpen)
 function ns.OpenWindow(tabID, keepOpen)
-  if not ns.db or not ns.Detect.state.started then ns.Print("not ready yet.") return end
+  if not ns.db or not ns.Detect.state.started then ns.Print(L["SL_NOT_READY"]) return end
   if not frame then build() end
   if tabID then
     -- Same tab already showing: the command closes the window again (a toggle)

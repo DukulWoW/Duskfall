@@ -7,11 +7,12 @@
 --         ns.FillTooltip(tooltip), ns.UpdateMinimapButton(), ns.UpdateBroker()
 -- Globals for the TOC: Duskfall_OnAddonCompartmentClick / Enter / Leave
 local ADDON, ns = ...
+local L = ns.L
 local UI, C, D = ns.UI, ns.Channels, ns.Detect
 
 local LDB = LibStub and LibStub("LibDataBroker-1.1", true)
 local DBIcon = LibStub and LibStub("LibDBIcon-1.0", true)
-local NAME = "Duskfall"
+local NAME = "Duskfall"   --noloc
 local TITLE = "|cff9fb4ffDuskfall|r"
 
 -- The Looks that set a channel right now, in channel order, each once.
@@ -30,13 +31,13 @@ end
 
 -- "Off", "Previewing", the names of the Looks in effect, or "Baseline".
 function ns.StateText()
-  if D.state.comparing == "peek" then return "Brighter while held" end
-  if not ns.cfg or not ns.cfg.enabled then return "Off" end
-  if D.state.comparing then return "Before: your own settings" end
-  if D.state.preview then return "Previewing" end
+  if D.state.comparing == "peek" then return L["BR_PEEK"] end
+  if not ns.cfg or not ns.cfg.enabled then return L["WIN_OFF"] end
+  if D.state.comparing then return L["BR_BEFORE"] end
+  if D.state.preview then return L["BR_PREVIEWING"] end
   local names = {}
   for _, look in ipairs(ns.ActiveLooks()) do names[#names + 1] = look.name or "?" end
-  if #names == 0 then return "Baseline" end
+  if #names == 0 then return L["BR_BASELINE"] end
   return table.concat(names, " + ")
 end
 
@@ -75,35 +76,36 @@ end
 function ns.FillTooltip(tt)
   tt:AddLine(TITLE)
   if not ns.db or not D.state.started then
-    tt:AddLine("Starting...", 0.7, 0.7, 0.7)
+    tt:AddLine(L["BR_STARTING"], 0.7, 0.7, 0.7)
     return
   end
-  local onoff = "|cff40ff40On|r"
-  if not ns.cfg.enabled then onoff = "|cffff4040Off|r" end
-  tt:AddDoubleLine("Duskfall", onoff, 0.8, 0.8, 0.8)
-  tt:AddDoubleLine("Style", ns.Resolver.ActiveStyle().name or "?", 0.8, 0.8, 0.8, 1, 1, 1)
-  tt:AddDoubleLine("Here", ns.HereText(), 0.8, 0.8, 0.8, 1, 1, 1)
+  local onoff = "|cff40ff40" .. L["BR_ON"] .. "|r"
+  if not ns.cfg.enabled then onoff = "|cffff4040" .. L["WIN_OFF"] .. "|r" end
+  tt:AddDoubleLine("Duskfall", onoff,   --noloc
+    0.8, 0.8, 0.8)
+  tt:AddDoubleLine(L["STYLE_DEFAULT"], ns.Resolver.ActiveStyle().name or "?", 0.8, 0.8, 0.8, 1, 1, 1)
+  tt:AddDoubleLine(L["PL_HERE"], ns.HereText(), 0.8, 0.8, 0.8, 1, 1, 1)
   if ns.cfg.enabled then
-    tt:AddDoubleLine("Look", ns.StateText(), 0.8, 0.8, 0.8, 1, 0.82, 0)
+    tt:AddDoubleLine(L["BR_LOOK"], ns.StateText(), 0.8, 0.8, 0.8, 1, 0.82, 0)
   end
   tt:AddLine(ns.ValuesText(), 1, 1, 1)
   tt:AddLine(" ")
-  tt:AddLine("Left-click: open Duskfall", 1, 1, 1)
-  tt:AddLine("Right-click: switch on or off", 1, 1, 1)
-  tt:AddLine("Shift-right-click: settings", 1, 1, 1)
+  tt:AddLine(L["BR_LEFT"], 1, 1, 1)
+  tt:AddLine(L["BR_RIGHT"], 1, 1, 1)
+  tt:AddLine(L["BR_SHIFT_RIGHT"], 1, 1, 1)
 end
 
 local obj
 if LDB then
   obj = LDB:NewDataObject(NAME, {
-    type = "data source",
+    type = "data source",   --noloc
     icon = UI.ART .. "icon",
     label = NAME,
     text = "",
     OnClick = function(_, button) ns.Safe(ns.LauncherClick, "broker click", button) end,
     OnTooltipShow = function(tt)
       ns.Safe(ns.FillTooltip, "broker tooltip", tt)
-      tt:AddLine("Drag to move the minimap button.", 0.6, 0.6, 0.6)
+      tt:AddLine(L["BR_DRAG"], 0.6, 0.6, 0.6)
     end,
   })
 end
