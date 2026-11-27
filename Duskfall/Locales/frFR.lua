@@ -742,9 +742,11 @@ L["PN_TOAST"] = "Découvrez les nouveautés de Duskfall !"
 L["PN_TOAST_TIP"] = "Cliquez pour lire les nouveautés. Clic droit pour fermer."
 
 -- Patch notes (one key per note, newest version first) -----------------------------------------
+L["PN_130_04"] = "Duskfall parle aussi espagnol, coréen, japonais et ukrainien. Le japonais et l’ukrainien (le jeu n’a pas de client dans ces langues) se choisissent dans les Paramètres."
 L["PN_130_01"] = "Les boutons et les barres Endroit, Moment et Environnement ont le bord de la fenêtre, de l’or au bleu."
 L["PN_130_02"] = "Vos endroits : les réglages actifs là où vous êtes apparaissent en premier, au-dessus d’un trait fin."
 L["PN_130_03"] = "Fossoyeuse compte comme intérieur (le jeu la considère comme extérieure, c’est pourquoi on peut y monter)."
+L["PN_130_05"] = "Les curseurs simples vont du bleu de Duskfall à l’or, avec un < bleu et un > doré."
 L["PN_120_02"] = "Duskfall est disponible en chinois simplifié et traditionnel, en allemand et en français. D’autres langues arriveront bientôt."
 L["PN_120_01"] = "L’onglet À propos se termine par un message de solidarité : fierté LGBTQIA+, droits des personnes trans, Slava Ukraini et Palestine libre."
 L["PN_120_03"] = "Les dates des notes de mise à jour sont indiquées en chiffres (2026-11-27), de la même façon dans toutes les langues."

@@ -19,7 +19,8 @@ ns.LANGS = { "enUS", "zhCN", "zhTW", "deDE", "frFR", "esES", "koKR", "jaJP", "uk
 ns.LANG_NAMES = { enUS = "English", zhCN = "简体中文", zhTW = "繁體中文", deDE = "Deutsch", frFR = "Français",
                   esES = "Español", koKR = "한국어", jaJP = "日本語", ukUA = "Українська" }
 -- The languages with a file in Locales (and the TOC): add a code here when its file ships
-ns.LANG_READY = { enUS = true, zhCN = true, zhTW = true, deDE = true, frFR = true }
+ns.LANG_READY = { enUS = true, zhCN = true, zhTW = true, deDE = true, frFR = true, esES = true, koKR = true,
+                  jaJP = true, ukUA = true }
 ns.locale = (db and type(db.lang) == "string" and db.lang ~= "") and db.lang or GetLocale()
 if ns.locale == "enGB" then ns.locale = "enUS" end
 if ns.locale == "esMX" then ns.locale = "esES" end
@@ -826,9 +827,11 @@ L["PN_TOAST"] = "Check out what's new in Duskfall!"
 L["PN_TOAST_TIP"] = "Click to read what's new. Right-click to close."
 
 -- Patch notes (one key per note, newest version first) -----------------------------------------
+L["PN_130_04"] = "Duskfall speaks Spanish, Korean, Japanese and Ukrainian too. Japanese and Ukrainian (the game has no client for them) are picked in Settings."
 L["PN_130_01"] = "Buttons and the Place, Time and Inside bars have the window's gold-to-blue edge."
 L["PN_130_02"] = "Your places: the settings in effect where you are come first, above a thin line."
 L["PN_130_03"] = "Undercity counts as indoors (the game calls it outdoors, which is why you can ride there)."
+L["PN_130_05"] = "Plain sliders run from Duskfall blue to gold, with a blue < and a gold >."
 L["PN_120_02"] = "Duskfall speaks Chinese (Simplified and Traditional), German and French. More languages are on the way."
 L["PN_120_01"] = "About ends with a line of solidarity: LGBTQIA+ Pride, Trans Rights, Slava Ukraini and Free Palestine."
 L["PN_120_03"] = "Patch note dates are written as numbers (2026-11-27), the same in every language."

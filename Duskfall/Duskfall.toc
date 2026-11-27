@@ -5,6 +5,9 @@
 ## Notes-zhTW: 根據你所在的位置設定伽馬、亮度、對比度和輝光，並平滑過渡。
 ## Notes-deDE: Stellt Gamma, Helligkeit, Kontrast und Bloom passend zu deinem Aufenthaltsort ein, mit sanften Übergängen.
 ## Notes-frFR: Règle le gamma, la luminosité, le contraste et le flou lumineux selon l’endroit où vous êtes, avec des transitions douces.
+## Notes-esES: Ajusta el gamma, el brillo, el contraste y el resplandor según dónde estés, con transiciones suaves.
+## Notes-esMX: Ajusta el gamma, el brillo, el contraste y el resplandor según dónde estés, con transiciones suaves.
+## Notes-koKR: 현재 위치에 맞춰 감마, 밝기, 대비, 빛 번짐을 설정하고 부드럽게 전환합니다.
 ## Author: Dukul
 ## Version: 1.2.0
 ## IconTexture: Interface\AddOns\Duskfall\Assets\icon
@@ -24,6 +27,10 @@ Locales\zhCN.lua
 Locales\zhTW.lua
 Locales\deDE.lua
 Locales\frFR.lua
+Locales\esES.lua
+Locales\koKR.lua
+Locales\jaJP.lua
+Locales\ukUA.lua
 
 Core\Core.lua
 Core\Channels.lua

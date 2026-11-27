@@ -742,9 +742,11 @@ L["PN_TOAST"] = "Entdecke, was es in Duskfall Neues gibt!"
 L["PN_TOAST_TIP"] = "Klicken, um die Neuerungen zu lesen. Rechtsklick zum Schließen."
 
 -- Patch notes (one key per note, newest version first) -----------------------------------------
+L["PN_130_04"] = "Duskfall spricht jetzt auch Spanisch, Koreanisch, Japanisch und Ukrainisch. Japanisch und Ukrainisch (dafür gibt es keinen Spielclient) wählst du in den Einstellungen."
 L["PN_130_01"] = "Schaltflächen und die Leisten Ort, Tageszeit und Umgebung haben den Rand des Fensters, von Gold zu Blau."
 L["PN_130_02"] = "Deine Orte: Die Einstellungen, die an deinem Ort wirken, stehen oben, über einer dünnen Linie."
 L["PN_130_03"] = "Unterstadt zählt als drinnen (das Spiel nennt es draußen, deshalb kann man dort reiten)."
+L["PN_130_05"] = "Einfache Regler verlaufen jetzt von Duskfall-Blau zu Gold, mit einem blauen < und einem goldenen >."
 L["PN_120_02"] = "Duskfall spricht jetzt vereinfachtes und traditionelles Chinesisch, Deutsch und Französisch. Weitere Sprachen folgen."
 L["PN_120_01"] = "Der Info-Reiter endet mit einem Zeichen der Solidarität: LGBTQIA+ Pride, Rechte für trans Menschen, Slawa Ukrajini und Freiheit für Palästina."
 L["PN_120_03"] = "Die Daten in den Patchnotes stehen als Zahlen da (2026-11-27), in jeder Sprache gleich."
