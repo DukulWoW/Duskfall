@@ -43,17 +43,26 @@ For WoW Forever. Download on [CurseForge](https://www.curseforge.com/wow/addons/
   also in the addon compartment and on broker bars, there is a key binding to switch it on and
   off, and an optional floating display shows what is in effect when it changes. The game's
   colorblind filter is close at hand on Settings > Display.
-- **A window of its own.** The game's frame in the icon's gold and blue, and a soft light that
-  follows your mouse and lights everything under it in its own colour.
-- **Help built in.** A short welcome on your first login, and a help button in the window that
-  explains everything in a few plain topics.
+- **Compare and brighten.** Hold Compare (or its key) to see your own settings for a moment, or
+  hold the Hold to brighten key to peer into a dark corner.
+- **A head start.** The Dark Places Style adds a little more light in the darkest zones and at
+  night. Coming from another lighting addon? Duskfall can bring its settings along as a Style, and
+  tells you when two addons would fight over the same settings.
+- **Calibrate and HDR.** Grey squares to set your own look by, and an HDR tab for HDR screens:
+  peak brightness, paper white and strength, which the game's own options do not have.
+- **Sounds.** A short sound when you walk into a new place, and one when a setting starts, if you
+  like; other addons' sounds can be picked too.
+- **A window of its own.** The game's frame in the icon's gold and blue, windows that fade in and
+  out, and a soft light that follows your mouse and lights everything under it in its own colour.
+- **Help built in.** A short welcome on your first login, a help button in the window that
+  explains everything in a few plain topics, with links to the pages, and the patch notes.
 
 ## Commands
 
 `/dusk` (or `/duskfall`, `/df`) opens the window, `/dusk settings` opens it on Settings, and
 `/dusk help` opens the help, whose Commands topic lists everything else: `status`, `on` / `off`,
-`save` / `clear` / `looks` for quick settings from chat, `style`, `mode`, `fade`, `adapt`,
-`baseline` and more.
+`refresh`, `notes`, `save` / `clear` / `looks` for quick settings from chat, `style`, `mode`,
+`fade`, `adapt`, `baseline` and more.
 
 ---
 

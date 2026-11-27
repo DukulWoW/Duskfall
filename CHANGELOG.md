@@ -1,18 +1,28 @@
-# Duskfall v1.0.0
+# Duskfall v1.1.0
 
 ## WoW Forever
 
-The first release. Duskfall sets the game's Gamma, Brightness, Contrast and Bloom for where you are, and moves between them the way your eyes adjust.
+A big one: HDR, a calibration chart, Compare, sounds, a starter Style, patch notes in the game, and a lot of polish.
 
 ### New
-- **Places, found as you play.** Every part of a zone, zone and instance you visit is remembered. Nothing changes until you set something.
-- **Simple to start.** Open Duskfall where you stand, pick the place (this part of the zone, the whole zone or everywhere), a time of day and indoors or outdoors, and move a slider. The change shows at once. Copy and Paste move values from one setting to another; the mini panel shows only the sliders, so you see the whole screen.
-- **Advanced mode** for everything else: every place, a full Look editor with every condition (combat, mounted, swimming, underwater, resting, ghost, your own hours), offsets or fixed values, Preview and Revert.
-- **How changes feel:** Instant, Smooth, or Like your eyes (slowly into the dark with a short dip, quickly out into the light with a short glare), with one speed slider and Try it. Fades glide in fine steps, with no visible stepping.
-- **Styles:** named sets of settings with their own feel, shared by all characters or per character.
-- **Time of day** follows the server clock, the one the sky uses. Drag the edges of the day bar to change when dawn, day, dusk and night start, or use your computer's clock.
-- **Share** a setting or a whole Style as one line of text; Import takes it back in.
-- **Your settings stay yours:** your own values are the baseline every setting changes from, and they come back when you log out or switch Duskfall off.
-- **Out of the way:** the minimap's day and night moon opens Duskfall and glows softly where a setting is in effect; a minimap button when the moon is hidden; the addon compartment, broker bars, a key binding to switch it on and off, and an optional status display by the minimap.
-- **A window of its own:** the game's frame in the icon's gold and blue, a soft cursor light that lights everything in its own colour, built-in help, and a short welcome on your first login.
-- The game's colorblind filter close at hand on Settings > Display.
+- **HDR tab** for HDR screens: turn HDR on and set peak brightness, paper white and strength. The game's own options have none of these.
+- **Calibrate** (Settings > Baseline): grey squares to set your own Gamma, Brightness and Contrast by.
+- **Compare:** hold the Compare button (Places, mini panel) or its key binding to see your own settings; let go to see Duskfall's again.
+- **Hold to brighten:** a key binding that makes the screen brighter while you hold it, to peer into a dark corner. Set how much on Settings > General.
+- **Sounds:** a short sound the first time you walk into a place (on), and one when walking in starts one of your settings (off). Pick each sound, other addons' sounds too, on Settings > General.
+- **Dark Places:** a starter Style with a little more light in the darkest zones and at night. On the Styles tab, and as a choice in the welcome.
+- **Underwater** in simple mode: a setting can be for underwater only.
+- **Other lighting addons:** Duskfall warns once when another addon also changes Gamma, Brightness and Contrast, can turn it off for you, and can first bring its settings along as a new Style.
+- **Patch Notes** on About and in Help; after an update a short note by the minimap points to them.
+- **Refresh**, left of the big switch on Settings (and `/dusk refresh`), puts the settings for here back at once if the screen ever seems stuck.
+
+### Changes
+- Windows fade in and out gently, and the status display fades out smoothly.
+- The status display shows a thin bar while a change runs and can stay for exactly as long as the change. Left-click it for the settings for where you are, right-click to close it.
+- Help: links open the page they name, with pictures, and new topics on other addons, HDR and calibrating, and more.
+- The line under each slider is softer: blue when you turn a value down, gold when you turn it up.
+- Sharper close and help buttons in the title bar. Right-click the close button to move the window back to the middle of the screen.
+- Styles: delete a Style straight from the list with the X on its line.
+- The cursor light costs less: it only draws while the mouse is over a Duskfall window, and switches itself off while the game runs below 60 frames a second.
+- The About tab is tidier, with Commands, Help and Patch Notes buttons.
+- Report a bug opens a form for bugs and ideas.

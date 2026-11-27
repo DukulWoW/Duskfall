@@ -5,7 +5,7 @@
 local ADDON, ns = ...
 
 ns.PATCH_NOTES = {
-  { version = "1.1.0", date = nil, notes = {
+  { version = "1.1.0", date = "27 Nov 2026", notes = {
     { "new", "Patch notes: this page. Find it on About and in Help; after an update a short note by the minimap points to it." },
     { "new", "Compare: hold the Compare button (Places, mini panel) or its key binding to see your own settings; let go to see Duskfall's again." },
     { "new", "HDR tab: turn HDR on and set peak brightness, paper white and strength, for HDR screens. The game's own options have none of these." },
