@@ -4,6 +4,7 @@
 ## Notes-zhCN: 根据你所在的位置设置伽马、亮度、对比度和辉光，并平滑过渡。
 ## Notes-zhTW: 根據你所在的位置設定伽馬、亮度、對比度和輝光，並平滑過渡。
 ## Notes-deDE: Stellt Gamma, Helligkeit, Kontrast und Bloom passend zu deinem Aufenthaltsort ein, mit sanften Übergängen.
+## Notes-frFR: Règle le gamma, la luminosité, le contraste et le flou lumineux selon l’endroit où vous êtes, avec des transitions douces.
 ## Author: Dukul
 ## Version: 1.1.0
 ## IconTexture: Interface\AddOns\Duskfall\Assets\icon
@@ -22,6 +23,7 @@ Locales\enUS.lua
 Locales\zhCN.lua
 Locales\zhTW.lua
 Locales\deDE.lua
+Locales\frFR.lua
 
 Core\Core.lua
 Core\Channels.lua

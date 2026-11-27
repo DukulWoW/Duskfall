@@ -17,7 +17,7 @@ ns.LANGS = { "enUS", "zhCN", "zhTW", "deDE", "frFR", "esES", "ruRU", "koKR" }
 ns.LANG_NAMES = { enUS = "English", zhCN = "简体中文", zhTW = "繁體中文", deDE = "Deutsch", frFR = "Français",
                   esES = "Español", ruRU = "Русский", koKR = "한국어" }
 -- The languages with a file in Locales (and the TOC): add a code here when its file ships
-ns.LANG_READY = { enUS = true, zhCN = true, zhTW = true, deDE = true }
+ns.LANG_READY = { enUS = true, zhCN = true, zhTW = true, deDE = true, frFR = true }
 ns.locale = (db and type(db.lang) == "string" and db.lang ~= "") and db.lang or GetLocale()
 if ns.locale == "enGB" then ns.locale = "enUS" end
 if ns.locale == "esMX" then ns.locale = "esES" end
@@ -824,7 +824,7 @@ L["PN_TOAST"] = "Check out what's new in Duskfall!"
 L["PN_TOAST_TIP"] = "Click to read what's new. Right-click to close."
 
 -- Patch notes (one key per note, newest version first) -----------------------------------------
-L["PN_120_02"] = "Duskfall speaks Chinese, Simplified and Traditional. More languages are on the way."
+L["PN_120_02"] = "Duskfall speaks Chinese (Simplified and Traditional), German and French. More languages are on the way."
 L["PN_120_01"] = "About ends with a line of solidarity: LGBTQIA+ Pride, Trans Rights, Slava Ukraini and Free Palestine."
 L["PN_120_03"] = "Patch note dates are written as numbers (2026-11-27), the same in every language."
 L["PN_120_04"] = "The About tab shows the solidarity line where the status line was; the status line stays on every other tab."

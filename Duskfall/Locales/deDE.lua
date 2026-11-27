@@ -742,7 +742,7 @@ L["PN_TOAST"] = "Entdecke, was es in Duskfall Neues gibt!"
 L["PN_TOAST_TIP"] = "Klicken, um die Neuerungen zu lesen. Rechtsklick zum Schließen."
 
 -- Patch notes (one key per note, newest version first) -----------------------------------------
-L["PN_120_02"] = "Duskfall spricht jetzt vereinfachtes und traditionelles Chinesisch. Weitere Sprachen folgen."
+L["PN_120_02"] = "Duskfall spricht jetzt vereinfachtes und traditionelles Chinesisch, Deutsch und Französisch. Weitere Sprachen folgen."
 L["PN_120_01"] = "Der Info-Reiter endet mit einem Zeichen der Solidarität: LGBTQIA+ Pride, Rechte für trans Menschen, Slawa Ukrajini und Freiheit für Palästina."
 L["PN_120_03"] = "Die Daten in den Patchnotes stehen als Zahlen da (2026-11-27), in jeder Sprache gleich."
 L["PN_120_04"] = "Der Info-Reiter zeigt das Zeichen der Solidarität dort, wo die Statuszeile war; auf allen anderen Reitern bleibt die Statuszeile."
