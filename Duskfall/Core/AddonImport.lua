@@ -91,6 +91,23 @@ local function zoneMap(name)
   return m and m.id
 end
 
+-- A part of a zone Duskfall has been in, by its name. One match: that one, whatever zone the other
+-- addon named (Iris says "Undercity | Ruins of Lordaeron" where Duskfall sees Tirisfal Glades);
+-- several: the one in zoneId, if any.
+local function subKey(name, zoneId)
+  local found, inZone, n = nil, nil, 0
+  for key in pairs(ns.db.places or {}) do
+    local z, s = key:match("^sub:(%d+):(.+)$")
+    if s == name then
+      n = n + 1
+      found = key
+      if zoneId and tonumber(z) == zoneId then inZone = key end
+    end
+  end
+  if n == 1 then return found end
+  return inZone
+end
+
 local function instanceKey(name)
   for key, p in pairs(ns.db.places or {}) do
     if key:match("^instance:") and p.name == name then return key end
@@ -128,7 +145,11 @@ function AI.Run(src)
       key = instanceKey(zone)
     else
       local id = zoneById(e.mapID) or zoneMap(zone)
-      if id then key = (sub ~= "" and ("sub:" .. id .. ":" .. sub)) or ("zone:" .. id) end
+      if sub ~= "" then
+        key = subKey(sub, id) or (id and ("sub:" .. id .. ":" .. sub))
+      elseif id then
+        key = "zone:" .. id
+      end
     end
     local name = e.everywhere and "Everywhere" or (sub ~= "" and (sub .. ", " .. zone)) or zone or "?"
     if key == nil then
@@ -143,15 +164,16 @@ function AI.Run(src)
         if e.b and e.b ~= 0 then values.brightness = round(e.b) end
         if e.c and e.c ~= 0 then values.contrast = round(e.c) end
       end
+      -- Changes too small to see are left out (Kim: Gamma below 0.03; the others round to whole numbers)
       if not e.relative and e.g and base.gamma then
         local d = round(e.g - base.gamma, 2)
-        if d ~= 0 then values.gamma = d end
+        if math.abs(d) >= 0.03 then values.gamma = d end
       end
-      if e.b and base.brightness then
+      if not e.relative and e.b and base.brightness then
         local d = round(e.b - base.brightness)
         if d ~= 0 then values.brightness = d end
       end
-      if e.c and base.contrast then
+      if not e.relative and e.c and base.contrast then
         local d = round(e.c - base.contrast)
         if d ~= 0 then values.contrast = d end
       end
@@ -172,8 +194,10 @@ function AI.Run(src)
   return st, matched, skipped
 end
 
--- Make st the Style every character uses (as picking it on the Styles tab).
+-- Use st as picking it on the Styles tab does (UI/SimpleStyles.lua ns.UseStyle: for this
+-- character when characters have their own Styles, else for every character).
 function AI.Use(st)
+  if ns.UseStyle then ns.UseStyle(st) return end
   for _, o in ipairs(ns.db.styles) do
     if o ~= st and ns.UI.ScopeIsGlobal(o.scope, true) then o.scope = { chars = {} } end
   end
@@ -191,7 +215,7 @@ function AI.Report(st, matched, skipped, from)
   end
   ns.Print("imported %d setting%s into the Style \"%s\".", matched, matched == 1 and "" or "s", st.name)
   if #skipped > 0 then ns.Print("skipped (no matching place): %s.", table.concat(skipped, "; ")) end
-  ns.UI.Confirm("Use \"" .. st.name .. "\" for every character now?", function() AI.Use(st) end)
+  ns.UI.Confirm("Use \"" .. st.name .. "\" now?", function() AI.Use(st) end)
 end
 
 -- Starter Style (Kim, 2026-11-27): our own values for places that are too dark, as changes from

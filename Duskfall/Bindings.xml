@@ -5,4 +5,7 @@
   <Binding name="DUSKFALL_COMPARE" category="Duskfall" runOnUp="true">
     Duskfall_Compare(keystate)
   </Binding>
+  <Binding name="DUSKFALL_PEEK" category="Duskfall" runOnUp="true">
+    Duskfall_Peek(keystate)
+  </Binding>
 </Bindings>

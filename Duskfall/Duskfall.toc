@@ -34,12 +34,14 @@ UI\Simple.lua
 UI\Places.lua
 UI\SimpleStyles.lua
 UI\Styles.lua
+UI\HDR.lua
 UI\Broker.lua
 UI\StatusDisplay.lua
 UI\Moon.lua
 UI\Pages.lua
 UI\Help.lua
 UI\PatchNotes.lua
+UI\Calibrate.lua
 UI\Conflict.lua
 UI\Welcome.lua
 Core\OptionsPanel.lua

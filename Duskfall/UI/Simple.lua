@@ -100,11 +100,25 @@ end
 local function kindOf(key) return key and ns.PlaceUI.kindOf(key) end
 local function noIndoors(key) local k = kindOf(key) return k == "instance" or k == "itype" end
 
--- "Canals, Undercity" (lists) or "Canals" (the Look's name).
-local function placeLabel(key, long)
+-- Another zone has a part with the same name (then the list adds the zone; Kim: the names were cut off)
+local function sharedName(key)
+  local zone, name = key:match("^sub:([^:]+):(.+)$")
+  if not name then return false end
+  for k in pairs(ns.db.places or {}) do
+    local z, n = k:match("^sub:([^:]+):(.+)$")
+    if n == name and z ~= zone then return true end
+  end
+  return false
+end
+
+-- "Canals" or, when two zones have a part called that, "Canals, Undercity" (lists; long).
+-- force: always add the zone (the Place picker, when a part has the zone's own name).
+local function placeLabel(key, long, force)
   if not key then return "Everywhere" end
   local P = ns.PlaceUI
-  if long and P.kindOf(key) == "sub" then return P.placeName(key) .. ", " .. P.zoneName(P.zoneKeyOf(key)) end
+  if long and P.kindOf(key) == "sub" and (force or sharedName(key)) then
+    return P.placeName(key) .. ", " .. P.zoneName(P.zoneKeyOf(key))
+  end
   return P.placeName(key)
 end
 
@@ -327,7 +341,7 @@ function SP.Create(parent, hooks)
       if not found then
         -- Two places can share a name (Ruins of Lordaeron in Undercity and in Tirisfal): add the zone
         local label = placeLabel(sel.key)
-        for _, it in ipairs(out) do if it[2] == label then label = placeLabel(sel.key, true) end end
+        for _, it in ipairs(out) do if it[2] == label then label = placeLabel(sel.key, true, true) end end
         table.insert(out, 1, { mine, label, nil, "The place you picked in Your places." })
       end
       return out
@@ -735,7 +749,8 @@ function SP.Create(parent, hooks)
       local places = {}
       local function addPlace(key)
         local label = placeLabel(key, true)
-        if hit(label:lower()) then
+        -- Found by its zone's name too, even when the list leaves the zone out
+        if hit(placeLabel(key, true, true):lower()) then
           local k = kindOf(key)
           local kind = PLACE_KIND[k] or ""
           places[#places + 1] = { place = key, label = label, kind = kind, sort = label:lower() }

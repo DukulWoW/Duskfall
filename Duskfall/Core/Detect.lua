@@ -2,7 +2,7 @@
 -- flicker, works out the target and applies it. Also the baseline safety (capture, crash check,
 -- restore at logout) and manual slider changes (held, never learned).
 -- Public: D.Evaluate(why), D.Now(why), D.Preview(target, seconds, opts), D.SetEnabled(on), D.SaveBaseline(), D.ClearHolds(),
---         D.Compare(on), D.Refresh(), D.state
+--         D.Compare(on), D.Peek(on), D.Calibrate(on), D.Refresh(), D.state
 local ADDON, ns = ...
 local D = {}
 ns.Detect = D
@@ -18,7 +18,7 @@ local state = {
   pendingSig = nil, pendingAt = 0,
   held = {},              -- key -> value the player set by hand while here
   hinted = false,         -- the hold hint was printed for the current hold
-  comparing = false,      -- D.Compare: the baseline shows while a key / button is held
+  comparing = false,      -- "before" (D.Compare: the baseline) or "peek" (D.Peek: brighter) while held
   started = false,
 }
 D.state = state
@@ -121,27 +121,57 @@ end
 -- Before / after (Kim, 2026-11-27): while held, the baseline shows at once; let go and this place's
 -- values come back at once (also any slider moved by hand, and a place walked into meanwhile).
 -- Ends by itself after COMPARE_MAX seconds, in case the key-up never arrives (alt-tab, reload).
+-- Hold to brighten (Kim, 2026-11-27, Earendil's idea): while held, what is on screen gets a lift
+-- (settings.peekLift 0 - 1: Gamma, and Brightness with Contrast so it does not go grey); let go
+-- and it is back. Works with Duskfall off too (lifts the baseline). Same safety as Compare.
 local COMPARE_MAX = 30
+local LIFT = { gamma = 0.6, brightness = 16, contrast = 8 }   -- at peekLift = 1
 local compareToken = 0
-function D.Compare(on)
-  on = on and true or false
+
+local function restore()
+  if ns.cfg.enabled and state.target then T.Apply(state.target, state.held, "edit")
+  else C.WriteAll(ns.db.baseline) end
+end
+
+local function hold(mode, on)
   if not ns.db or not ns.db.baseline or not state.started then return end
-  if on and not ns.cfg.enabled then return end   -- off: the baseline shows already
-  if on == state.comparing then return end
-  state.comparing = on
+  if not on then
+    if state.comparing ~= mode then return end
+    state.comparing = false
+    compareToken = compareToken + 1
+    T.Cancel()
+    restore()
+    ns.Fire("COMPARE", false)
+    return
+  end
+  if mode == "before" and not ns.cfg.enabled then return end   -- off: the baseline shows already
+  if state.comparing == mode then return end
+  state.comparing = mode
   compareToken = compareToken + 1
   T.Cancel()
-  if on then
+  if mode == "before" or mode == "calib" then
     C.WriteAll(ns.db.baseline)
-    local token = compareToken
-    C_Timer.After(COMPARE_MAX, function()
-      if state.comparing and compareToken == token then D.Compare(false) end
-    end)
-  elseif ns.cfg.enabled and state.target then
-    T.Apply(state.target, state.held, "edit")
+  else
+    local from = (ns.cfg.enabled and state.target) or ns.db.baseline
+    local a = tonumber(ns.cfg.peekLift) or 0.5
+    for k, add in pairs(LIFT) do
+      local v = state.held[k] or from[k]
+      if v ~= nil then C.Write(k, C.Clamp(k, v + add * a)) end
+    end
   end
-  ns.Fire("COMPARE", on)
+  local token = compareToken
+  if mode ~= "calib" then   -- the calibration chart stays until it is closed
+    C_Timer.After(COMPARE_MAX, function()
+      if state.comparing == mode and compareToken == token then hold(mode, false) end
+    end)
+  end
+  ns.Fire("COMPARE", mode)
 end
+
+function D.Compare(on) hold("before", on and true or false) end
+function D.Peek(on) hold("peek", on and true or false) end
+-- The calibration chart (UI/Calibrate.lua): the baseline, with Duskfall off too, until closed
+function D.Calibrate(on) hold("calib", on and true or false) end
 
 -- Refresh (Kim, 2026-11-27): clears anything that could hold the screen (Compare, a Preview, a
 -- running fade, sliders moved by hand) and writes what belongs here now (the baseline when off).

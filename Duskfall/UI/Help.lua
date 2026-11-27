@@ -68,8 +68,8 @@ local TOPICS = {
       .. "the settings, " .. Y .. "/dusk help|r this help, " .. Y .. "/dusk notes|r the patch notes, "
       .. Y .. "/dusk status|r what Duskfall is doing, in chat.",
     Y .. "/dusk on|r, " .. Y .. "/dusk off|r: Duskfall on or off; there is a key binding for it too "
-      .. "(Options > Keybindings > AddOns), and one to hold for a quick look at your own settings "
-      .. "(as the Compare button). " .. Y .. "/dusk baseline|r: the current values become your baseline. " .. Y .. "/dusk refresh|r (or the Refresh "
+      .. "(Options > Keybindings > AddOns), one to hold for a quick look at your own settings "
+      .. "(as the Compare button), and one to hold for a brighter screen. " .. Y .. "/dusk baseline|r: the current values become your baseline. " .. Y .. "/dusk refresh|r (or the Refresh "
       .. "button on Settings) puts the settings for here back at once if the screen ever seems stuck.",
     Y .. "/dusk save sub|r, " .. Y .. "zone|r or " .. Y .. "instance|r, then any of " .. Y .. "dawn day dusk night "
       .. "21:00-05:30 indoors outdoors resting combat mounted swimming underwater ghost|r (! in front = not): "

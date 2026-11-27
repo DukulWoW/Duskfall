@@ -1,0 +1,113 @@
+-- Duskfall UI/HDR.lua: the HDR tab, right of Styles (Kim, 2026-11-27). Forever's Graphics options
+-- have no HDR settings, but the client has the CVars (Kim's probe, 2026-11-27; none protected,
+-- all apply at once, the client accepts any value, so the slider ranges are ours):
+--   HDROutput            0 / 1      HDR on or off (default 0)
+--   HDRPeakBrightness    nits       the screen's peak (default 400), used when useHDRPeakBrightness = 1
+--   HDRBrightness        nits       paper white, normal white (default 203), used when useHDRBrightness = 1
+--   HDRFactor            0.5 - 3    HDR strength (default 2)
+-- RenderFormat is left alone (what its numbers mean is unknown). These are game-wide, not per place.
+local ADDON, ns = ...
+local UI, W = ns.UI, ns.Window
+
+local DEFAULTS = { HDROutput = 0, HDRPeakBrightness = 400, useHDRPeakBrightness = 0, HDRBrightness = 203,
+                   useHDRBrightness = 0, HDRFactor = 2 }
+local RANGE = { HDRPeakBrightness = { 200, 4000, 50 }, HDRBrightness = { 80, 500, 5 }, HDRFactor = { 0.5, 3, 0.1 } }
+
+local function has(cvar) return C_CVar and C_CVar.GetCVar and C_CVar.GetCVar(cvar) ~= nil end
+local function get(cvar) return tonumber(C_CVar.GetCVar(cvar)) end
+local function set(cvar, v)
+  local r = RANGE[cvar]
+  if r then v = math.max(r[1], math.min(r[2], v)) end
+  pcall(C_CVar.SetCVar, cvar, tostring(v))
+end
+local function on(cvar) return (get(cvar) or 0) ~= 0 end
+
+W.AddTab("hdr", "HDR", function(page)
+  UI.Glow(page, nil, 0.8)
+  local FULL_W = 728
+  local title = UI.Label(page, "HDR", "GameFontNormalHuge")
+  title:SetPoint("TOPLEFT", page, "TOPLEFT", 14, -14)
+  local intro = UI.Label(page, "For HDR screens. Windows HDR must be on (Windows Settings > System > Display > "
+    .. "Use HDR). Changes show at once and apply everywhere in the game.")
+  intro:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -8)
+  intro:SetWidth(FULL_W)
+  intro:SetTextColor(0.7, 0.7, 0.7)
+
+  if not has("HDROutput") then
+    local none = UI.Label(page, "This game client has no HDR settings.", "GameFontNormalLarge")
+    none:SetPoint("TOPLEFT", intro, "BOTTOMLEFT", 0, -30)
+    return
+  end
+
+  local controls = {}
+  local function refresh() for _, c in ipairs(controls) do if c.Refresh then c:Refresh() end end end
+
+  -- HDR output: the big switch
+  local top = UI.Card(page, 12, -84, FULL_W, 74)
+  local outT = UI.Label(top, "HDR output", "GameFontNormalLarge")
+  outT:SetPoint("TOPLEFT", top, "TOPLEFT", 16, -14)
+  local outD = UI.Label(top, "Off: the game draws as on a normal screen and the settings below do nothing.")
+  outD:SetPoint("TOPLEFT", outT, "BOTTOMLEFT", 0, -6)
+  outD:SetTextColor(0.68, 0.68, 0.68)
+  local out = UI.Switch(page, { label = "HDR", big = true,
+    tip = "HDR output on or off. Needs Windows HDR on.",
+    get = function() return on("HDROutput") end,
+    set = function(v) set("HDROutput", v and 1 or 0) refresh() end })
+  out:SetPoint("RIGHT", top, "RIGHT", -24, 0)
+  controls[#controls + 1] = out
+
+  -- Brightness
+  local SL_W = FULL_W - 32 - 130
+  local box = UI.Card(page, 12, -170, FULL_W, 250)
+  local bT = UI.Label(box, "Brightness", "GameFontNormalLarge")
+  bT:SetPoint("TOPLEFT", box, "TOPLEFT", 16, -14)
+  local bD = UI.Label(box, "Set Peak brightness to what your screen can show (see its specs), then Paper white "
+    .. "until white text and the sky look right. Strength last.")
+  bD:SetPoint("TOPLEFT", bT, "BOTTOMLEFT", 0, -6)
+  bD:SetWidth(FULL_W - 32)
+  bD:SetTextColor(0.68, 0.68, 0.68)
+
+  local y = -70
+  local function row(cvar, useCvar, label, tip, fmt)
+    local r = RANGE[cvar]
+    local sl = UI.Slider(page, SL_W, { label = label, min = r[1], max = r[2], step = r[3], default = DEFAULTS[cvar],
+      fmt = fmt, tip = tip,
+      get = function() return get(cvar) or DEFAULTS[cvar] end,
+      onChange = function(v) set(cvar, v) end })
+    sl:SetPoint("TOPLEFT", box, "TOPLEFT", 16, y)
+    controls[#controls + 1] = sl
+    if useCvar then
+      local use = UI.Check(page, { label = "Use it", tip = "Off: the game picks this itself.",
+        get = function() return on(useCvar) end,
+        set = function(v)
+          set(useCvar, v and 1 or 0)
+          sl:SetEnabled(v)
+        end })
+      use:SetPoint("LEFT", sl, "RIGHT", 24, -6)
+      controls[#controls + 1] = use
+      local oldRefresh = sl.Refresh
+      function sl:Refresh()
+        oldRefresh(self)
+        self:SetEnabled(on(useCvar))
+      end
+    end
+    y = y - (UI.SLIDER_H + 22)
+  end
+  local nits = function(v) return string.format("%d nits", v) end
+  row("HDRPeakBrightness", "useHDRPeakBrightness", "Peak brightness",
+    "The brightest the game draws, in nits. Match it to your screen's peak.", nits)
+  row("HDRBrightness", "useHDRBrightness", "Paper white",
+    "How bright normal white (text, interface, clouds) is, in nits.", nits)
+  row("HDRFactor", nil, "Strength", "How strongly bright parts are pushed up. Lower is calmer.",
+    function(v) return string.format("%.1f", v) end)
+
+  local reset = UI.Button(page, "Reset to defaults", 160, function()
+    for k, v in pairs(DEFAULTS) do if k ~= "HDROutput" then set(k, v) end end
+    refresh()
+  end, 24)
+  reset:SetPoint("TOPRIGHT", box, "BOTTOMRIGHT", 0, -12)
+  UI.Tooltip(reset, "Reset to defaults", "The game's own values for the settings above. HDR output stays as it is.")
+
+  page:HookScript("OnShow", refresh)
+  refresh()
+end)

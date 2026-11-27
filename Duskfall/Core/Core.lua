@@ -37,6 +37,7 @@ ns.DEFAULTS = {
   soundActive = false,          -- a sound when walking into a place makes a setting take effect
   soundActiveName = "Duskfall: Setting starts",
   soundChannel = "SFX",         -- PlaySoundFile channel
+  peekLift = 0.5,               -- Hold to brighten: 0 - 1 (Core/Detect.lua LIFT at 1)
 }
 
 -- Output ---------------------------------------------------------------------------------------

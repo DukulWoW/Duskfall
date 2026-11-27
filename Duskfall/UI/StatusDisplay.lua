@@ -39,7 +39,7 @@ local function fill()
   local state = ns.StateText()
   local color = "|cffffd100"
   if state == "Off" then color = "|cffff4040"
-  elseif state == "Baseline" or D.state.comparing then color = "|cffffffff" end
+  elseif state == "Baseline" or D.state.comparing == "before" then color = "|cffffffff" end
   frame.look:SetText(color .. state .. "|r")
   frame.values:SetText(ns.ValuesText())
 end

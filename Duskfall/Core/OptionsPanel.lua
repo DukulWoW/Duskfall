@@ -8,10 +8,14 @@ local ADDON, ns = ...
 BINDING_HEADER_DUSKFALL = "Duskfall"
 BINDING_NAME_DUSKFALL_TOGGLE = "Toggle Duskfall on/off"
 BINDING_NAME_DUSKFALL_COMPARE = "Hold to see before (your own settings)"
+BINDING_NAME_DUSKFALL_PEEK = "Hold to brighten"
 
 -- runOnUp: keystate is "down" while pressed, "up" when let go
 function Duskfall_Compare(keystate)
   if ns.Detect then ns.Detect.Compare(keystate == "down") end
+end
+function Duskfall_Peek(keystate)
+  if ns.Detect then ns.Detect.Peek(keystate == "down") end
 end
 
 function Duskfall_ToggleEnabled()

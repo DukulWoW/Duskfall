@@ -83,6 +83,10 @@ local function use(st)
   changed()
 end
 
+-- Picking a Style, the one way (the import and the starter Style use it too: with per-character
+-- Styles a Global one never won over this character's own, so the new Style did not show, Kim)
+ns.UseStyle = use
+
 StaticPopupDialogs["DUSKFALL_RENAME_STYLE"] = {
   text = "New name for the Style:",
   button1 = OKAY,

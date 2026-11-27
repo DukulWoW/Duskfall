@@ -65,6 +65,11 @@ local function placeName(key)
   if p and p.name then return p.name end
   local _, sub = subParts(key)
   if sub then return sub end
+  -- A zone not visited yet (the starter Style, an import): the game's map name
+  if key:match("^zone:%d+$") then
+    local info = C_Map.GetMapInfo(tonumber(key:match("%d+")))
+    if info and info.name then return info.name end
+  end
   return key
 end
 

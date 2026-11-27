@@ -138,18 +138,28 @@ local function buildGeneral(p)
     "soundActive", "soundActiveName")
 
   local SL_W = FULL_W - 32
-  local _, timing = card(p, 12, -170, FULL_W, 166, "Timing",
-    "How quickly Duskfall reacts. The feel of the changes themselves is on the Styles tab.", controls)
-  timing(UI.Slider(p, SL_W, { label = "Doorway delay", min = 0, max = 2, step = 0.1, default = 0.5,
+  -- Timing and keys (Kim, 2026-11-27): the two timings side by side, Hold to brighten under them
+  local _, timing = card(p, 12, -170, FULL_W, 166, "Timing and keys",
+    "How quickly Duskfall reacts, and how much Hold to brighten (a key binding) lifts the screen.", controls)
+  local HALF_SL = math.floor((SL_W - 24) / 2)
+  local door = timing(UI.Slider(p, HALF_SL, { label = "Doorway delay", min = 0, max = 2, step = 0.1, default = 0.5,
     fmt = function(v) return string.format("%.1f s", v) end,
     tip = "How long a new state (indoors, mounted...) must hold before Duskfall reacts. Stops flicker in doorways.",
     get = function() return ns.cfg.debounce end,
     onChange = function(v) ns.cfg.debounce = v end }), UI.SLIDER_H, 10)
-  timing(UI.Slider(p, SL_W, { label = "Adapt overshoot gap", min = 0, max = 10, step = 0.5, default = 2,
+  local gap = UI.Slider(p, HALF_SL, { label = "Adapt overshoot gap", min = 0, max = 10, step = 0.5, default = 2,
     fmt = function(v) return string.format("%.1f s", v) end,
     tip = "Two Adapt dips or glares never come closer than this. Riding along a zone border dips once.",
     get = function() return ns.cfg.adaptGap end,
-    onChange = function(v) ns.cfg.adaptGap = v end }), UI.SLIDER_H, 10)
+    onChange = function(v) ns.cfg.adaptGap = v end })
+  gap:SetPoint("TOPLEFT", door, "TOPLEFT", HALF_SL + 24, 0)
+  controls[#controls + 1] = gap
+  timing(UI.Slider(p, SL_W, { label = "Hold to brighten", min = 0.1, max = 1, step = 0.05, default = 0.5,
+    fmt = function(v) return string.format("%d%%", math.floor(v * 100 + 0.5)) end,
+    tip = "How much brighter the screen gets while you hold the Hold to brighten key (Options > Keybindings > "
+      .. "AddOns > Duskfall). 50% is about Gamma +0.3, Brightness +8, Contrast +4.",
+    get = function() return ns.cfg.peekLift end,
+    onChange = function(v) ns.cfg.peekLift = v end }), UI.SLIDER_H, 10)
 
   -- Factory reset (Kim, 2026-11-26): a red box at the bottom, one button per kind of reset, each
   -- asks first. None of them can be undone.
@@ -385,8 +395,13 @@ local function buildBaseline(p)
   local tip = UI.Label(p, "Drag a slider and the screen follows. Right-click a slider for the game default.")
   tip:SetPoint("BOTTOMLEFT", actions, "TOPLEFT", 4, 6)
   tip:SetTextColor(0.7, 0.7, 0.7)
+  -- Calibrate (Kim, 2026-11-27): grey squares to set the baseline by (UI/Calibrate.lua)
+  local calib = UI.Button(p, "Calibrate", 120, function() if ns.Calibrate then ns.Calibrate.Open() end end)
+  calib:SetKind("main")
+  calib:SetPoint("LEFT", reset, "RIGHT", 8, 0)
+  UI.Tooltip(calib, "Calibrate", "Grey squares to set your baseline by: black level, white level and even grey steps.")
   local help = UI.HelpIcon(p, "own", "Baseline", "Your own look, which every setting in Places changes from.")
-  help:SetPoint("LEFT", reset, "RIGHT", 10, 0)
+  help:SetPoint("LEFT", calib, "RIGHT", 10, 0)
   return refreshCards
 end
 
