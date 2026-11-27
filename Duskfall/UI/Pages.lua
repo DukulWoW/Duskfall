@@ -819,28 +819,51 @@ W.AddTab("about", L["TAB_ABOUT"], function(page)
     { L["AB_PATCH"], L["AB_PATCH_TIP"], function() if ns.PatchNotes then ns.PatchNotes.Open() end end },
   }
   local total = #row * BW + (#row - 1) * BG
+  local midBtn   -- the middle button: the row is centred on it
   for i, r in ipairs(row) do
     local b = UI.Button(col, r[1], BW, r[3], 26)
     b:SetPoint("TOPLEFT", desc, "BOTTOM", -math.floor(total / 2) + (i - 1) * (BW + BG), -(18 + SZ + 18))
     UI.Tooltip(b, r[1], r[2])
+    if i == math.ceil(#row / 2) then midBtn = b end
   end
 
-  -- The solidarity line from all of Kim's addons (as BigNoteBox's General tab): a rule, then four
-  -- flags at the very bottom; the fan project note just above the rule. Kept as written in every
-  -- language (as in BigNoteBox).
+  -- The bottom (Kim, 2026-11-27): the status strip is hidden on this tab (W.UpdateStrip) and the
+  -- solidarity line from all of Kim's addons (as BigNoteBox's General tab) takes its place; a gold
+  -- rule above it, and the fan project note centred between the buttons and the rule. The flags line
+  -- is kept as written in every language (as in BigNoteBox). Own frame above the page's glow.
   local FLAG = UI.ART .. "Flags\\"
-  local sol = UI.Label(page, "LGBTQIA+ |T" .. FLAG .. "flag-pride:14:20|t Pride  \226\128\148"   --noloc
+  local solFrame = CreateFrame("Frame", nil, page)
+  solFrame:SetPoint("BOTTOMLEFT", W.frame, "BOTTOMLEFT", 16, 10)
+  solFrame:SetPoint("BOTTOMRIGHT", W.frame, "BOTTOMRIGHT", -16, 10)
+  solFrame:SetHeight(16)
+  solFrame:SetFrameLevel(page:GetFrameLevel() + 20)
+  local sol = UI.Label(solFrame, "LGBTQIA+ |T" .. FLAG .. "flag-pride:14:20|t Pride  \226\128\148"   --noloc
     .. "  Trans |T" .. FLAG .. "flag-trans:14:20|t Rights  \226\128\148"   --noloc
     .. "  Slava |T" .. FLAG .. "flag-ua:14:20|t Ukraini  \226\128\148"   --noloc
     .. "  Free |T" .. FLAG .. "flag-ps:14:20|t Palestine", "GameFontHighlightSmall")   --noloc
-  sol:SetPoint("BOTTOM", page, "BOTTOM", 0, 10)
+  sol:SetPoint("CENTER", solFrame, "CENTER", 0, 0)
   sol:SetJustifyH("CENTER")
   sol:SetTextColor(0.85, 0.85, 0.85)
-  local rule = page:CreateTexture(nil, "ARTWORK")
+  -- The rule: Duskfall blue at both ends, gold in the middle (Kim), as two gradient halves
+  local rule = CreateFrame("Frame", nil, solFrame)
   rule:SetHeight(1)
-  rule:SetColorTexture(1, 0.82, 0, 0.25)
-  rule:SetPoint("BOTTOMLEFT", page, "BOTTOMLEFT", 24, 32)
-  rule:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -24, 32)
-  local foot = UI.Label(page, L["AB_FOOT"], "GameFontDisableSmall")
-  foot:SetPoint("BOTTOM", rule, "TOP", 0, 6)
+  rule:SetPoint("BOTTOMLEFT", solFrame, "TOPLEFT", 8, 10)
+  rule:SetPoint("BOTTOMRIGHT", solFrame, "TOPRIGHT", -8, 10)
+  local blue, gold = UI.RING_BLUE, UI.RING_GOLD
+  local ruleL = rule:CreateTexture(nil, "ARTWORK")
+  ruleL:SetPoint("TOPLEFT", rule, "TOPLEFT")
+  ruleL:SetPoint("BOTTOMRIGHT", rule, "BOTTOM")
+  UI.Gradient(ruleL, "HORIZONTAL", { blue[1], blue[2], blue[3], 0.7 }, { gold[1], gold[2], gold[3], 0.7 })
+  local ruleR = rule:CreateTexture(nil, "ARTWORK")
+  ruleR:SetPoint("TOPLEFT", rule, "TOP")
+  ruleR:SetPoint("BOTTOMRIGHT", rule, "BOTTOMRIGHT")
+  UI.Gradient(ruleR, "HORIZONTAL", { gold[1], gold[2], gold[3], 0.7 }, { blue[1], blue[2], blue[3], 0.7 })
+  -- The note, centred in the gap between the buttons and the rule
+  local gap = CreateFrame("Frame", nil, page)
+  gap:SetPoint("TOP", midBtn, "BOTTOM", 0, 0)
+  gap:SetPoint("BOTTOM", rule, "TOP", 0, 0)
+  gap:SetWidth(700)
+  gap:SetFrameLevel(page:GetFrameLevel() + 20)
+  local foot = UI.Label(gap, L["AB_FOOT"], "GameFontDisableSmall")
+  foot:SetPoint("CENTER", gap, "CENTER", 0, 0)
 end, "right")

@@ -174,11 +174,20 @@ function W.NewOverlay(titleText)
       if o ~= self and o:IsShown() then return end
     end
     for _, t in ipairs(tabs) do if t.page then t.page:SetAlpha(1) end end
-    if win.strip then win.strip:Show() end
+    W.UpdateStrip()
   end)
   overlays[#overlays + 1] = f
   f:Hide()
   return f
+end
+
+-- The status strip shows on every tab but About (Kim, 2026-11-27: the flags sit there), and never
+-- under an overlay
+function W.UpdateStrip()
+  if not (frame and frame.strip) then return end
+  local covered = false
+  for _, o in ipairs(overlays) do if o:IsShown() then covered = true end end
+  frame.strip:SetShown(not covered and frame.selected ~= "about")
 end
 
 function W.Select(id)
@@ -201,6 +210,7 @@ function W.Select(id)
       end
       frame.selected = id
       ns.cfg.windowTab = id
+      W.UpdateStrip()
     else
       t.page:Hide()
       pcall(PanelTemplates_DeselectTab, t.button)

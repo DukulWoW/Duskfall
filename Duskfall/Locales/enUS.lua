@@ -809,7 +809,10 @@ L["PN_TOAST"] = "Check out what's new in Duskfall!"
 L["PN_TOAST_TIP"] = "Click to read what's new. Right-click to close."
 
 -- Patch notes (one key per note, newest version first) -----------------------------------------
+L["PN_120_02"] = "Duskfall speaks Chinese, Simplified and Traditional. More languages are on the way."
 L["PN_120_01"] = "About ends with a line of solidarity: LGBTQIA+ Pride, Trans Rights, Slava Ukraini and Free Palestine."
+L["PN_120_03"] = "Patch note dates are written as numbers (2026-11-27), the same in every language."
+L["PN_120_04"] = "The About tab shows the solidarity line where the status line was; the status line stays on every other tab."
 L["PN_110_01"] = "Patch notes: this page. Find it on About and in Help; after an update a short note by the minimap points to it."
 L["PN_110_02"] = "Compare: hold the Compare button (Places, mini panel) or its key binding to see your own settings; let go to see Duskfall's again."
 L["PN_110_03"] = "HDR tab: turn HDR on and set peak brightness, paper white and strength, for HDR screens. The game's own options have none of these."
