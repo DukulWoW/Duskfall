@@ -1038,7 +1038,8 @@ UI.CHANNEL_GRADIENT = {
 -- Light slider ---------------------------------------------------------------------------------
 --   Gamma      [ dark ======|=====O====== light ]    +0.10
 -- Simple mode's slider: the track is a gradient (what the value does to the picture), the mark in
--- the middle is 0 ("no change"), a gold line under the track runs from the mark to the thumb.
+-- the middle is 0 ("no change"), a line under the track runs from the mark to the thumb: gold above
+-- the mark, Duskfall blue below it, fading out towards the mark (Kim, 2026-11-27).
 -- Right-click puts it back to 0. The range should be symmetric around 0.
 -- o = { label, min, max, step, from = { r, g, b }, to = { r, g, b }, get = fn() -> v,
 --       mid = the mark's value (default 0), labelW / valueW = column widths (0 = none),
@@ -1120,8 +1121,20 @@ function UI.LightSlider(parent, width, o)
   mark:SetColorTexture(1, 0.86, 0.55, 0.4)
   mark:SetSize(2, o.lineH or 16)
   local fill = sl:CreateTexture(nil, "ARTWORK", nil, 3)
-  fill:SetColorTexture(1, 0.82, 0, 0.95)
   fill:SetHeight(2)
+  local FILL_UP = { 1, 0.82, 0 }
+  local FILL_DOWN = UI.RING_BLUE
+  local FILL_A, FILL_A0 = 0.85, 0.12   -- at the thumb, at the mark
+  local fillDir   -- "up" / "down": the gradient is set again only when the side changes
+  local function paintFill(dir)
+    if dir == fillDir then return end
+    fillDir = dir
+    local c = dir == "up" and FILL_UP or FILL_DOWN
+    local strong, faint = { c[1], c[2], c[3], FILL_A }, { c[1], c[2], c[3], FILL_A0 }
+    -- Left to right: above the mark the thumb is on the right, below it on the left
+    if dir == "up" then UI.Gradient(fill, "HORIZONTAL", faint, strong)
+    else UI.Gradient(fill, "HORIZONTAL", strong, faint) end
+  end
 
   local cur, muted = 0, false
   local function snap(v) return math.floor(v / o.step + 0.5) * o.step end
@@ -1139,6 +1152,7 @@ function UI.LightSlider(parent, width, o)
     if math.abs(x1 - x0) < 1 then
       fill:Hide()
     else
+      paintFill(x1 > x0 and "up" or "down")
       fill:SetPoint("TOPLEFT", sl, "LEFT", math.min(x0, x1), -6)
       fill:SetWidth(math.abs(x1 - x0))
       fill:Show()
