@@ -108,8 +108,68 @@ end
 
 -- Tabs are selected one by one (as BigNoteBox does), never with PanelTemplates_SetTab: that
 -- re-anchors the whole row in a line, which broke the left / right groups (Kim's screenshot).
+-- Overlays (Help, Patch Notes): a panel over the pages, under the title bar, down to the bottom
+-- edge. While one shows, the page under it is see-through-proof (alpha 0) and the status strip is
+-- hidden (Kim). One at a time; picking a tab or closing the window closes them.
+-- W.NewOverlay(title) -> f with f.closeBtn (top right) and f.title; f:Show() / f:FadeHide().
+local overlays = {}
+function W.CloseOverlays()
+  local any = false
+  for _, o in ipairs(overlays) do
+    if o:IsOpen() then o:FadeHide() any = true end
+  end
+  return any
+end
+function W.NewOverlay(titleText)
+  local win = frame
+  local f = CreateFrame("Frame", nil, win)
+  f:SetPoint("TOPLEFT", win, "TOPLEFT", 6, -26)
+  f:SetPoint("BOTTOMRIGHT", win, "BOTTOMRIGHT", -6, 5)
+  f:SetFrameLevel(win:GetFrameLevel() + 40)
+  f:EnableMouse(true)
+  -- Solid under the wood: the wood art is partly see-through, and the page under it showed (Kim)
+  local base = f:CreateTexture(nil, "BACKGROUND", nil, -8)
+  base:SetAllPoints()
+  base:SetColorTexture(0.07, 0.05, 0.03, 1)
+  local bg = f:CreateTexture(nil, "BACKGROUND", nil, 0)
+  bg:SetAllPoints()
+  bg:SetTexture(UI.ART .. "Backgrounds\\wood", "REPEAT", "REPEAT")
+  bg:SetHorizTile(true)
+  bg:SetVertTile(true)
+  UI.Glow(f, nil, 0.8)
+  f.title = UI.Label(f, titleText, "GameFontNormalHuge")
+  f.title:SetPoint("TOPLEFT", f, "TOPLEFT", 22, -16)
+  f.closeBtn = UI.Button(f, "Close", 90, function() f:FadeHide() end)
+  f.closeBtn:SetPoint("TOPRIGHT", f, "TOPRIGHT", -20, -16)
+  win:HookScript("OnHide", function() f:Hide() end)
+  UI.Fader(f)   -- ESC: the window's OnKeyDown closes it (before the page)
+  f:HookScript("OnShow", function(self)
+    -- From one overlay to another (Help <-> Patch Notes): swap at once, no fade (Kim)
+    local swapped = false
+    for _, o in ipairs(overlays) do
+      if o ~= self and o:IsShown() then o:Hide() swapped = true end
+    end
+    if swapped then self:FadeSkip() end
+    -- Every tab page out of sight while it shows (it is a page of its own, Kim)
+    for _, t in ipairs(tabs) do if t.page then t.page:SetAlpha(0) end end
+    if win.strip then win.strip:Hide() end
+  end)
+  f:HookScript("OnHide", function(self)
+    for _, o in ipairs(overlays) do
+      if o ~= self and o:IsShown() then return end
+    end
+    for _, t in ipairs(tabs) do if t.page then t.page:SetAlpha(1) end end
+    if win.strip then win.strip:Show() end
+  end)
+  overlays[#overlays + 1] = f
+  f:Hide()
+  return f
+end
+
 function W.Select(id)
-  if ns.Help then ns.Help.Hide() end
+  -- Only a change of tab closes an overlay: the window's OnShow selects its tab again (now and
+  -- next frame), which closed the Patch Notes the toast had just opened
+  if not frame or frame.selected ~= id then W.CloseOverlays() end
   for _, t in ipairs(tabs) do
     if t.id == id then
       if not t.page.built then
@@ -200,7 +260,14 @@ local function build()
   -- Close: our own round title button (UI.TitleButton, Assets/Buttons/tb-x), in the place of the template's
   -- red one (hidden, still the anchor); ESC closes the window as before
   local old = f.CloseButton or _G.DuskfallWindowCloseButton
-  local close = UI.TitleButton(f, TB + 2, "x", { tip = "Close", onClick = function() f:FadeHide() end })
+  -- Right-click: back to the middle of the screen (Kim)
+  local close = UI.TitleButton(f, TB + 2, "x", { tip = "Close", tipSub = "Right-click: move the window back to the "
+    .. "middle of the screen.", onClick = function() f:FadeHide() end,
+    onRightClick = function()
+      f:ClearAllPoints()
+      f:SetPoint("CENTER")
+      ns.cfg.window = nil
+    end })
   if old then
     close:SetPoint("CENTER", old, "CENTER", -2, 0)
     old:SetAlpha(0)
@@ -259,9 +326,8 @@ local function build()
   f:SetScript("OnKeyDown", function(self, key)
     if InCombatLockdown() or key ~= "ESCAPE" then return end
     local t = current()
-    local helpOpen = ns.Help and ns.Help.Shown()
-    if helpOpen then ns.Help.Hide() end
-    if helpOpen or (t and t.page.Back and t.page.Back()) then
+    local overlayOpen = W.CloseOverlays()
+    if overlayOpen or (t and t.page.Back and t.page.Back()) then
       self.escHandled = true   -- not a close (UI.Fader's ESC)
       pcall(self.SetPropagateKeyboardInput, self, false)
       C_Timer.After(0, function()

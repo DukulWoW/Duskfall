@@ -749,22 +749,30 @@ W.AddTab("about", "About", function(page)
   col:SetPoint("TOP", page, "TOP", 0, -18)
   col:SetSize(560, 440)
 
+  -- The name block (Kim, 2026-11-27): bigger, one line each: Duskfall / Version / by / Dukul
   local logo = col:CreateTexture(nil, "ARTWORK")
-  logo:SetSize(104, 104)
+  logo:SetSize(128, 128)
   logo:SetPoint("TOP", col, "TOP", 0, 0)
   logo:SetTexture(UI.ART .. "icon")
 
   local name = col:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge3")
+  local path, _, flags = name:GetFont()
+  if path then name:SetFont(path, 44, flags or "") end
   name:SetPoint("TOP", logo, "BOTTOM", 0, -8)
   name:SetText("|cff3355ccD|cff506ac5u|cff6d7fbes|cff8a94b7k|cffa8a9aff|cffc5bea8a|cffe2d3a1l|cffffe89al|r")
-  -- "Dukul" in Duskfall blue (UI.RING_BLUE, the blue of the frame and the icon's ring; Kim)
-  local ver = UI.Label(col, "Version " .. ns.VERSION .. "   |cff6f6f6fby|r |cff5c80ffDukul|r", "GameFontHighlight")
+  local ver = UI.Label(col, "Version " .. ns.VERSION, "GameFontHighlightLarge")
   ver:SetPoint("TOP", name, "BOTTOM", 0, -6)
-  ver:SetTextColor(0.62, 0.62, 0.62)
+  ver:SetTextColor(0.75, 0.75, 0.75)
+  local by = UI.Label(col, "by", "GameFontHighlight")
+  by:SetPoint("TOP", ver, "BOTTOM", 0, -6)
+  by:SetTextColor(0.45, 0.45, 0.45)
+  -- "Dukul" in Duskfall blue (UI.RING_BLUE, the blue of the frame and the icon's ring; Kim)
+  local who = UI.Label(col, "|cff5c80ffDukul|r", "GameFontNormalLarge")
+  who:SetPoint("TOP", by, "BOTTOM", 0, -4)
 
   local desc = UI.Label(col, "Gamma, brightness, contrast and bloom that follow you through the world, and change "
     .. "the way your eyes do.", "GameFontHighlight")
-  desc:SetPoint("TOP", ver, "BOTTOM", 0, -16)
+  desc:SetPoint("TOP", who, "BOTTOM", 0, -18)
   desc:SetWidth(460)
   desc:SetJustifyH("CENTER")
   desc:SetSpacing(3)
@@ -783,32 +791,19 @@ W.AddTab("about", "About", function(page)
     b:SetPoint("TOPLEFT", desc, "BOTTOM", -math.floor(rowW / 2) + (i - 1) * (SZ + GAP), -18)
   end
 
-  -- Commands, folded away until asked for
-  local panel = CreateFrame("Frame", nil, col)
-  panel:SetPoint("TOP", desc, "BOTTOM", 0, -(18 + SZ + 52))
-  panel:SetSize(520, 150)
-  UI.RoundBox(panel, { radius = 10, bottom = { 0, 0, 0, 0.5 }, top = { 0.18, 0.14, 0.09, 0.4 },
-    border = { 1, 0.82, 0, 0.2 } })
-  local cmds = UI.Label(panel, table.concat({
-    "|cffffd100/dusk|r   this window",
-    "|cffffd100/dusk settings|r   this window, on Settings",
-    "|cffffd100/dusk status|r   where you are and what Duskfall shows, in chat",
-    "|cffffd100/dusk save|r  /  |cffffd100clear|r  sub, zone or instance [conditions]   from chat",
-    "|cffffd100/dusk on|r  /  |cffffd100off|r   switch Duskfall on or off (also a key binding)",
-    "|cffffd100/dusk refresh|r   put the settings for here back if the screen seems stuck",
-    "|cffffd100/dusk help|r   the help, with every command",
-  }, "\n"), "GameFontHighlight")
-  cmds:SetPoint("TOPLEFT", panel, "TOPLEFT", 18, -16)
-  cmds:SetPoint("RIGHT", panel, "RIGHT", -18, 0)
-  cmds:SetSpacing(5)
-  panel:Hide()
-
-  local toggle
-  toggle = UI.Button(col, "Commands", 140, function()
-    panel:SetShown(not panel:IsShown())
-    toggle:SetText(panel:IsShown() and "Hide commands" or "Commands")
-  end)
-  toggle:SetPoint("TOP", desc, "BOTTOM", 0, -(18 + SZ + 16))
+  -- Commands, Help and Patch Notes in one row (Kim): Commands opens Help on its Commands topic
+  local BW, BG = 130, 10
+  local row = {
+    { "Commands", "Every slash command, in Help.", function() if ns.Help then ns.Help.Open("commands") end end },
+    { "Help", "How Duskfall works.", function() if ns.Help then ns.Help.Open("start") end end },
+    { "Patch Notes", "What changed in each version.", function() if ns.PatchNotes then ns.PatchNotes.Open() end end },
+  }
+  local total = #row * BW + (#row - 1) * BG
+  for i, r in ipairs(row) do
+    local b = UI.Button(col, r[1], BW, r[3], 26)
+    b:SetPoint("TOPLEFT", desc, "BOTTOM", -math.floor(total / 2) + (i - 1) * (BW + BG), -(18 + SZ + 18))
+    UI.Tooltip(b, r[1], r[2])
+  end
 
   local foot = UI.Label(page, "A free fan project, not affiliated with Blizzard Entertainment. All rights reserved.",
     "GameFontDisableSmall")

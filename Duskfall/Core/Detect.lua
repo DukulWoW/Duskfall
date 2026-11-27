@@ -197,6 +197,7 @@ ns.On("CVAR_UPDATE", function(name, value)
   if not ch or C.IsOurs(name, value) then return end
   local v = tonumber(value) or C.Read(ch.key)
   if v == nil then return end
+  ns.Fire("FOREIGN_CVAR", ch.key)   -- UI/Conflict.lua: another addon writing these?
   if not ns.cfg.enabled then
     -- Off: the values on screen are the player's own, so they are the baseline.
     if ns.db.baseline then ns.db.baseline[ch.key] = v end

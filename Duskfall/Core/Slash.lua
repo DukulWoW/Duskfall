@@ -365,6 +365,10 @@ local function handler(msg)
   elseif cmd == "refresh" or cmd == "fix" then
     D.Refresh()
     ns.Print("refreshed: the settings for here are back.")
+  elseif cmd == "notes" or cmd == "patchnotes" then
+    if ns.PatchNotes then ns.PatchNotes.Open() end
+  elseif cmd == "whatsnew" then   -- shows the update toast (testing)
+    if ns.PatchNotes then ns.PatchNotes.Toast() end
   elseif cmd == "welcome" then
     if ns.Welcome then ns.Welcome.Show() end
   elseif cmd == "moon" then

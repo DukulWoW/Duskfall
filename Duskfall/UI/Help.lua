@@ -65,7 +65,8 @@ local TOPICS = {
   } },
   { "Commands", {
     Y .. "/dusk|r (or " .. Y .. "/duskfall|r, " .. Y .. "/df|r) opens this window, " .. Y .. "/dusk settings|r "
-      .. "the settings, " .. Y .. "/dusk help|r this help, " .. Y .. "/dusk status|r what Duskfall is doing, in chat.",
+      .. "the settings, " .. Y .. "/dusk help|r this help, " .. Y .. "/dusk notes|r the patch notes, "
+      .. Y .. "/dusk status|r what Duskfall is doing, in chat.",
     Y .. "/dusk on|r, " .. Y .. "/dusk off|r: Duskfall on or off; there is a key binding for it too "
       .. "(Options > Keybindings > AddOns), and one to hold for a quick look at your own settings "
       .. "(as the Compare button). " .. Y .. "/dusk baseline|r: the current values become your baseline. " .. Y .. "/dusk refresh|r (or the Refresh "
@@ -105,23 +106,11 @@ local function show(i)
 end
 
 local function build()
-  local win = W.frame
-  local f = CreateFrame("Frame", nil, win)
-  f:SetPoint("TOPLEFT", win, "TOPLEFT", 6, -26)
-  f:SetPoint("BOTTOMRIGHT", win, "BOTTOMRIGHT", -6, 30)
-  f:SetFrameLevel(win:GetFrameLevel() + 40)
-  f:EnableMouse(true)
-  local bg = f:CreateTexture(nil, "BACKGROUND", nil, 0)
-  bg:SetAllPoints()
-  bg:SetTexture(UI.ART .. "Backgrounds\\wood", "REPEAT", "REPEAT")
-  bg:SetHorizTile(true)
-  bg:SetVertTile(true)
-  UI.Glow(f, nil, 0.8)
-
-  local title = UI.Label(f, "How Duskfall works", "GameFontNormalHuge")
-  title:SetPoint("TOPLEFT", f, "TOPLEFT", 22, -16)
-  local close = UI.Button(f, "Close", 90, function() f:FadeHide() end)
-  close:SetPoint("TOPRIGHT", f, "TOPRIGHT", -20, -16)
+  -- An overlay over the pages (W.NewOverlay: wood, title, Close, fades, hides the page and strip)
+  local f = W.NewOverlay("How Duskfall works")
+  -- Patch Notes next to Close (Kim)
+  local notes = UI.Button(f, "Patch Notes", 120, function() if ns.PatchNotes then ns.PatchNotes.Open() end end)
+  notes:SetPoint("RIGHT", f.closeBtn, "LEFT", -8, 0)
 
   -- Topics
   local list = CreateFrame("Frame", nil, f)
@@ -151,7 +140,7 @@ local function build()
   -- Text
   local page = CreateFrame("Frame", nil, f)
   page:SetPoint("TOPLEFT", list, "TOPRIGHT", 20, 0)
-  page:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -20, 16)
+  page:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -20, 20)
   UI.RoundBox(page, { radius = 12, bottom = { 0, 0, 0, 0.4 }, top = { 0.16, 0.12, 0.08, 0.35 },
     border = { 1, 0.82, 0, 0.2 } })
   heading = UI.Label(page, "", "GameFontNormalLarge")
@@ -163,13 +152,6 @@ local function build()
   body:SetSpacing(4)
   body:SetTextColor(0.9, 0.88, 0.84)
 
-  -- Closing the window or picking a tab closes help too
-  win:HookScript("OnHide", function() f:Hide() end)
-  UI.Fader(f)   -- ESC: the window's OnKeyDown closes it (Help first, then the page)
-  -- The window's status strip (Style / Here / values) does not belong under the help (Kim)
-  f:HookScript("OnShow", function() if win.strip then win.strip:Hide() end end)
-  f:HookScript("OnHide", function() if win.strip then win.strip:Show() end end)
-  f:Hide()
   frame = f
   show(current)
 end

@@ -734,7 +734,12 @@ function UI.TitleButton(parent, size, glyph, o)
       shine:SetAlpha(0)
     end
   end
-  if o.onClick then btn:SetScript("OnClick", function(self, mb) ns.Safe(o.onClick, "title button", self, mb) end) end
+  -- o.onRightClick: a right-click does that instead (the close button: back to the middle)
+  if o.onRightClick then btn:RegisterForClicks("LeftButtonUp", "RightButtonUp") end
+  btn:SetScript("OnClick", function(self, mb)
+    if mb == "RightButton" and o.onRightClick then ns.Safe(o.onRightClick, "title button", self)
+    elseif mb ~= "RightButton" and o.onClick then ns.Safe(o.onClick, "title button", self, mb) end
+  end)
   btn:SetScript("OnEnter", function(self)
     over = true
     refresh()
@@ -1564,6 +1569,7 @@ end
 -- UI.Fader(f, o): f fades in on every show (from its alpha at attach time, or o.alpha) and gets
 --   f:FadeHide([seconds])  fade out, then the real Hide (OnHide fires at the end)
 --   f:IsOpen()             shown and not fading out (use this for toggles)
+--   f:FadeSkip()           end a running fade in at once (full alpha)
 --   f:Show()               during a fade-out it turns back and fades in from where it is
 -- Hide() itself is left alone (secure code calls it through UISpecialFrames: wrapping it would carry
 -- our taint into the game menu), so ESC in combat still closes at once. Out of combat, o.esc = true
@@ -1618,6 +1624,11 @@ function UI.Fader(f, o)
     run(a, 0, (seconds or o.fadeOut or UI.FADE_OUT) * a / math.max(target, 0.01))
   end
   function f:IsOpen() return self:IsShown() and not closing end
+  function f:FadeSkip()
+    if closing then return end
+    driver:Hide()
+    self:SetAlpha(target)
+  end
   function f:IsClosing() return closing end
   if o.esc then
     f:EnableKeyboard(true)
