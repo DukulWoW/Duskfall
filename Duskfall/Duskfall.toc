@@ -6,7 +6,7 @@
 ## Notes-deDE: Stellt Gamma, Helligkeit, Kontrast und Bloom passend zu deinem Aufenthaltsort ein, mit sanften Übergängen.
 ## Notes-frFR: Règle le gamma, la luminosité, le contraste et le flou lumineux selon l’endroit où vous êtes, avec des transitions douces.
 ## Author: Dukul
-## Version: 1.1.0
+## Version: 1.2.0
 ## IconTexture: Interface\AddOns\Duskfall\Assets\icon
 ## SavedVariables: DuskfallDB
 ## LoadSavedVariablesFirst: 1

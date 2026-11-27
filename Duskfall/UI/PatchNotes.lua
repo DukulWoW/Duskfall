@@ -15,7 +15,7 @@ local CHIP = {   -- BNB's chip colours (HelpBook CHIP_KINDS, skin)
   change = { L["PN_CHANGE"], { 0.42, 0.65, 1.00 } },
   fix = { L["PN_FIX"], { 0.95, 0.38, 0.35 } },
 }
-local CHIP_W, CHIP_H, CHIP_GAP, ROW_GAP = 60, 16, 10, 10
+local CHIP_MIN_W, CHIP_H, CHIP_GAP, ROW_GAP = 60, 16, 10, 10
 local TOAST_SECONDS = 10
 local TOAST_DELAY = 6   -- after login; the welcome (first install) waits 4
 
@@ -33,8 +33,24 @@ local function chipFont()
   return f
 end
 
+-- Every chip as wide as the widest of the three labels in this language (French NOUVEAUTÉ and
+-- German ÄNDERUNG ran out of the old fixed 60 px), so the notes still line up
+local function chipWidth()
+  if PN.chipW then return PN.chipW end
+  local fs = UIParent:CreateFontString(nil, "OVERLAY")
+  fs:SetFontObject(chipFont())
+  local w = CHIP_MIN_W
+  for _, k in pairs(CHIP) do
+    fs:SetText(k[1])
+    w = math.max(w, math.ceil(fs:GetUnboundedStringWidth()) + 12)
+  end
+  fs:Hide()
+  PN.chipW = w
+  return w
+end
+
 local function textWidth()
-  return math.max(200, (box:GetWidth() or 440) - CHIP_W - CHIP_GAP - 8)
+  return math.max(200, (box:GetWidth() or 440) - chipWidth() - CHIP_GAP - 8)
 end
 
 local function indexOf(version)
@@ -133,7 +149,7 @@ local function build()
   view:SetElementInitializer("Frame", function(row, e)
     if not row.chip then
       local chip = CreateFrame("Frame", nil, row)
-      chip:SetSize(CHIP_W, CHIP_H)
+      chip:SetSize(chipWidth(), CHIP_H)
       chip:SetPoint("TOPLEFT", row, "TOPLEFT", 0, 0)
       chip.bg = chip:CreateTexture(nil, "BACKGROUND")
       chip.bg:SetAllPoints()

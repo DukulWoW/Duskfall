@@ -1198,6 +1198,15 @@ function UI.LightSlider(parent, width, o)
   local lbl = UI.Label(h, o.label, "GameFontNormal")
   lbl:SetPoint("LEFT", h, "LEFT", 0, 0)
   lbl:SetWidth(LABEL_W)
+  -- A long translated name (French "Flou lumineux") gets a smaller font, then two lines
+  if LABEL_W > 0 and o.label then
+    lbl:SetWordWrap(false)
+    local _, base = lbl:GetFont()
+    if UI.FitText(lbl, LABEL_W - 8, base) then
+      lbl:SetWordWrap(true)
+      if lbl.SetMaxLines then lbl:SetMaxLines(2) end
+    end
+  end
   local val = UI.Label(h, "", "GameFontHighlight")
   val:SetPoint("RIGHT", h, "RIGHT", 0, 0)
   val:SetWidth(VALUE_W)

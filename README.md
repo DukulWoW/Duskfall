@@ -9,7 +9,7 @@ Gamma, brightness and contrast that follow you through the world. Duskfall sets 
 Gamma, Brightness, Contrast and Bloom for where you are and what you are doing, and moves
 between them smoothly, the way your eyes adjust when you walk from sunlight into a cave.
 
-For WoW Forever. Download on [CurseForge](https://www.curseforge.com/wow/addons/duskfall) or [Wago](https://addons.wago.io/addons/duskfall).
+For WoW Forever, in English, Chinese, German and French. Download on [CurseForge](https://www.curseforge.com/wow/addons/duskfall) or [Wago](https://addons.wago.io/addons/duskfall).
 
 ## What it does
 
@@ -56,6 +56,9 @@ For WoW Forever. Download on [CurseForge](https://www.curseforge.com/wow/addons/
   out, and a soft light that follows your mouse and lights everything under it in its own colour.
 - **Help built in.** A short welcome on your first login, a help button in the window that
   explains everything in a few plain topics, with links to the pages, and the patch notes.
+- **In your language.** Duskfall follows your game's language, or pick one in Settings:
+  Simplified and Traditional Chinese, German and French, with English for everything else.
+  Slash commands are the same in every language.
 
 ## Commands
 
