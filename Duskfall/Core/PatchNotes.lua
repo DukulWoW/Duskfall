@@ -1,7 +1,8 @@
 -- Duskfall Core/PatchNotes.lua: the patch notes shown in the window (About > Patch Notes, Help >
 -- Patch Notes, the toast after an update). Newest first. kind = "new", "change" or "fix".
 -- Only what players need to know, and only against the release before (Kim, 2026-11-27).
--- date = nil while a version is not released yet; set it when tagging.
+-- date = nil while a version is not released yet; set it when tagging, as YYYY-MM-DD (numbers read the
+-- same in every language, Kim 2026-11-27).
 -- The text of each note is in Locales/enUS.lua (PN_<version>_<nn>), so it can be translated:
 -- a new note is a new key there and its L["..."] here.
 local ADDON, ns = ...
@@ -11,7 +12,7 @@ ns.PATCH_NOTES = {
   { version = "1.2.0", date = nil, notes = {
     { "new", L["PN_120_01"] },
   } },
-  { version = "1.1.0", date = "27 Nov 2026", notes = {
+  { version = "1.1.0", date = "2026-11-27", notes = {
     { "new", L["PN_110_01"] },
     { "new", L["PN_110_02"] },
     { "new", L["PN_110_03"] },
@@ -34,7 +35,7 @@ ns.PATCH_NOTES = {
     { "change", L["PN_110_20"] },
     { "change", L["PN_110_21"] },
   } },
-  { version = "1.0.0", date = "27 Nov 2026", notes = {
+  { version = "1.0.0", date = "2026-11-27", notes = {
     { "new", L["PN_100_01"] },
   } },
 }
