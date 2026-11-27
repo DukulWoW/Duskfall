@@ -13,7 +13,7 @@ local frame
 
 local function build()
   local f = CreateFrame("Frame", "DuskfallWelcome", UIParent)
-  f:SetSize(480, 244)
+  f:SetSize(480, 276)
   f:SetPoint("CENTER", UIParent, "CENTER", 0, 80)
   f:SetFrameStrata("DIALOG")
   f:SetToplevel(true)
@@ -23,7 +23,7 @@ local function build()
   local slate = f:CreateTexture(nil, "BACKGROUND", nil, 0)
   slate:SetAllPoints()
   slate:SetTexture(UI.ART .. UI.BACKGROUND)
-  slate:SetTexCoord(0, 480 / 512, 0, 244 / 512)
+  slate:SetTexCoord(0, 480 / 512, 0, 276 / 512)
   local cut = f:CreateMaskTexture()
   cut:SetAllPoints()
   cut:SetTexture(UI.ART .. "Shapes\\round-rect-mask", "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
@@ -56,13 +56,25 @@ local function build()
   body:SetSpacing(2)
   body:SetTextColor(0.9, 0.88, 0.84)
 
+  -- The starter Style (Kim): off unless ticked; used when the welcome is closed either way
+  local starter = UI.Check(f, { label = "Start with a little more light in dark places",
+    tip = "Adds the starter Style and uses it: the darkest zones and the nights a little brighter. "
+      .. "Change or remove it on the Styles tab." })
+  starter:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", 18, 50)
+  local function takeStarter()
+    if starter:GetChecked() and ns.AddonImport then
+      starter:SetChecked(false, true)
+      ns.AddonImport.AddStarter(false)
+    end
+  end
   local open = UI.Button(f, "Open Duskfall", 140, function()
+    takeStarter()
     f:FadeHide()
     if ns.OpenWindow then ns.OpenWindow("places", true) end
   end, 26)
   open:SetKind("main")
   open:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -16, 14)
-  local later = UI.Button(f, "Later", 90, function() f:FadeHide() end, 26)
+  local later = UI.Button(f, "Later", 90, function() takeStarter() f:FadeHide() end, 26)
   later:SetPoint("RIGHT", open, "LEFT", -8, 0)
 
   -- The About tab's link buttons (sites and bug reports), bottom left (Kim)

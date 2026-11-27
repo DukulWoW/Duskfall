@@ -11,6 +11,7 @@ ns.PATCH_NOTES = {
     { "new", "Sounds: a short sound the first time you walk into a place (on), and one when walking in starts one of your settings (off). Pick each sound, other addons' sounds too, on Settings > General." },
     { "new", "Duskfall warns once when another addon (such as Iris) also changes Gamma, Brightness and Contrast, and can turn it off for you." },
     { "new", "Import from Iris: bring Iris's settings into a new Style before you turn it off (in that warning, or on the Styles tab while Iris is on)." },
+    { "new", "Starter Style: a little more light in the darkest zones and at night, as a Style of its own. On the Styles tab, and as a choice in the welcome." },
     { "new", "Refresh, left of the big switch on Settings (and /dusk refresh), puts the settings for here back at once if the screen ever seems stuck." },
     { "change", "Windows fade in and out gently, and the status display fades out smoothly." },
     { "change", "The line under each slider is softer: blue when you turn a value down, gold when you turn it up." },

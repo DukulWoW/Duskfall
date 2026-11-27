@@ -317,7 +317,15 @@ function SS.Create(parent)
     AI.Report(st, matched, skipped, src.name)
     refresh()
   end)
-  fromAddon:SetPoint("LEFT", import, "RIGHT", 8, 0)
+  -- The starter Style (Core/AddonImport.lua): our own values for dark places, as a new Style
+  local starter = UI.Button(f, "Starter Style", 120, function()
+    if ns.AddonImport then ns.AddonImport.AddStarter(true) end
+    refresh()
+  end)
+  starter:SetPoint("LEFT", import, "RIGHT", 8, 0)
+  UI.Tooltip(starter, "Starter Style", "Adds a Style with a little more light in the darkest zones (Duskwood, "
+    .. "Deadwind Pass, Felwood, Swamp of Sorrows) and at night everywhere. Your own Style stays as it is.")
+  fromAddon:SetPoint("LEFT", starter, "RIGHT", 8, 0)
   UI.Tooltip(fromAddon, "Import from another addon", "Brings that addon's settings into a new Style, as changes from "
     .. "your own settings. Places Duskfall can't find are skipped and named in chat.")
   fromAddon:Hide()
@@ -339,6 +347,7 @@ function SS.Create(parent)
     local src = ns.AddonImport and ns.AddonImport.FirstAvailable()
     fromAddon:SetShown(src ~= nil)
     if src then fromAddon:SetText("Import from " .. src.name) end
+    foot:SetShown(src == nil)   -- no room for both on the row
     if perCharacter() then foot:SetText(GREY .. "Characters have their own Styles: picking one sets it for this character.|r")
     else foot:SetText(GREY .. "Picking a Style uses it for every character.|r") end
   end

@@ -6,7 +6,8 @@
 -- Each source turns its data into plain entries:
 --   { zone = name, sub = name or "", place = "outdoor" / "indoor" / "instance",
 --     time = "dawn" / "day" / "dusk" / "night" or nil, g = gamma, b = brightness, c = contrast }
--- (fixed values; nil = not set), and the shared part does the rest:
+-- (fixed values; nil = not set). Also: mapID (tried before the name), everywhere = true (no place),
+-- relative = true (g / b / c are already changes, as the starter Style's). The shared part does the rest:
 --   place     Subzone -> part of a zone, empty -> the zone (by name: Duskfall's places first, then
 --             the game's map list); instance -> a dungeon Duskfall has been in (by name)
 --   when      outdoor / indoor -> outdoors / indoors, the part of the day as it is
@@ -102,31 +103,47 @@ local function round(v, places)
 end
 
 -- Import -----------------------------------------------------------------------------------------
+-- A zone map by id, if this client has it as a zone
+local function zoneById(id)
+  local info = id and C_Map and C_Map.GetMapInfo and C_Map.GetMapInfo(id)
+  if not info then return nil end
+  local zoneType = Enum and Enum.UIMapType and Enum.UIMapType.Zone
+  if zoneType and info.mapType ~= zoneType then return nil end
+  return id
+end
+
 function AI.Run(src)
   local list = src and src.entries()
   if not list or #list == 0 then return nil, 0, {} end
   local base = ns.db.baseline or {}
-  local st = ns.NewStyle("From " .. src.name)
+  local st = ns.NewStyle(src.styleName or ("From " .. src.name))
   st.scope = { chars = {} }   -- not in use until the player says so
   local seen, matched, skipped = {}, 0, {}
   for _, e in ipairs(list) do
     local zone, sub, place, time = e.zone, e.sub or "", e.place, e.time
     local key
-    if place == "instance" then
+    if e.everywhere then
+      key = false   -- no place: everywhere
+    elseif place == "instance" then
       key = instanceKey(zone)
     else
-      local id = zoneMap(zone)
+      local id = zoneById(e.mapID) or zoneMap(zone)
       if id then key = (sub ~= "" and ("sub:" .. id .. ":" .. sub)) or ("zone:" .. id) end
     end
-    local name = (sub ~= "" and (sub .. ", " .. zone)) or zone or "?"
-    if not key then
+    local name = e.everywhere and "Everywhere" or (sub ~= "" and (sub .. ", " .. zone)) or zone or "?"
+    if key == nil then
       skipped[#skipped + 1] = name
     else
       local when = {}
       if PERIODS[time] then when[#when + 1] = "time:" .. time end
       if place == "indoor" then when[#when + 1] = "indoors" elseif place == "outdoor" then when[#when + 1] = "outdoors" end
       local values = {}
-      if e.g and base.gamma then
+      if e.relative then
+        if e.g and e.g ~= 0 then values.gamma = round(e.g, 2) end
+        if e.b and e.b ~= 0 then values.brightness = round(e.b) end
+        if e.c and e.c ~= 0 then values.contrast = round(e.c) end
+      end
+      if not e.relative and e.g and base.gamma then
         local d = round(e.g - base.gamma, 2)
         if d ~= 0 then values.gamma = d end
       end
@@ -138,7 +155,7 @@ function AI.Run(src)
         local d = round(e.c - base.contrast)
         if d ~= 0 then values.contrast = d end
       end
-      local shapeKey = key .. "|" .. table.concat(when, ",")
+      local shapeKey = tostring(key) .. "|" .. table.concat(when, ",")
       if next(values) and not seen[shapeKey] then
         seen[shapeKey] = true
         matched = matched + 1
@@ -146,7 +163,7 @@ function AI.Run(src)
         if place == "indoor" then label = label .. " indoors" elseif place == "outdoor" then label = label .. " outdoors" end
         if PERIODS[time] then label = label .. " (" .. time .. ")" end
         st.looks[#st.looks + 1] = { id = ns.NewID("l"), name = label, on = true, scope = { global = true },
-          absolute = false, where = { key }, when = when, values = values }
+          absolute = false, where = key and { key } or {}, when = when, values = values }
       end
     end
   end
@@ -175,6 +192,41 @@ function AI.Report(st, matched, skipped, from)
   ns.Print("imported %d setting%s into the Style \"%s\".", matched, matched == 1 and "" or "s", st.name)
   if #skipped > 0 then ns.Print("skipped (no matching place): %s.", table.concat(skipped, "; ")) end
   ns.UI.Confirm("Use \"" .. st.name .. "\" for every character now?", function() AI.Use(st) end)
+end
+
+-- Starter Style (Kim, 2026-11-27): our own values for places that are too dark, as changes from
+-- the player's baseline. Placeholders until Kim has tuned them in the game. Map ids are the
+-- Classic ones; the name is the fallback.
+local DARK = { g = 0.15, b = 4, c = 3 }
+local NIGHT = { g = 0.08, b = 2, c = 1 }
+local STARTER = {
+  name = "Starter", styleName = "Starter: dark places",
+  entries = function()
+    local out = {}
+    for _, z in ipairs({ { 1431, "Duskwood" }, { 1430, "Deadwind Pass" }, { 1448, "Felwood" },
+                         { 1435, "Swamp of Sorrows" } }) do
+      out[#out + 1] = { mapID = z[1], zone = z[2], relative = true, g = DARK.g, b = DARK.b, c = DARK.c }
+    end
+    out[#out + 1] = { everywhere = true, time = "night", relative = true, g = NIGHT.g, b = NIGHT.b, c = NIGHT.c }
+    return out
+  end,
+}
+
+-- Adds the starter Style. ask = true: then "Use it now?"; false: use it at once (the welcome's switch).
+function AI.AddStarter(ask)
+  local st, matched, skipped = AI.Run(STARTER)
+  if not st then
+    ns.Print("the starter Style found none of its places.")
+    return
+  end
+  if ask then
+    AI.Report(st, matched, skipped, STARTER.name)
+  else
+    AI.Use(st)
+    ns.Print("using the Style \"%s\": dark places and nights are a little brighter. Change it on the Styles tab.", st.name)
+    if #skipped > 0 then ns.Print("skipped (no matching place): %s.", table.concat(skipped, "; ")) end
+  end
+  return st
 end
 
 -- Import, then turn the addon off: the interface reloads, so the summary comes after it.
