@@ -1,12 +1,18 @@
 -- Duskfall OptionsPanel.lua: the ESC > Options > AddOns entry (same pattern as BigNoteBox and
 -- BigChatBox): logo, name, version, "by Dukul" and an "Open Settings" button.
 -- Until the settings window exists (B-04) the button prints the command list and closes Options.
--- Also the key binding (Bindings.xml): toggle Duskfall on / off.
+-- Also the key bindings (Bindings.xml): toggle Duskfall on / off, hold to see before.
 local ADDON, ns = ...
 
 -- Key bindings need globals: the header, the label and the function Bindings.xml calls.
 BINDING_HEADER_DUSKFALL = "Duskfall"
 BINDING_NAME_DUSKFALL_TOGGLE = "Toggle Duskfall on/off"
+BINDING_NAME_DUSKFALL_COMPARE = "Hold to see before (your own settings)"
+
+-- runOnUp: keystate is "down" while pressed, "up" when let go
+function Duskfall_Compare(keystate)
+  if ns.Detect then ns.Detect.Compare(keystate == "down") end
+end
 
 function Duskfall_ToggleEnabled()
   if not ns.db or not ns.Detect.state.started then return end

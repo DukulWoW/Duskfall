@@ -120,7 +120,7 @@ function W.Select(id)
       pcall(PanelTemplates_SelectTab, t.button)
       paintTab(t.button, true)
       -- The About tab keeps the old wood (Kim); everything else the slate
-      local file = UI.ART .. (id == "about" and "wood" or UI.BACKGROUND)
+      local file = UI.ART .. (id == "about" and "Backgrounds\\wood" or UI.BACKGROUND)
       for _, bg in ipairs({ frame.Bg, frame.bgLit }) do
         if bg then bg:SetTexture(file, "REPEAT", "REPEAT") bg:SetHorizTile(true) bg:SetVertTile(true) end
       end
@@ -197,10 +197,10 @@ local function build()
     end,
     get = function() return ns.cfg.advanced and "advanced" or "simple" end,
     set = function(v) W.SetAdvanced(v == "advanced") end })
-  -- Close: our link-button look with a gold X (Assets/bt-close-*), in the place of the template's
+  -- Close: our own round title button (UI.TitleButton, Assets/Buttons/tb-x), in the place of the template's
   -- red one (hidden, still the anchor); ESC closes the window as before
   local old = f.CloseButton or _G.DuskfallWindowCloseButton
-  local close = UI.IconButton(f, TB, "close", { tip = "Close", onClick = function() f:FadeHide() end })
+  local close = UI.TitleButton(f, TB + 2, "x", { tip = "Close", onClick = function() f:FadeHide() end })
   if old then
     close:SetPoint("CENTER", old, "CENTER", -2, 0)
     old:SetAlpha(0)
@@ -209,9 +209,8 @@ local function build()
     close:SetPoint("TOPRIGHT", f, "TOPRIGHT", -8, -4)
   end
   f.closeBtn = close
-  -- Help, between Advanced and the close button: our link-button look with Kim's coloured "?"
-  -- (Assets/bt-help-normal / -press), as the About tab's buttons
-  local help = UI.IconButton(f, TB, "help", { tip = "Help", tipSub = "How Duskfall works.",
+  -- Help, between Advanced and the close button: the same round title button with a "?"
+  local help = UI.TitleButton(f, TB + 2, "help", { tip = "Help", tipSub = "How Duskfall works.",
     onClick = function() if ns.Help then ns.Help.Toggle() end end })
   help:SetPoint("RIGHT", close, "LEFT", -4, 0)
   f.helpBtn = help
@@ -312,6 +311,7 @@ local function build()
   -- Status strip on its own frame above the pages: a page's glow (a child frame) drew over a
   -- string on the window itself, and the RIGHT anchor stretched it to mid-window (it vanished)
   local strip = CreateFrame("Frame", nil, f)
+  f.strip = strip   -- hidden under overlays (Help, Patch Notes; Kim)
   strip:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", 16, 10)
   strip:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -16, 10)
   strip:SetHeight(16)

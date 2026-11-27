@@ -38,7 +38,8 @@ end
 local function fill()
   local state = ns.StateText()
   local color = "|cffffd100"
-  if state == "Off" then color = "|cffff4040" elseif state == "Baseline" then color = "|cffffffff" end
+  if state == "Off" then color = "|cffff4040"
+  elseif state == "Baseline" or D.state.comparing then color = "|cffffffff" end
   frame.look:SetText(color .. state .. "|r")
   frame.values:SetText(ns.ValuesText())
 end
@@ -167,6 +168,7 @@ ns.Listen("EVALUATED", function(why)
   if why == "edit" or why == "demo" or why == "preview end" then changed = false end
   SD.Refresh(changed)
 end)
+ns.Listen("COMPARE", function() SD.Refresh(true) end)
 ns.Listen("ONOFF", function()
   lastKey = lookKey()
   SD.Refresh(true)

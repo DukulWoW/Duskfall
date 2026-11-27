@@ -46,6 +46,30 @@ local ITYPE_NAME = { party = "All dungeons", raid = "All raids", pvp = "All batt
 -- What a Look is in simple terms -------------------------------------------------------------------
 -- { key = place key or nil (everywhere), time = period or nil, io = "indoors" / "outdoors" / nil },
 -- or nil when it needs Advanced mode.
+-- Before / after (Kim, 2026-11-27): hold to see your own settings, let go for this place again.
+-- icon = true: a narrow button with the before / after symbol (Assets/Buttons/compare), where the
+-- word does not fit (Places' button row; Kim keeps "Mini panel" as it is).
+local function compareButton(parent, w, icon)
+  local b = UI.Button(parent, icon and "" or "Compare", w or 96)
+  if icon then
+    local sym = b:CreateTexture(nil, "OVERLAY")
+    sym:SetSize(18, 18)
+    sym:SetPoint("CENTER")
+    sym:SetTexture(UI.ART .. "Buttons\\compare")
+    b.sym = sym
+  end
+  b:SetScript("OnMouseDown", function(_, btn) if btn == "LeftButton" then D.Compare(true) end end)
+  b:SetScript("OnMouseUp", function() D.Compare(false) end)
+  b:HookScript("OnHide", function() D.Compare(false) end)
+  if b.sym then
+    b:HookScript("OnMouseDown", function() b.sym:SetPoint("CENTER", 1, -1) end)
+    b:HookScript("OnMouseUp", function() b.sym:SetPoint("CENTER", 0, 0) end)
+  end
+  UI.Tooltip(b, "Compare", "Hold to see your own settings (before); let go to see this place again (after). " ..
+    "There is a key binding for it too (Options > Keybindings > AddOns).")
+  return b
+end
+
 local function shapeOf(look)
   if look.on == false or look.absolute then return nil end
   if not UI.ScopeIsGlobal(look.scope) then return nil end
@@ -326,7 +350,7 @@ function SP.Create(parent, hooks)
     items = function()
       local out = { { "any", "Any time", nil, "Day and night." } }
       for _, p in ipairs(PERIODS) do
-        out[#out + 1] = { p, PERIOD_NAME[p], UI.ART .. "ui-" .. p, "Only " .. PERIOD_PHRASE[p]:sub(2) ..
+        out[#out + 1] = { p, PERIOD_NAME[p], UI.ART .. "Day\\ui-" .. p, "Only " .. PERIOD_PHRASE[p]:sub(2) ..
           ". The hours are on Settings > Time of day." }
       end
       return out
@@ -494,8 +518,12 @@ function SP.Create(parent, hooks)
       yy = yy - 36
       miniSliders[#miniSliders + 1] = sl
     end
+    local cmp = compareButton(m, 96)
+    cmp:SetPoint("BOTTOMRIGHT", m, "BOTTOMRIGHT", -12, 10)
     miniHint = UI.Label(m, "")
     miniHint:SetPoint("BOTTOMLEFT", m, "BOTTOMLEFT", 14, 12)
+    miniHint:SetPoint("RIGHT", cmp, "LEFT", -8, 0)
+    miniHint:SetWordWrap(false)
     tinsert(UISpecialFrames, "DuskfallMiniPanel")
     if ns.CursorLight then ns.CursorLight.Attach(m) end
     UI.Fader(m, { esc = true })
@@ -527,6 +555,7 @@ function SP.Create(parent, hooks)
   pasteBtn:SetPoint("LEFT", copyBtn, "RIGHT", 8, 0)
   UI.Tooltip(pasteBtn, "Paste values", "Put the copied values here: this place, time and inside / outside. " ..
     "Replaces what is set here.")
+  compareButton(actions, 40, true):SetPoint("LEFT", pasteBtn, "RIGHT", 8, 0)
 
   local hint = UI.Label(left, "")
   hint:SetPoint("BOTTOMLEFT", actions, "TOPLEFT", 4, 6)
@@ -616,7 +645,7 @@ function SP.Create(parent, hooks)
       r.dot = r:CreateTexture(nil, "ARTWORK")
       r.dot:SetSize(9, 9)
       r.dot:SetPoint("TOPLEFT", r, "TOPLEFT", 7, -9)
-      UI.Gradient(r.dot, "VERTICAL", { 0.05, 0.55, 0.1 }, { 0.55, 1, 0.5 }, UI.ART .. "dot")
+      UI.Gradient(r.dot, "VERTICAL", { 0.05, 0.55, 0.1 }, { 0.55, 1, 0.5 }, UI.ART .. "Shapes\\dot")
       r.tag = UI.Label(r, "", "GameFontHighlightSmall")
       r.tag:SetPoint("TOPRIGHT", r, "TOPRIGHT", -8, -6)
       r.tag:SetTextColor(0.62, 0.71, 1)
@@ -732,7 +761,7 @@ function SP.Create(parent, hooks)
       if env.sub then parts[#parts + 1] = env.sub end
       parts[#parts + 1] = env.indoors and "Indoors" or "Outdoors"
     end
-    parts[#parts + 1] = "|T" .. UI.ART .. "ui-" .. env.period .. ":16|t " .. PERIOD_NAME[env.period] ..
+    parts[#parts + 1] = "|T" .. UI.ART .. "Day\\ui-" .. env.period .. ":16|t " .. PERIOD_NAME[env.period] ..
       " " .. ns.FormatHour(env.hour, env.min)
     subText:SetText(table.concat(parts, GREY .. "   /   |r"))
     if not ns.cfg.enabled then

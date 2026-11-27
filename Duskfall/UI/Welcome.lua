@@ -26,7 +26,7 @@ local function build()
   slate:SetTexCoord(0, 480 / 512, 0, 244 / 512)
   local cut = f:CreateMaskTexture()
   cut:SetAllPoints()
-  cut:SetTexture(UI.ART .. "round-rect-mask", "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+  cut:SetTexture(UI.ART .. "Shapes\\round-rect-mask", "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
   slate:AddMaskTexture(cut)
   if ns.CursorLight then
     local lit = ns.CursorLight.Copy(slate, "fill")

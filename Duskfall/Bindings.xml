@@ -2,4 +2,7 @@
   <Binding name="DUSKFALL_TOGGLE" category="Duskfall" runOnUp="false">
     Duskfall_ToggleEnabled()
   </Binding>
+  <Binding name="DUSKFALL_COMPARE" category="Duskfall" runOnUp="true">
+    Duskfall_Compare(keystate)
+  </Binding>
 </Bindings>

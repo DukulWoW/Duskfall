@@ -25,7 +25,7 @@ UI.RING_GOLD, UI.RING_BLUE = { 1, 0.85, 0.4 }, { 0.36, 0.5, 1 }
 -- Forever look ---------------------------------------------------------------------------------
 -- The window's background, tiled: Kim's slate (Assets/bg-slate, 2026-11-26, on trial; was "wood",
 -- Kahoof's, still in Assets to go back)
-UI.BACKGROUND = "bg-slate"
+UI.BACKGROUND = "Backgrounds\\bg-slate"
 function UI.Wood(f)
   local bg = f.Bg
   if not bg then
@@ -45,7 +45,7 @@ UI.GLOW = false
 function UI.Glow(host, region, alpha)
   local glow = host:CreateTexture(nil, "BACKGROUND", nil, 7)
   glow:SetAllPoints(region or host)
-  glow:SetTexture(UI.ART .. "glow")
+  glow:SetTexture(UI.ART .. "Backgrounds\\glow")
   if alpha then glow:SetAlpha(alpha) end
   glow:SetShown(UI.GLOW)
   return glow
@@ -200,7 +200,7 @@ function UI.GlowRing(host, anchor, size, o)
   local ok = pcall(glow.SetTexture, glow, GLOW_FILE) and glow:GetTexture()
   if not ok then ok = pcall(glow.SetTexture, glow, GLOW_PATH) and glow:GetTexture() end
   if not ok then
-    glow:SetTexture(UI.ART .. "dot")
+    glow:SetTexture(UI.ART .. "Shapes\\dot")
     glow:SetVertexColor(1, 0.8, 0.35)
   end
   local turn, breath = o.turn or GLOW_TURN, o.breath or GLOW_BREATH
@@ -284,21 +284,21 @@ function UI.Switch(parent, o)
   knob:SetSize(K, K)
   layers[#layers + 1] = { knob, 5 }
   local shadow = knob:CreateTexture(nil, "BACKGROUND")
-  shadow:SetTexture(UI.ART .. "dot")
+  shadow:SetTexture(UI.ART .. "Shapes\\dot")
   shadow:SetVertexColor(0, 0, 0, 0.45)
   shadow:SetSize(K + 2, K + 2)
   shadow:SetPoint("CENTER", knob, "CENTER", 0.5, -1)
   local disc = knob:CreateTexture(nil, "ARTWORK")
   disc:SetAllPoints()
-  UI.Gradient(disc, "VERTICAL", { 0.8, 0.8, 0.84, 1 }, { 1, 1, 1, 1 }, UI.ART .. "dot")
+  UI.Gradient(disc, "VERTICAL", { 0.8, 0.8, 0.84, 1 }, { 1, 1, 1, 1 }, UI.ART .. "Shapes\\dot")
   if ns.CursorLight then
     local lit = ns.CursorLight.NewTwin(knob, "ARTWORK", 2, "art")
     lit:SetAllPoints(disc)
-    UI.Gradient(lit, "VERTICAL", { 0.8, 0.8, 0.84, 1 }, { 1, 1, 1, 1 }, UI.ART .. "dot")
+    UI.Gradient(lit, "VERTICAL", { 0.8, 0.8, 0.84, 1 }, { 1, 1, 1, 1 }, UI.ART .. "Shapes\\dot")
   end
   local hover = knob:CreateTexture(nil, "OVERLAY")
   hover:SetAllPoints()
-  hover:SetTexture(UI.ART .. "dot")
+  hover:SetTexture(UI.ART .. "Shapes\\dot")
   hover:SetBlendMode("ADD")
   hover:SetVertexColor(1, 0.9, 0.6, 0.3)
   hover:Hide()
@@ -529,7 +529,10 @@ function UI.Dropdown(parent, width, o)
   end
   local function build()
     dd:SetupMenu(function(_, root)
-      for _, it in ipairs(items()) do
+      local list = items()
+      -- Long lists (other addons' sounds) scroll inside the menu instead of running off the screen
+      if #list > 20 and root.SetScrollMode then pcall(root.SetScrollMode, root, 20 * 20) end
+      for _, it in ipairs(list) do
         root:CreateRadio(it[2],
           function(v) return o.get() == v end,
           function(v) ns.Safe(o.set, "dropdown", v) end,
@@ -661,7 +664,7 @@ function UI.IconButton(parent, size, symbol, o)
   local function refresh()
     local dim = not btn:IsEnabled()
     local pressed = down and not dim
-    sym:SetTexture(UI.ART .. "bt-" .. symbol .. (pressed and "-press" or "-normal"))
+    sym:SetTexture(UI.ART .. "Buttons\\bt-" .. symbol .. (pressed and "-press" or "-normal"))
     sym:ClearAllPoints()
     sym:SetPoint("CENTER", pressed and 1 or 0, pressed and -1 or 0)
     sym:SetDesaturated(dim)
@@ -688,6 +691,67 @@ function UI.IconButton(parent, size, symbol, o)
   btn:SetScript("OnMouseUp", function() down = false refresh() end)
   btn:SetScript("OnEnable", refresh)
   btn:SetScript("OnDisable", refresh)
+  btn:HookScript("OnHide", function() over, down = false, false refresh() end)
+  refresh()
+  return btn
+end
+
+-- Title bar button (Kim, 2026-11-27: the scaled-down link-button art looked low-res): our own round
+-- disc with a gold ring (Assets/Buttons/tb-disc) and a white glyph tinted gold (tb-x, tb-help), drawn
+-- 8x and scaled to 64 px. Hover lights the disc and the glyph, press darkens it and moves the glyph
+-- 1 px down. glyph = "x" or "help"; o = { tip, tipSub, onClick }.
+function UI.TitleButton(parent, size, glyph, o)
+  o = o or {}
+  local btn = CreateFrame("Button", nil, parent)
+  btn:SetSize(size, size)
+  local disc = btn:CreateTexture(nil, "ARTWORK")
+  disc:SetAllPoints()
+  disc:SetTexture(UI.ART .. "Buttons\\tb-disc")
+  local shine = btn:CreateTexture(nil, "ARTWORK", nil, 1)
+  shine:SetAllPoints()
+  shine:SetTexture(UI.ART .. "Buttons\\tb-disc")
+  shine:SetBlendMode("ADD")
+  shine:SetAlpha(0)
+  local sym = btn:CreateTexture(nil, "OVERLAY")
+  sym:SetSize(size, size)
+  sym:SetTexture(UI.ART .. "Buttons\\tb-" .. glyph)
+  local over, down = false, false
+  local function refresh()
+    local pressed = down and over
+    sym:ClearAllPoints()
+    sym:SetPoint("CENTER", btn, "CENTER", 0, pressed and -1 or 0)
+    if pressed then
+      disc:SetVertexColor(0.7, 0.7, 0.7)
+      sym:SetVertexColor(0.85, 0.68, 0)
+      shine:SetAlpha(0)
+    elseif over then
+      disc:SetVertexColor(1, 1, 1)
+      sym:SetVertexColor(1, 0.94, 0.62)
+      shine:SetAlpha(0.35)
+    else
+      disc:SetVertexColor(1, 1, 1)
+      sym:SetVertexColor(1, 0.82, 0)
+      shine:SetAlpha(0)
+    end
+  end
+  if o.onClick then btn:SetScript("OnClick", function(self, mb) ns.Safe(o.onClick, "title button", self, mb) end) end
+  btn:SetScript("OnEnter", function(self)
+    over = true
+    refresh()
+    if o.tip then
+      GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
+      GameTooltip:AddLine(o.tip, 1, 1, 1)
+      if o.tipSub then GameTooltip:AddLine(o.tipSub, 0.78, 0.78, 0.78, true) end
+      GameTooltip:Show()
+    end
+  end)
+  btn:SetScript("OnLeave", function(self)
+    over = false
+    refresh()
+    if GameTooltip:IsOwned(self) then GameTooltip:Hide() end
+  end)
+  btn:SetScript("OnMouseDown", function() down = true refresh() end)
+  btn:SetScript("OnMouseUp", function() down = false refresh() end)
   btn:HookScript("OnHide", function() over, down = false, false refresh() end)
   refresh()
   return btn
@@ -807,7 +871,7 @@ function UI.RoundBox(f, o)
       local t = tex(sub + 1, "edge")
       t:SetSize(R, R)
       t:SetPoint(point, f, point, 0, 0)
-      both(t, "SetTexture", UI.ART .. "round-ring-" .. R)
+      both(t, "SetTexture", UI.ART .. "Shapes\\round-ring-" .. R)
       both(t, "SetTexCoord", unpack(CORNERS[k]))
       local c = cc[k]
       both(t, "SetVertexColor", c[1], c[2], c[3], c[4] or 1)
@@ -845,7 +909,7 @@ function UI.RoundBox(f, o)
       if twins[t] then UI.Gradient(twins[t], "VERTICAL", lerp(lo, hi, from), lerp(lo, hi, to), file) end
     end
     for k, t in pairs(c) do
-      local file = box.round[k] and (UI.ART .. "round-corner") or nil
+      local file = box.round[k] and (UI.ART .. "Shapes\\round-corner") or nil
       if k == "tl" or k == "tr" then shade(t, b, 1, file) else shade(t, 0, a, file) end
       if file then both(t, "SetTexCoord", unpack(CORNERS[k])) else both(t, "SetTexCoord", 0, 1, 0, 1) end
     end
@@ -883,7 +947,7 @@ function UI.BackButton(parent, size, o)
   local arrow = b:CreateTexture(nil, "OVERLAY")
   arrow:SetSize(size - 8, size - 8)
   arrow:SetPoint("CENTER", -1, 0)
-  arrow:SetTexture(UI.ART .. "chevron")
+  arrow:SetTexture(UI.ART .. "Buttons\\chevron")
   arrow:SetVertexColor(1, 0.82, 0)
   arrow:SetRotation(math.pi)
   b:SetScript("OnMouseDown", function() arrow:SetPoint("CENTER", 0, -1) end)
@@ -1084,7 +1148,7 @@ function UI.LightSlider(parent, width, o)
   -- moves its thumb to a layer of its choosing, so the layer is set again afterwards: on top of
   -- the middle line (Kim)
   local thumb = sl:CreateTexture(nil, "OVERLAY", nil, 7)
-  thumb:SetTexture(UI.ART .. "diamond")
+  thumb:SetTexture(UI.ART .. "Shapes\\diamond")
   thumb:SetSize(22, 22)
   sl:SetThumbTexture(thumb)
   thumb:SetDrawLayer("OVERLAY", 7)
@@ -1092,7 +1156,7 @@ function UI.LightSlider(parent, width, o)
   if ns.CursorLight then
     local lit = ns.CursorLight.NewTwin(sl, "OVERLAY", 7, "edge")
     lit:SetAllPoints(thumb)
-    lit:SetTexture(UI.ART .. "diamond")
+    lit:SetTexture(UI.ART .. "Shapes\\diamond")
   end
   -- The thumb's centre travels from half its width to the other end minus that: the track too
   INSET = 11
@@ -1243,10 +1307,10 @@ function UI.ClearX(parent, size, onClick, tip)
   local tx = btn:CreateTexture(nil, "ARTWORK")
   tx:SetSize(size, size)
   tx:SetPoint("CENTER")
-  tx:SetTexture(UI.ART .. "clear-x")
+  tx:SetTexture(UI.ART .. "Buttons\\clear-x")
   local hi = btn:CreateTexture(nil, "HIGHLIGHT")
   hi:SetAllPoints(tx)
-  hi:SetTexture(UI.ART .. "clear-x")
+  hi:SetTexture(UI.ART .. "Buttons\\clear-x")
   hi:SetBlendMode("ADD")
   hi:SetAlpha(0.25)
   local function look(down)
@@ -1321,9 +1385,9 @@ end
 function UI.HelpIcon(parent, topic, title, text)
   local b = CreateFrame("Button", nil, parent)
   b:SetSize(16, 16)
-  b:SetNormalTexture(UI.ART .. "help-normal")
-  b:SetHighlightTexture(UI.ART .. "help-hover")
-  b:SetPushedTexture(UI.ART .. "help-press")
+  b:SetNormalTexture(UI.ART .. "Buttons\\help-normal")
+  b:SetHighlightTexture(UI.ART .. "Buttons\\help-hover")
+  b:SetPushedTexture(UI.ART .. "Buttons\\help-press")
   b:SetAlpha(0.35)
   b:SetScript("OnEnter", function(self)
     self:SetAlpha(1)

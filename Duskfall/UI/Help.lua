@@ -67,7 +67,9 @@ local TOPICS = {
     Y .. "/dusk|r (or " .. Y .. "/duskfall|r, " .. Y .. "/df|r) opens this window, " .. Y .. "/dusk settings|r "
       .. "the settings, " .. Y .. "/dusk help|r this help, " .. Y .. "/dusk status|r what Duskfall is doing, in chat.",
     Y .. "/dusk on|r, " .. Y .. "/dusk off|r: Duskfall on or off; there is a key binding for it too "
-      .. "(Options > Keybindings > AddOns). " .. Y .. "/dusk baseline|r: the current values become your baseline.",
+      .. "(Options > Keybindings > AddOns), and one to hold for a quick look at your own settings "
+      .. "(as the Compare button). " .. Y .. "/dusk baseline|r: the current values become your baseline. " .. Y .. "/dusk refresh|r (or the Refresh "
+      .. "button on Settings) puts the settings for here back at once if the screen ever seems stuck.",
     Y .. "/dusk save sub|r, " .. Y .. "zone|r or " .. Y .. "instance|r, then any of " .. Y .. "dawn day dusk night "
       .. "21:00-05:30 indoors outdoors resting combat mounted swimming underwater ghost|r (! in front = not): "
       .. "saves the current values there. " .. Y .. "/dusk clear|r the same way removes it. " .. Y .. "/dusk looks|r "
@@ -111,7 +113,7 @@ local function build()
   f:EnableMouse(true)
   local bg = f:CreateTexture(nil, "BACKGROUND", nil, 0)
   bg:SetAllPoints()
-  bg:SetTexture(UI.ART .. "wood", "REPEAT", "REPEAT")
+  bg:SetTexture(UI.ART .. "Backgrounds\\wood", "REPEAT", "REPEAT")
   bg:SetHorizTile(true)
   bg:SetVertTile(true)
   UI.Glow(f, nil, 0.8)
@@ -164,6 +166,9 @@ local function build()
   -- Closing the window or picking a tab closes help too
   win:HookScript("OnHide", function() f:Hide() end)
   UI.Fader(f)   -- ESC: the window's OnKeyDown closes it (Help first, then the page)
+  -- The window's status strip (Style / Here / values) does not belong under the help (Kim)
+  f:HookScript("OnShow", function() if win.strip then win.strip:Hide() end end)
+  f:HookScript("OnHide", function() if win.strip then win.strip:Show() end end)
   f:Hide()
   frame = f
   show(current)

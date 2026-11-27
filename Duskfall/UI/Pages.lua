@@ -87,18 +87,58 @@ end
 
 local function buildGeneral(p)
   local controls = {}
-  local _, top = card(p, 12, -50, FULL_W, 96, "Duskfall", nil, controls)
-  local on = top(UI.Check(p, { label = "Duskfall on", tip = "Off puts your baseline back and leaves the sliders to you.",
+  -- Top row (Kim, 2026-11-27): Duskfall on the left, Sound on the right
+  local HALF = math.floor((FULL_W - 12) / 2)
+  local _, top = card(p, 12, -50, HALF, 108, "Duskfall", nil, controls)
+  top(UI.Check(p, { label = "Duskfall on", tip = "Off puts your baseline back and leaves the sliders to you.",
     get = function() return ns.cfg.enabled end,
     set = function(v) D.SetEnabled(v) W.UpdateStatus() end }), 26, 4)
-  local dbg = UI.Check(p, { label = "Debug output", tip = "Prints what Duskfall does in chat.",
+  top(UI.Check(p, { label = "Debug output", tip = "Prints what Duskfall does in chat.",
     get = function() return ns.cfg.debug end,
-    set = function(v) ns.cfg.debug = v end })
-  dbg:SetPoint("LEFT", on, "LEFT", 300, 0)
-  controls[#controls + 1] = dbg
+    set = function(v) ns.cfg.debug = v end }), 26, 4)
+
+  -- Sound (Core/Sound.lua): two sounds, each on / off with its own choice and a Play button; the
+  -- channel on the title line
+  local SND = ns.Sound
+  local sc = card(p, 12 + HALF + 12, -50, HALF, 108, "Sound", nil, controls)
+  local chan = UI.Dropdown(p, 132, { tip = "Which of the game's volume sliders the sounds follow.",
+    items = function()
+      local out = {}
+      for _, c in ipairs(SND.CHANNELS) do out[#out + 1] = { c[1], c[2] } end
+      return out
+    end,
+    get = function() return ns.cfg.soundChannel end,
+    set = function(v) ns.cfg.soundChannel = v end })
+  chan:SetPoint("TOPRIGHT", sc, "TOPRIGHT", -14, 6)
+  controls[#controls + 1] = chan
+  local function soundRow(y, label, tip, onKey, nameKey)
+    local sw = UI.Check(p, { label = label, tip = tip,
+      get = function() return ns.cfg[onKey] end,
+      set = function(v) ns.cfg[onKey] = v end })
+    sw:SetPoint("TOPLEFT", sc, "TOPLEFT", 16, y)
+    controls[#controls + 1] = sw
+    -- The sound dropdowns line up with the channel's on the right, Play to their left (Kim)
+    local dd = UI.Dropdown(p, 132, { tip = "The sound. Sounds from other addons (LibSharedMedia) are listed too.",
+      items = function()
+        local out = {}
+        for _, n in ipairs(SND.List()) do out[#out + 1] = { n, n } end
+        return out
+      end,
+      get = function() return ns.cfg[nameKey] end,
+      set = function(v) ns.cfg[nameKey] = v SND.Play(v) end })
+    dd:SetPoint("TOPRIGHT", sc, "TOPRIGHT", -14, y + 16)
+    controls[#controls + 1] = dd
+    local play = UI.Button(p, "Play", 52, function() SND.Play(ns.cfg[nameKey]) end, 22)
+    play:SetPoint("RIGHT", dd._dd, "LEFT", -6, 0)
+    UI.Tooltip(play, "Play", "Hear the sound picked here.")
+  end
+  soundRow(-42, "New place", "The first time you walk into a place Duskfall has not seen before.",
+    "soundNew", "soundNewName")
+  soundRow(-72, "Setting starts", "When you walk into a place where one of your settings takes effect.",
+    "soundActive", "soundActiveName")
 
   local SL_W = FULL_W - 32
-  local _, timing = card(p, 12, -158, FULL_W, 166, "Timing",
+  local _, timing = card(p, 12, -170, FULL_W, 166, "Timing",
     "How quickly Duskfall reacts. The feel of the changes themselves is on the Styles tab.", controls)
   timing(UI.Slider(p, SL_W, { label = "Doorway delay", min = 0, max = 2, step = 0.1, default = 0.5,
     fmt = function(v) return string.format("%.1f s", v) end,
@@ -114,8 +154,8 @@ local function buildGeneral(p)
   -- Factory reset (Kim, 2026-11-26): a red box at the bottom, one button per kind of reset, each
   -- asks first. None of them can be undone.
   local danger = CreateFrame("Frame", nil, p)
-  danger:SetPoint("TOPLEFT", p, "TOPLEFT", 12, -336)
-  danger:SetSize(FULL_W, 148)
+  danger:SetPoint("TOPLEFT", p, "TOPLEFT", 12, -348)
+  danger:SetSize(FULL_W, 136)
   danger:SetFrameLevel(p:GetFrameLevel())
   UI.RoundBox(danger, { radius = 10, bottom = { 0.12, 0.02, 0.01, 0.55 }, top = { 0.3, 0.06, 0.04, 0.45 },
     border = { 0.95, 0.35, 0.22, 0.5 } })
@@ -506,14 +546,14 @@ end
 
 local SUBPAGES = {
   { key = "general", title = "General", build = buildGeneral, icon = "Interface\\Icons\\Trade_Engineering",
-    desc = "On or off, doorway delay and timing.",
+    desc = "On or off, sounds, doorway delay and timing.",
     summary = function()
       if not ns.cfg.enabled then return "|cffff6060Switched off|r" end
       return string.format("On, doorway delay %.1f s", ns.cfg.debounce or 0.5)
     end },
   { key = "time", title = "Time of day", build = buildTime,
     desc = "The clock, and when dawn, day, dusk and night start.",
-    iconFn = function() return UI.ART .. "ui-" .. ns.Situations.Snapshot().period end,
+    iconFn = function() return UI.ART .. "Day\\ui-" .. ns.Situations.Snapshot().period end,
     summary = function()
       local env = ns.Situations.Snapshot()
       local name = { dawn = "Dawn", day = "Day", dusk = "Dusk", night = "Night" }
@@ -563,6 +603,14 @@ W.AddTab("settings", "Settings", function(page)
     get = function() return ns.cfg.enabled end,
     set = function(v) D.SetEnabled(v) W.UpdateStatus() end })
   quick:SetPoint("TOPRIGHT", overview, "TOPRIGHT", -24, -12)
+  -- Refresh, left of the big switch (Kim): clears anything stuck and writes the settings for here
+  local refresh = UI.Button(overview, "Refresh", 96, function()
+    D.Refresh()
+    W.UpdateStatus()
+  end, 24)
+  refresh:SetPoint("RIGHT", quick, "LEFT", -28, 0)
+  UI.Tooltip(refresh, "Refresh", "Puts the settings for here back on screen, at once. Use it if the " ..
+    "screen ever seems stuck (after a Compare, a preview or a slider moved by hand). Also |cffffd100/dusk refresh|r.")
   local tiles = {}
   -- Layout (Kim): General across the top, then Time of day | Baseline, then Display | Characters,
   -- tall enough to fill the page. TILE_SPOT = key -> { column (0, 1 or "full"), row }.
@@ -747,6 +795,7 @@ W.AddTab("about", "About", function(page)
     "|cffffd100/dusk status|r   where you are and what Duskfall shows, in chat",
     "|cffffd100/dusk save|r  /  |cffffd100clear|r  sub, zone or instance [conditions]   from chat",
     "|cffffd100/dusk on|r  /  |cffffd100off|r   switch Duskfall on or off (also a key binding)",
+    "|cffffd100/dusk refresh|r   put the settings for here back if the screen seems stuck",
     "|cffffd100/dusk help|r   the help, with every command",
   }, "\n"), "GameFontHighlight")
   cmds:SetPoint("TOPLEFT", panel, "TOPLEFT", 18, -16)

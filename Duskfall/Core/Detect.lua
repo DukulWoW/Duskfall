@@ -1,7 +1,8 @@
 -- Duskfall Detect.lua: notices where the player is and what state they are in, waits out doorway
 -- flicker, works out the target and applies it. Also the baseline safety (capture, crash check,
 -- restore at logout) and manual slider changes (held, never learned).
--- Public: D.Evaluate(why), D.Now(why), D.Preview(target, seconds, opts), D.SetEnabled(on), D.SaveBaseline(), D.ClearHolds(), D.state
+-- Public: D.Evaluate(why), D.Now(why), D.Preview(target, seconds, opts), D.SetEnabled(on), D.SaveBaseline(), D.ClearHolds(),
+--         D.Compare(on), D.Refresh(), D.state
 local ADDON, ns = ...
 local D = {}
 ns.Detect = D
@@ -17,6 +18,7 @@ local state = {
   pendingSig = nil, pendingAt = 0,
   held = {},              -- key -> value the player set by hand while here
   hinted = false,         -- the hold hint was printed for the current hold
+  comparing = false,      -- D.Compare: the baseline shows while a key / button is held
   started = false,
 }
 D.state = state
@@ -67,7 +69,7 @@ function D.Evaluate(why)
   end
   if state.target and not C.SameAll(state.target, target) then D.ClearHolds() end
   state.target, state.source, state.style, state.cands = target, source, style, cands
-  if ns.cfg.enabled then T.Apply(target, state.held, why, timeOnly, trStyle) end
+  if ns.cfg.enabled and not state.comparing then T.Apply(target, state.held, why, timeOnly, trStyle) end
   ns.Debug("evaluate (%s): g %.2f b %d c %d", tostring(why), target.gamma, target.brightness, target.contrast)
   ns.Fire("EVALUATED", why)
 end
@@ -116,7 +118,57 @@ local function tick()
   if now - state.pendingAt >= (tonumber(ns.cfg.debounce) or 0.5) then D.Evaluate("change") end
 end
 
+-- Before / after (Kim, 2026-11-27): while held, the baseline shows at once; let go and this place's
+-- values come back at once (also any slider moved by hand, and a place walked into meanwhile).
+-- Ends by itself after COMPARE_MAX seconds, in case the key-up never arrives (alt-tab, reload).
+local COMPARE_MAX = 30
+local compareToken = 0
+function D.Compare(on)
+  on = on and true or false
+  if not ns.db or not ns.db.baseline or not state.started then return end
+  if on and not ns.cfg.enabled then return end   -- off: the baseline shows already
+  if on == state.comparing then return end
+  state.comparing = on
+  compareToken = compareToken + 1
+  T.Cancel()
+  if on then
+    C.WriteAll(ns.db.baseline)
+    local token = compareToken
+    C_Timer.After(COMPARE_MAX, function()
+      if state.comparing and compareToken == token then D.Compare(false) end
+    end)
+  elseif ns.cfg.enabled and state.target then
+    T.Apply(state.target, state.held, "edit")
+  end
+  ns.Fire("COMPARE", on)
+end
+
+-- Refresh (Kim, 2026-11-27): clears anything that could hold the screen (Compare, a Preview, a
+-- running fade, sliders moved by hand) and writes what belongs here now (the baseline when off).
+function D.Refresh()
+  if not ns.db or not ns.db.baseline or not state.started then return end
+  local wasComparing = state.comparing
+  state.comparing = false
+  compareToken = compareToken + 1
+  state.preview = nil
+  T.Cancel()
+  D.ClearHolds()
+  state.target = nil
+  if wasComparing then ns.Fire("COMPARE", false) end
+  if ns.cfg.enabled then
+    D.Evaluate("refresh")
+    if state.target then T.Apply(state.target, nil, "edit") end   -- at once, not a transition
+  else
+    C.WriteAll(ns.db.baseline)
+  end
+end
+
 function D.SetEnabled(on)
+  if state.comparing then
+    state.comparing = false
+    compareToken = compareToken + 1
+    ns.Fire("COMPARE", false)
+  end
   ns.cfg.enabled = on and true or false
   D.ClearHolds()
   T.Cancel()

@@ -31,6 +31,7 @@ end
 -- "Off", "Previewing", the names of the Looks in effect, or "Baseline".
 function ns.StateText()
   if not ns.cfg or not ns.cfg.enabled then return "Off" end
+  if D.state.comparing then return "Before: your own settings" end
   if D.state.preview then return "Previewing" end
   local names = {}
   for _, look in ipairs(ns.ActiveLooks()) do names[#names + 1] = look.name or "?" end

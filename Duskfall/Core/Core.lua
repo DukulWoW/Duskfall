@@ -32,6 +32,11 @@ ns.DEFAULTS = {
   ringGlow = true,              -- the glow ring on the moon badge and minimap button where a setting is in effect
   cursorLight = true,           -- a soft light follows the mouse over Duskfall's windows (UI/CursorLight.lua)
   cursorLightStrength = 1,      -- its brightness, 0.25 - 3 (1 = the built-in WIDE_A / CORE_A)
+  soundNew = true,              -- a sound the first time you walk into a place (Core/Sound.lua)
+  soundNewName = "Duskfall: New place",       -- LibSharedMedia sound names (ours: Assets/Sounds)
+  soundActive = false,          -- a sound when walking into a place makes a setting take effect
+  soundActiveName = "Duskfall: Setting starts",
+  soundChannel = "SFX",         -- PlaySoundFile channel
 }
 
 -- Output ---------------------------------------------------------------------------------------

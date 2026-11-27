@@ -111,7 +111,7 @@ end
 function CL.Attach(win)
   if not win or win.duskMask then return end
   local mask = win:CreateMaskTexture()
-  mask:SetTexture(UI.ART .. "cursor-light", "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+  mask:SetTexture(UI.ART .. "Backgrounds\\cursor-light", "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
   mask:SetSize(1, 1)
   mask:SetPoint("CENTER", UIParent, "BOTTOMLEFT", -1000, -1000)
   win.duskMask = mask
@@ -123,7 +123,7 @@ function CL.Attach(win)
   clip:EnableMouse(false)
   clip:SetFrameLevel(math.min(9000, win:GetFrameLevel() + LEVEL_UP))
   local haze = clip:CreateTexture(nil, "OVERLAY", nil, 7)
-  haze:SetTexture(UI.ART .. "cursor-light")
+  haze:SetTexture(UI.ART .. "Backgrounds\\cursor-light")
   haze:SetBlendMode("ADD")
   haze:SetSize(HAZE, HAZE)
   haze:SetVertexColor(1, 0.85, 0.55)

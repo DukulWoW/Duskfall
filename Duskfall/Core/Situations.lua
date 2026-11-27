@@ -196,6 +196,7 @@ end
 -- Every place the player has been, for the place list (B-04). Off until a Look uses it.
 function S.Discover(env)
   local places, now = ns.db.places, time()
+  S.foundNew = false
   for _, kind in ipairs({ "instance", "zone", "sub" }) do
     local key = S.PlaceKey(kind, env)
     if key then
@@ -203,6 +204,7 @@ function S.Discover(env)
       if not p then
         p = { first = now }
         places[key] = p
+        S.foundNew = true   -- Core/Sound.lua: a new place was found by this Discover
         ns.Debug("new place %s", key)
       end
       p.name = S.PlaceName(kind, env) or p.name

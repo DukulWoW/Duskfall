@@ -10,3 +10,4 @@ authoritative one.
 | CallbackHandler-1.0 | 8 | No license notice in the file; part of the Ace3 project |
 | LibDataBroker-1.1 | 4 | No license notice in the file |
 | LibDBIcon-1.0 | 57 | No license notice in the file |
+| LibSharedMedia-3.0 | 12000005 | LGPL v2.1 (stated in `LibSharedMedia-3.0/LibSharedMedia-3.0.lua`) |
