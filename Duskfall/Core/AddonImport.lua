@@ -224,7 +224,7 @@ end
 local DARK = { g = 0.15, b = 4, c = 3 }
 local NIGHT = { g = 0.08, b = 2, c = 1 }
 local STARTER = {
-  name = "Starter", styleName = "Starter: dark places",
+  name = "Starter", styleName = "Dark Places",
   entries = function()
     local out = {}
     for _, z in ipairs({ { 1431, "Duskwood" }, { 1430, "Deadwind Pass" }, { 1448, "Felwood" },

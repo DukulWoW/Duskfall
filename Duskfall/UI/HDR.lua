@@ -27,11 +27,20 @@ W.AddTab("hdr", "HDR", function(page)
   local FULL_W = 728
   local title = UI.Label(page, "HDR", "GameFontNormalHuge")
   title:SetPoint("TOPLEFT", page, "TOPLEFT", 14, -14)
+  local help = UI.HelpIcon(page, "hdr", "HDR", "Settings for HDR screens; Help explains how to set them.")
+  help:SetPoint("LEFT", title, "RIGHT", 8, 0)
   local intro = UI.Label(page, "For HDR screens. Windows HDR must be on (Windows Settings > System > Display > "
     .. "Use HDR). Changes show at once and apply everywhere in the game.")
   intro:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -8)
   intro:SetWidth(FULL_W)
   intro:SetTextColor(0.7, 0.7, 0.7)
+
+  -- Kim: a plain warning, in red, for players without an HDR screen
+  local warn = UI.Label(page, "Only for HDR screens. On a normal screen leave HDR off: the picture can look washed "
+    .. "out or wrong.", "GameFontNormal")
+  warn:SetPoint("TOPLEFT", intro, "BOTTOMLEFT", 0, -6)
+  warn:SetWidth(FULL_W)
+  warn:SetTextColor(1, 0.35, 0.3)
 
   if not has("HDROutput") then
     local none = UI.Label(page, "This game client has no HDR settings.", "GameFontNormalLarge")
@@ -43,7 +52,7 @@ W.AddTab("hdr", "HDR", function(page)
   local function refresh() for _, c in ipairs(controls) do if c.Refresh then c:Refresh() end end end
 
   -- HDR output: the big switch
-  local top = UI.Card(page, 12, -84, FULL_W, 74)
+  local top = UI.Card(page, 12, -100, FULL_W, 74)
   local outT = UI.Label(top, "HDR output", "GameFontNormalLarge")
   outT:SetPoint("TOPLEFT", top, "TOPLEFT", 16, -14)
   local outD = UI.Label(top, "Off: the game draws as on a normal screen and the settings below do nothing.")
@@ -58,7 +67,7 @@ W.AddTab("hdr", "HDR", function(page)
 
   -- Brightness
   local SL_W = FULL_W - 32 - 130
-  local box = UI.Card(page, 12, -170, FULL_W, 250)
+  local box = UI.Card(page, 12, -186, FULL_W, 250)
   local bT = UI.Label(box, "Brightness", "GameFontNormalLarge")
   bT:SetPoint("TOPLEFT", box, "TOPLEFT", 16, -14)
   local bD = UI.Label(box, "Set Peak brightness to what your screen can show (see its specs), then Paper white "

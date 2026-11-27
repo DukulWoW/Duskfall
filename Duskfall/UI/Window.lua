@@ -113,10 +113,24 @@ end
 -- hidden (Kim). One at a time; picking a tab or closing the window closes them.
 -- W.NewOverlay(title) -> f with f.closeBtn (top right) and f.title; f:Show() / f:FadeHide().
 local overlays = {}
-function W.CloseOverlays()
+-- The page frame of a tab (built or not)
+function W.PageOf(id)
+  for _, t in ipairs(tabs) do
+    if t.id == id then return t.page end
+  end
+end
+
+-- instant: hide at once (a Help link opens a page: it must show now, not behind a fading Help)
+function W.CloseOverlays(instant)
   local any = false
   for _, o in ipairs(overlays) do
-    if o:IsOpen() then o:FadeHide() any = true end
+    if instant and o:IsShown() then
+      o:Hide()
+      any = true
+    elseif o:IsOpen() then
+      o:FadeHide()
+      any = true
+    end
   end
   return any
 end

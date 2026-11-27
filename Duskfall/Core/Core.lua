@@ -28,6 +28,7 @@ ns.DEFAULTS = {
   brokerText = "look",          -- broker bars: "look", "values", "both", "none"
   statusDisplay = "change",     -- floating display: "off", "change", "always"
   statusSeconds = 4,            -- "change": seconds it stays after the change is done
+  statusStay = "seconds",       -- "seconds" (statusSeconds after the change) or "change" (as long as it runs)
   advanced = false,             -- Places in Advanced mode (full list and Look editor), else simple
   ringGlow = true,              -- the glow ring on the moon badge and minimap button where a setting is in effect
   cursorLight = true,           -- a soft light follows the mouse over Duskfall's windows (UI/CursorLight.lua)

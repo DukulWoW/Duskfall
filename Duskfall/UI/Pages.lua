@@ -540,11 +540,23 @@ local function buildDisplay(p)
       ns.cfg.statusDisplay = v
       ns.StatusDisplay.Refresh(v == "change")
     end }), UI.DROPDOWN_H, 10)
-  local stays = UI.Slider(p, DD_W, { label = "Stays for", min = 1, max = 15, step = 1, default = 4,
-    fmt = function(v) return v .. " s" end,
-    tip = "When the setting changes: how long the display stays once the change is done.",
-    get = function() return ns.cfg.statusSeconds end,
-    onChange = function(v) ns.cfg.statusSeconds = v end })
+  -- Stays (Kim, 2026-11-27): as long as the change runs, or some seconds after it
+  local stays = UI.Dropdown(p, DD_W, { label = "Stays",
+    tip = "When the setting changes: how long the display stays. A thin bar on it fills while the change runs.",
+    items = { { "change", "As long as the change" }, { 2, "2 s after the change" }, { 4, "4 s after the change" },
+              { 6, "6 s after the change" }, { 10, "10 s after the change" }, { 15, "15 s after the change" } },
+    get = function()
+      if ns.cfg.statusStay == "change" then return "change" end
+      return tonumber(ns.cfg.statusSeconds) or 4
+    end,
+    set = function(v)
+      if v == "change" then
+        ns.cfg.statusStay = "change"
+      else
+        ns.cfg.statusStay = "seconds"
+        ns.cfg.statusSeconds = v
+      end
+    end })
   stays:SetPoint("TOPLEFT", show, "TOPLEFT", HALF + 12, 0)
   controls[#controls + 1] = stays
   local move = UI.Button(p, "Move it", 120, function() ns.StatusDisplay.Unlock(20) end)
@@ -599,6 +611,15 @@ local SUBPAGES = {
       return string.format("%d character%s", n, n == 1 and "" or "s")
     end },
 }
+
+-- Open the window on a Settings page (key: general, time, display, baseline, chars; nil = the overview).
+function ns.OpenSettingsPage(key)
+  if not ns.OpenWindow then return end
+  W.CloseOverlays(true)
+  ns.OpenWindow("settings", true)
+  local pg = W.PageOf("settings")
+  if key and pg and pg.OpenSub then pg.OpenSub(key) end
+end
 
 -- Settings tab ------------------------------------------------------------------------------------
 W.AddTab("settings", "Settings", function(page)
@@ -733,6 +754,7 @@ W.AddTab("settings", "Settings", function(page)
     if sub.refresh then sub.refresh() end
     page.openSub = key
   end
+  page.OpenSub = function(key) if subs[key] then open(key) end end
   page.Back = function()
     if not page.openSub then return false end
     subs[page.openSub]:Hide()

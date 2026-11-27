@@ -150,49 +150,83 @@ function SS.Create(parent)
     "(for every character, or only this one once characters have their own). New, Duplicate, Rename and " ..
     "Delete are in the list too.")
   local function ddText() pcall(dd.OverrideText, dd, style().name or "?") end
+  local function deleteStyle(st)
+    if #ns.db.styles <= 1 then return end
+    local n = #(st.looks or {})
+    UI.Confirm(string.format("Delete Style \"%s\" and its %d setting%s?", st.name or "?", n, n == 1 and "" or "s"), function()
+      local wasGlobal = UI.ScopeIsGlobal(st.scope, true)
+      for i, o in ipairs(ns.db.styles) do
+        if o == st then table.remove(ns.db.styles, i) break end
+      end
+      -- A Global Style gone: the first one left takes over, so nobody is without one
+      if wasGlobal then
+        local any = false
+        for _, o in ipairs(ns.db.styles) do if UI.ScopeIsGlobal(o.scope, true) then any = true end end
+        if not any then ns.db.styles[1].scope = { global = true } end
+      end
+      changed()
+      refresh()
+    end)
+  end
+  -- A round X on a Style's line in the list, shown while the mouse is on that line (Kim): deletes it
+  -- without picking it first. Menu lines are pooled and reused, so every line sets (or clears) its
+  -- Style, and the X and its hover hooks are made once per line frame.
+  local function rowX(button, st)
+    if not button.duskX then
+      local x = UI.ClearX(button, 14, nil, "Delete this Style")
+      x:SetPoint("RIGHT", button, "RIGHT", -4, 0)
+      x:SetFrameLevel(button:GetFrameLevel() + 5)
+      x:Hide()
+      x:SetScript("OnClick", function()
+        local target = button.duskStyle
+        if not target then return end
+        if dd.CloseMenu then pcall(dd.CloseMenu, dd) end
+        deleteStyle(target)
+      end)
+      -- A watcher on the line: the X shows while the mouse is on the line or on the X itself
+      local watch = CreateFrame("Frame", nil, button)
+      watch:SetScript("OnUpdate", function()
+        local on = button.duskStyle ~= nil and #ns.db.styles > 1 and (button:IsMouseOver() or x:IsMouseOver())
+        if on ~= x:IsShown() then x:SetShown(on) end
+      end)
+      button.duskX = x
+    end
+    button.duskStyle = st
+    button.duskX:Hide()
+  end
+  local function noX(desc)
+    if desc and desc.AddInitializer then
+      desc:AddInitializer(function(button) if button.duskX then button.duskStyle = nil button.duskX:Hide() end end)
+    end
+    return desc
+  end
   dd:SetupMenu(function(_, root)
     for _, st in ipairs(ns.db.styles) do
-      root:CreateRadio(st.name or "?", function() return R.ActiveStyle() == st end, function()
+      local line = root:CreateRadio(st.name or "?", function() return R.ActiveStyle() == st end, function()
         use(st)
         refresh()
       end)
+      if line.AddInitializer then line:AddInitializer(function(button) rowX(button, st) end) end
     end
     root:CreateDivider()
-    root:CreateButton("New Style", function()
+    local nb = root:CreateButton("New Style", function()
       local st = ns.NewStyle("Style " .. (#ns.db.styles + 1))
       st.scope = { chars = {} }
       table.insert(ns.db.styles, st)
       use(st)
       refresh()
     end)
-    root:CreateButton("Duplicate this Style", function()
+    local db = root:CreateButton("Duplicate this Style", function()
       local c = ns.StyleCopy(style())
       table.insert(ns.db.styles, c)
       use(c)
       refresh()
     end)
-    root:CreateButton("Rename...", function()
+    local rb = root:CreateButton("Rename...", function()
       StaticPopup_Show("DUSKFALL_RENAME_STYLE", nil, nil, { st = style(), done = function() refresh() end })
     end)
-    local del = root:CreateButton("Delete this Style", function()
-      local st = style()
-      if #ns.db.styles <= 1 then return end
-      local n = #(st.looks or {})
-      UI.Confirm(string.format("Delete Style \"%s\" and its %d setting%s?", st.name or "?", n, n == 1 and "" or "s"), function()
-        local wasGlobal = UI.ScopeIsGlobal(st.scope, true)
-        for i, o in ipairs(ns.db.styles) do
-          if o == st then table.remove(ns.db.styles, i) break end
-        end
-        -- A Global Style gone: the first one left takes over, so nobody is without one
-        if wasGlobal then
-          local any = false
-          for _, o in ipairs(ns.db.styles) do if UI.ScopeIsGlobal(o.scope, true) then any = true end end
-          if not any then ns.db.styles[1].scope = { global = true } end
-        end
-        changed()
-        refresh()
-      end)
-    end)
+    local del = root:CreateButton("Delete this Style", function() deleteStyle(style()) end)
+    noX(nb) noX(db) noX(rb) noX(del)
     if #ns.db.styles <= 1 and del and del.SetEnabled then pcall(del.SetEnabled, del, false) end
   end)
 
@@ -327,7 +361,7 @@ function SS.Create(parent)
     refresh()
   end)
   starter:SetPoint("LEFT", import, "RIGHT", 8, 0)
-  UI.Tooltip(starter, "Starter Style", "Adds a Style with a little more light in the darkest zones (Duskwood, "
+  UI.Tooltip(starter, "Starter Style", "Adds the Style \"Dark Places\": a little more light in the darkest zones (Duskwood, "
     .. "Deadwind Pass, Felwood, Swamp of Sorrows) and at night everywhere. Your own Style stays as it is.")
   fromAddon:SetPoint("LEFT", starter, "RIGHT", 8, 0)
   UI.Tooltip(fromAddon, "Import from another addon", "Brings that addon's settings into a new Style, as changes from "

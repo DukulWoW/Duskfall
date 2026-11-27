@@ -77,6 +77,11 @@ function T.Drop(key)
 end
 
 function T.IsRunning() return run ~= nil end
+-- How far the running change is, 0 - 1 (dip or glare included), or nil when nothing runs.
+function T.Progress()
+  if not run then return nil end
+  return math.max(0, math.min(1, (GetTime() - run.t0) / run.dur))
+end
 
 -- held: key -> value for channels the player moved by hand; those are left alone.
 -- style: whose transition to use (default the active Style; Try it on the Styles tab).

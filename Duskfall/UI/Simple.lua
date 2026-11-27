@@ -44,7 +44,7 @@ local ITYPE_NAME = { party = "All dungeons", raid = "All raids", pvp = "All batt
                      scenario = "All scenarios" }
 
 -- What a Look is in simple terms -------------------------------------------------------------------
--- { key = place key or nil (everywhere), time = period or nil, io = "indoors" / "outdoors" / nil },
+-- { key = place key or nil (everywhere), time = period or nil, io = "indoors" / "outdoors" / "underwater" / nil },
 -- or nil when it needs Advanced mode.
 -- Before / after (Kim, 2026-11-27): hold to see your own settings, let go for this place again.
 -- icon = true: a narrow button with the before / after symbol (Assets/Buttons/compare), where the
@@ -81,7 +81,7 @@ local function shapeOf(look)
   for _, s in ipairs(look.when or {}) do
     local t = s:match("^time:(%a+)$")
     if t and PERIOD_NAME[t] and not time then time = t
-    elseif (s == "indoors" or s == "outdoors") and not io then io = s
+    elseif (s == "indoors" or s == "outdoors" or s == "underwater") and not io then io = s
     else return nil end
   end
   return { key = key, time = time, io = io }
@@ -275,7 +275,7 @@ function SP.Create(parent, hooks)
 
   -- how: "list" (Your places: stays when you walk on) or "row" (the pickers: follows you)
   local function pick(sh, how)
-    if noIndoors(sh.key) then sh.io = nil end
+    if noIndoors(sh.key) and sh.io ~= "underwater" then sh.io = nil end
     sel = sh
     picked = how == "list"
     stopPreview()
@@ -378,17 +378,22 @@ function SP.Create(parent, hooks)
 
   local ioSeg = UI.Segmented(left, SEG_W, {
     items = function()
-      return { { "any", "Inside and out", nil, "Indoors and outdoors." },
-               { "indoors", "Only indoors", nil, "Inside buildings and caves the game counts as indoors." },
-               { "outdoors", "Only outdoors", nil, "Under the open sky." } }
+      -- Underwater as a fourth choice (Kim, 2026-11-27); dungeons have no indoors / outdoors, but water
+      local out = { { "any", "In and out", nil, "Indoors, outdoors and underwater." } }
+      if not noIndoors(sel.key) then
+        out[#out + 1] = { "indoors", "Indoors", nil, "Inside buildings and caves the game counts as indoors." }
+        out[#out + 1] = { "outdoors", "Outdoors", nil, "Under the open sky." }
+      end
+      out[#out + 1] = { "underwater", "Underwater", nil, "With your head under water." }
+      return out
     end,
     get = function() return sel.io or "any" end,
     set = function(v)
       if v == "any" then v = nil end
       pick({ key = sel.key, time = sel.time, io = v }, picked and "list" or "row")
     end })
-  tip(row("Inside", ioSeg), "wins", "Inside", "Only indoors, only outdoors, or both. The game decides what " ..
-    "counts as indoors; inside dungeons it never does.")
+  tip(row("Inside", ioSeg), "wins", "Inside", "Only indoors, only outdoors, only underwater, or all. The game "
+    .. "decides what counts as indoors; inside dungeons it never does, so there it is only underwater or not.")
 
   -- Left: the sliders --------------------------------------------------------------------------
   y = y - 18
@@ -820,7 +825,7 @@ function SP.Create(parent, hooks)
     if full then
       placeSeg:Refresh()
       timeSeg:Refresh()
-      ioSeg:SetEnabled(not noIndoors(sel.key))
+      ioSeg:Refresh()   -- its choices follow the place (no indoors / outdoors in dungeons)
       for _, s in ipairs(sliders) do s:Refresh() end
     end
     reset:SetEnabled(current() ~= nil)

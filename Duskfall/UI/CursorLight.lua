@@ -13,6 +13,9 @@
 --     window), so a dark screen still lifts.
 -- The light grows from nothing when the mouse comes over a window and shrinks away when it leaves
 -- (FADE seconds), breathing a little. Its OnUpdate runs only while the window is shown.
+-- Cost (Kim, 2026-11-27: 115-120 fps down to 110-112): every twin is a full extra draw (the wood
+-- twin covers the whole window), masked or not. So the twins of a window are hidden whenever its
+-- light is out (the mouse is not over it); they only draw while the light shows.
 -- settings.cursorLight = false switches it off, settings.cursorLightStrength scales it.
 --
 -- Twins are made where the art is made (CL.NewTwin, CL.Copy) and wait, hidden, until the window
@@ -30,10 +33,22 @@ local FADE = 0.25                    -- seconds to grow or shrink
 local BREATH = 1.6                   -- radians a second (about 4 s a breath)
 local LEVEL_UP = 400                 -- the haze frame: above everything in the window
 local KIND = { fill = 0.55, edge = 1, art = 0.6 }   -- twin strength by kind
+local FPS_MIN, FPS_BACK = 60, 70     -- off below 60 frames a second, back above 70 (no flicker between)
 
 local pending, masked = {}, {}
 
-local function on() return not ns.cfg or ns.cfg.cursorLight ~= false end
+-- Frame rate guard (Kim, 2026-11-27): looked at twice a second, so one slow frame does not switch it
+local slow, fpsAt = false, 0
+local function fpsOk()
+  local now = GetTime()
+  if now - fpsAt > 0.5 then
+    fpsAt = now
+    local fps = GetFramerate and GetFramerate() or 999
+    if slow and fps > FPS_BACK then slow = false elseif not slow and fps < FPS_MIN then slow = true end
+  end
+  return not slow
+end
+local function on() return (not ns.cfg or ns.cfg.cursorLight ~= false) and fpsOk() end
 local function strength() return tonumber(ns.cfg and ns.cfg.cursorLightStrength) or 1 end
 
 local function alphaOf(t) return math.min(1, (KIND[t.duskKind] or 0.6) * strength()) end
@@ -53,7 +68,15 @@ end
 function CL.Want(t, shown)
   if not t then return end
   t.duskWant = shown and true or false
-  if t.duskMasked then t:SetShown(t.duskWant) end
+  if t.duskMasked then t:SetShown(t.duskWant and t.duskWin and t.duskWin.duskLit or false) end
+end
+
+-- All twins of a window shown (as wanted) or hidden, as its light comes and goes
+local function lightTwins(win, lit)
+  win.duskLit = lit
+  for _, t in ipairs(masked) do
+    if t.duskWin == win then t:SetShown(lit and t.duskWant) end
+  end
 end
 
 -- A twin of an existing texture: same picture, texture coordinates, tiling, colour and rotation,
@@ -92,8 +115,9 @@ local function flush()
     if f then
       if pcall(t.AddMaskTexture, t, f.duskMask) then
         t.duskMasked = true
+        t.duskWin = f
         t:SetAlpha(alphaOf(t))
-        t:SetShown(t.duskWant)
+        t:SetShown(t.duskWant and f.duskLit or false)
         masked[#masked + 1] = t
       end
     elseif t:GetParent() and t:GetParent():GetParent() == nil then
@@ -142,10 +166,12 @@ function CL.Attach(win)
         mask:SetPoint("CENTER", UIParent, "BOTTOMLEFT", -1000, -1000)
         mask:SetSize(1, 1)
         haze:Hide()
+        lightTwins(win, false)
         parked = true
       end
       return
     end
+    if parked then lightTwins(win, true) end
     parked = false
     local scale = win:GetEffectiveScale()
     local x, y = GetCursorPosition()

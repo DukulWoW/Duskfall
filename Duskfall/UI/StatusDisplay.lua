@@ -88,6 +88,32 @@ local function build()
   f.values:SetPoint("TOPLEFT", f.look, "BOTTOMLEFT", 0, -4)
   f.values:SetPoint("RIGHT", f, "RIGHT", -8, 0)
   f.values:SetWordWrap(false)
+  -- Progress (Kim, 2026-11-27): a thin bar along the bottom fills while a fade or Adapt runs
+  -- Duskfall blue on the left to gold on the right (Kim), the whole gradient laid out once and shown
+  -- through a clip as wide as the change has come. Softer (Kim: the 2 px line was harsh): a faint
+  -- track, a 1 px core with a low halo, and it starts under the text, clear of the icon.
+  local BAR_X, BAR_R = 48, 12
+  local track = f:CreateTexture(nil, "ARTWORK")
+  track:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", BAR_X, 6)
+  track:SetSize(W - BAR_X - BAR_R, 3)
+  track:SetColorTexture(1, 1, 1, 0.06)
+  track:Hide()
+  local bar = CreateFrame("Frame", nil, f)
+  bar:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", BAR_X, 6)
+  bar:SetSize(1, 3)
+  pcall(bar.SetClipsChildren, bar, true)
+  local B, G = UI.RING_BLUE, { 1, 0.82, 0 }
+  local halo = bar:CreateTexture(nil, "OVERLAY")
+  halo:SetPoint("LEFT", bar, "LEFT", 0, 0)
+  halo:SetSize(W - BAR_X - BAR_R, 3)
+  UI.Gradient(halo, "HORIZONTAL", { B[1], B[2], B[3], 0.22 }, { G[1], G[2], G[3], 0.22 })
+  local core = bar:CreateTexture(nil, "OVERLAY", nil, 1)
+  core:SetPoint("LEFT", bar, "LEFT", 0, 0)
+  core:SetSize(W - BAR_X - BAR_R, 1)
+  UI.Gradient(core, "HORIZONTAL", { B[1], B[2], B[3], 0.7 }, { G[1], G[2], G[3], 0.7 })
+  bar:Hide()
+  bar.track = track
+  f.bar = bar
   f.hint = UI.Label(f, "Drag to move", "GameFontDisableSmall")
   f.hint:SetPoint("TOP", f, "BOTTOM", 0, -2)
   f.hint:Hide()
@@ -96,7 +122,17 @@ local function build()
   f:Hide()
 
   local acc = 0
+  local BAR_W = W - 48 - 12
   f:SetScript("OnUpdate", function(self, el)
+    local p = ns.Transition.Progress()
+    if p then
+      bar:SetWidth(math.max(1, BAR_W * p))
+      bar:Show()
+      bar.track:Show()
+    else
+      bar:Hide()
+      bar.track:Hide()
+    end
     acc = acc + el
     if acc < 0.2 then return end
     acc = 0
@@ -110,7 +146,9 @@ local function build()
     end
     if (mode() == "change" or testing) and not unlocked and hideAt then
       if ns.Transition.IsRunning() then
-        hideAt = math.max(hideAt, now + 1)
+        -- "As long as the change" goes as soon as it is done; else statusSeconds after it
+        local after = ns.cfg.statusStay == "change" and 0.2 or (tonumber(ns.cfg.statusSeconds) or 4)
+        hideAt = math.max(hideAt, now + after)
       elseif now >= hideAt then
         -- UI.Fader runs the fade every frame (here it stepped with the 0.2 s tick: it stuttered)
         hideAt = nil
@@ -119,6 +157,13 @@ local function build()
       end
     end
   end)
+end
+
+-- Seconds it stays after a change shows up: "as long as the change" keeps it 1.5 s at least (an
+-- instant change has no length), and the running change keeps it up (OnUpdate).
+function SD.Stay()
+  if ns.cfg.statusStay == "change" then return 1.5 end
+  return tonumber(ns.cfg.statusSeconds) or 4
 end
 
 -- Shown / hidden / mouse per the mode; pop = the Look changed ("change" mode shows it).
@@ -135,7 +180,7 @@ function SD.Refresh(pop)
     frame:Show()
   elseif m == "change" then
     if pop then
-      hideAt = GetTime() + (tonumber(ns.cfg.statusSeconds) or 4)
+      hideAt = GetTime() + SD.Stay()
       fill()
       frame:Show()
     end
@@ -152,7 +197,7 @@ function SD.Test()
   if not frame then build() end
   if mode() == "always" then SD.Refresh() return end
   testing = true
-  hideAt = GetTime() + (tonumber(ns.cfg.statusSeconds) or 4)
+  hideAt = GetTime() + SD.Stay()
   fill()
   frame:Show()
 end
