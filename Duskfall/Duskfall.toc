@@ -2,6 +2,7 @@
 ## Title: |cff3355ccD|cff506ac5u|cff6d7fbes|cff8a94b7k|cffa8a9aff|cffc5bea8a|cffe2d3a1l|cffffe89al|r
 ## Notes: Sets gamma, brightness, contrast and bloom for where you are, with smooth transitions.
 ## Notes-zhCN: 根据你所在的位置设置伽马、亮度、对比度和辉光，并平滑过渡。
+## Notes-zhTW: 根據你所在的位置設定伽馬、亮度、對比度和輝光，並平滑過渡。
 ## Author: Dukul
 ## Version: 1.1.0
 ## IconTexture: Interface\AddOns\Duskfall\Assets\icon
@@ -18,6 +19,7 @@ libs\libs.xml
 
 Locales\enUS.lua
 Locales\zhCN.lua
+Locales\zhTW.lua
 
 Core\Core.lua
 Core\Channels.lua
