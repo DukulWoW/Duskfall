@@ -1,5 +1,5 @@
 <div align="center">
-  <img src=".github/logo.png" width="256" alt="Duskfall logo" />
+  <img src="https://raw.githubusercontent.com/DukulWoW/Duskfall/main/.github/logo.png" width="256" alt="Duskfall logo" />
   <br><br>
   <h1>Duskfall</h1>
   <b>By Dukul</b>
