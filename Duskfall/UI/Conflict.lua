@@ -1,6 +1,8 @@
 -- Duskfall UI/Conflict.lua: warns once when another addon also changes Gamma, Brightness or
 -- Contrast (Kim, 2026-11-27). Two ways:
---   known    an addon from KNOWN is loaded (by its folder name only; nothing of it is read)
+--   known    a loaded addon's folder name or title (colour codes stripped) is in KNOWN; nothing of
+--            it is read. Titles, because most folder names are unknown (Kim's research,
+--            _work/Research/addon-research.md: every one of these writes the same CVars)
 --   unknown  someone else writes our CVars FOREIGN_MAX times within FOREIGN_WINDOW seconds while
 --            the game's settings window is closed (Core/Detect.lua fires FOREIGN_CVAR)
 -- A dialog (in the welcome's style) and a chat line, never in combat. Known: "Turn off <name> and
@@ -12,8 +14,16 @@ local UI = ns.UI
 local CF = {}
 ns.Conflict = CF
 
--- Folder names of addons that change the same settings. Kim adds more from _work/Dump.
-local KNOWN = { "Iris" }
+-- Addons that change the same settings, lower case: folder names and titles.
+local KNOWN = {
+  "iris", "forever bright", "foreverbright", "adaptive brightness", "adaptivebrightness",
+  "dynamic ambiance", "dynamicambiance", "earendil", "advanced graphics tuner", "advancedgraphicstuner",
+  "panorama forever", "panoramaforever", "mac-ever", "macever", "hdr tuner", "hdr tuner (forever)", "hdrtuner",
+  "forever visuals", "forevervisuals", "lighternights", "lighter nights", "lighter_nights",
+  "dynamic light", "true-night", "truenight", "az set map", "azsetmap", "nightlight",
+}
+local isKnown = {}
+for _, k in ipairs(KNOWN) do isKnown[k] = true end
 local FOREIGN_MAX, FOREIGN_WINDOW = 3, 10
 local DELAY = 8   -- after login: after the welcome (4 s) and the update toast (6 s)
 
@@ -21,12 +31,31 @@ local Y = "|cffffd100"
 local frame, queue, sessionWarned = nil, {}, false
 local hits = {}
 
+local function plain(t)
+  if type(t) ~= "string" then return nil end
+  t = t:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""):gsub("^%s+", ""):gsub("%s+$", "")
+  return t
+end
+
 local function titleOf(name)
   local info = C_AddOns and C_AddOns.GetAddOnInfo and select(2, C_AddOns.GetAddOnInfo(name))
-  if type(info) == "string" and info ~= "" then
-    return (info:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""))
-  end
+  local t = plain(info)
+  if t and t ~= "" then return t end
   return name
+end
+
+-- Loaded addons from KNOWN: their folder names (never Duskfall itself).
+local function loadedKnown()
+  local out = {}
+  if not (C_AddOns and C_AddOns.GetNumAddOns and C_AddOns.GetAddOnInfo and C_AddOns.IsAddOnLoaded) then return out end
+  for i = 1, C_AddOns.GetNumAddOns() do
+    local name, title = C_AddOns.GetAddOnInfo(i)
+    if name and name ~= ADDON and C_AddOns.IsAddOnLoaded(name) then
+      local t = (plain(title) or ""):lower()
+      if isKnown[name:lower()] or isKnown[t] then out[#out + 1] = name end
+    end
+  end
+  return out
 end
 
 local function okFor(key) return ns.db and ns.db.conflictOk and ns.db.conflictOk[key] end
@@ -59,11 +88,18 @@ local function build()
   f.body:SetJustifyV("TOP")
   f.body:SetSpacing(3)
   f.body:SetTextColor(0.9, 0.88, 0.84)
-  f.main = UI.Button(f, "", 200, nil, 26)
-  f.main:SetKind("main")
-  f.main:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -16, 14)
-  f.other = UI.Button(f, "", 140, nil, 26)
-  f.other:SetPoint("RIGHT", f.main, "LEFT", -8, 0)
+  -- Up to three buttons, right to left; the first is the main one (gold)
+  f.buttons = {}
+  for i = 1, 3 do
+    local b = UI.Button(f, "", 120, nil, 26)
+    if i == 1 then
+      b:SetKind("main")
+      b:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -16, 14)
+    else
+      b:SetPoint("RIGHT", f.buttons[i - 1], "LEFT", -8, 0)
+    end
+    f.buttons[i] = b
+  end
   tinsert(UISpecialFrames, "DuskfallConflict")
   UI.Fader(f, { esc = true })
   f:HookScript("OnHide", function() C_Timer.After(0.5, CF.Next) end)
@@ -71,14 +107,23 @@ local function build()
   frame = f
 end
 
+-- w.buttons = { { text, width, fn }, ... } right to left
 local function showWarning(w)
   if not frame then build() end
   frame.title:SetText(w.title)
   frame.body:SetText(w.body)
-  frame.main:SetText(w.main)
-  frame.main:SetScript("OnClick", function() frame:FadeHide() ns.Safe(w.onMain, "conflict") end)
-  frame.other:SetText(w.other)
-  frame.other:SetScript("OnClick", function() frame:FadeHide() if w.onOther then ns.Safe(w.onOther, "conflict") end end)
+  local total = 32
+  for i, b in ipairs(frame.buttons) do
+    local spec = w.buttons[i]
+    b:SetShown(spec ~= nil)
+    if spec then
+      b:SetText(spec[1])
+      b:SetWidth(spec[2])
+      b:SetScript("OnClick", function() frame:FadeHide() if spec[3] then ns.Safe(spec[3], "conflict") end end)
+      total = total + spec[2] + (i > 1 and 8 or 0)
+    end
+  end
+  frame:SetWidth(math.max(480, total))
   frame:Show()
   ns.Print(w.chat)
 end
@@ -93,29 +138,48 @@ ns.On("PLAYER_REGEN_ENABLED", function() CF.Next() end)
 
 local WHAT = "Gamma, Brightness and Contrast"
 
+-- For this character, then saved: the addon list only keeps a change after SaveAddOns (the
+-- game's AddOns window does the same on Okay; without it the reload forgot it, Kim). Reloads.
+local function turnOff(name)
+  if C_AddOns and C_AddOns.DisableAddOn then
+    pcall(C_AddOns.DisableAddOn, name, UnitName("player"))
+    if C_AddOns.GetAddOnEnableState and (C_AddOns.GetAddOnEnableState(name, UnitName("player")) or 0) > 0 then
+      pcall(C_AddOns.DisableAddOn, name)   -- the character form did nothing: every character
+    end
+  end
+  if C_AddOns and C_AddOns.SaveAddOns then pcall(C_AddOns.SaveAddOns) end
+  ReloadUI()
+end
+
 local function knownWarning(name)
   local title = titleOf(name)
+  local AI = ns.AddonImport
+  local src = AI and AI.For(name)
+  local canImport = src and AI.Available(src)
+  local body = title .. " also changes " .. WHAT .. ". Two addons changing the same settings fight over them, "
+    .. "and the screen can flicker or jump. Use only one of them."
+  if canImport then
+    body = body .. "\n\nDuskfall can bring " .. title .. "'s settings along first, as a new Style. Turning "
+      .. title .. " off reloads the interface."
+  else
+    body = body .. "\n\nTurning " .. title .. " off reloads the interface."
+  end
+  local buttons = {}
+  if canImport then
+    buttons[#buttons + 1] = { "Import, then turn off " .. title, 230, function()
+      AI.RunBeforeReload(src)
+      turnOff(name)
+    end }
+    buttons[#buttons + 1] = { "Turn off " .. title, 150, function() turnOff(name) end }
+  else
+    buttons[#buttons + 1] = { "Turn off " .. title .. " and reload", 220, function() turnOff(name) end }
+  end
+  buttons[#buttons + 1] = { "Keep both", 110, function() setOk(name) end }
   return {
     title = title .. " is on too",
-    body = title .. " also changes " .. WHAT .. ". Two addons changing the same settings fight over them, "
-      .. "and the screen can flicker or jump. Use only one of them.\n\nTurning " .. title .. " off reloads "
-      .. "the interface.",
-    main = "Turn off " .. title .. " and reload",
-    other = "Keep both",
+    body = body,
+    buttons = buttons,
     chat = Y .. title .. "|r also changes " .. WHAT .. "; the two will fight over them. Use only one.",
-    onMain = function()
-      -- For this character, then saved: the addon list only keeps a change after SaveAddOns
-      -- (the game's AddOns window does the same on Okay; without it the reload forgot it, Kim)
-      if C_AddOns and C_AddOns.DisableAddOn then
-        pcall(C_AddOns.DisableAddOn, name, UnitName("player"))
-        if C_AddOns.GetAddOnEnableState and (C_AddOns.GetAddOnEnableState(name, UnitName("player")) or 0) > 0 then
-          pcall(C_AddOns.DisableAddOn, name)   -- the character form did nothing: every character
-        end
-      end
-      if C_AddOns and C_AddOns.SaveAddOns then pcall(C_AddOns.SaveAddOns) end
-      ReloadUI()
-    end,
-    onOther = function() setOk(name) end,
   }
 end
 
@@ -125,18 +189,15 @@ local function unknownWarning()
     body = "Something besides Duskfall keeps changing " .. WHAT .. ", most likely another addon. Two addons "
       .. "changing the same settings fight over them, and the screen can flicker or jump.\n\nIf you use "
       .. "another lighting or graphics addon, turn one of them off.",
-    main = "OK",
-    other = "Don't warn again",
+    buttons = { { "OK", 110 }, { "Don't warn again", 150, function() setOk("*") end } },
     chat = "something besides Duskfall keeps changing " .. WHAT .. ", most likely another addon.",
-    onMain = function() end,
-    onOther = function() setOk("*") end,
   }
 end
 
 function CF.Check()
   if not (C_AddOns and C_AddOns.IsAddOnLoaded) then return end
-  for _, name in ipairs(KNOWN) do
-    if not okFor(name) and C_AddOns.IsAddOnLoaded(name) then queue[#queue + 1] = knownWarning(name) end
+  for _, name in ipairs(loadedKnown()) do
+    if not okFor(name) then queue[#queue + 1] = knownWarning(name) end
   end
   CF.Next()
 end
@@ -152,11 +213,10 @@ ns.Listen("FOREIGN_CVAR", function()
   local now = GetTime()
   hits[#hits + 1] = now
   while hits[1] and now - hits[1] > FOREIGN_WINDOW do table.remove(hits, 1) end
+  ns.Debug("foreign write (%d in %d s)", #hits, FOREIGN_WINDOW)
   if #hits < FOREIGN_MAX then return end
   -- A known addon already explains it
-  for _, name in ipairs(KNOWN) do
-    if C_AddOns and C_AddOns.IsAddOnLoaded and C_AddOns.IsAddOnLoaded(name) then return end
-  end
+  if #loadedKnown() > 0 then return end
   sessionWarned = true
   queue[#queue + 1] = unknownWarning()
   CF.Next()

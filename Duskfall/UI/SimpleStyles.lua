@@ -308,6 +308,19 @@ function SS.Create(parent)
   local import = UI.Button(f, "Import", 100, function() ns.Share.ImportDialog(function() refresh() end) end)
   import:SetPoint("LEFT", share, "RIGHT", 8, 0)
   UI.Tooltip(import, "Import", "Paste a Style or a setting someone exported.")
+  -- Import from another lighting addon (Core/AddonImport.lua), only while its data is loaded
+  local fromAddon = UI.Button(f, "", 170, function()
+    local AI = ns.AddonImport
+    local src = AI and AI.FirstAvailable()
+    if not src then return end
+    local st, matched, skipped = AI.Run(src)
+    AI.Report(st, matched, skipped, src.name)
+    refresh()
+  end)
+  fromAddon:SetPoint("LEFT", import, "RIGHT", 8, 0)
+  UI.Tooltip(fromAddon, "Import from another addon", "Brings that addon's settings into a new Style, as changes from "
+    .. "your own settings. Places Duskfall can't find are skipped and named in chat.")
+  fromAddon:Hide()
   local foot = UI.Label(f, "")
   foot:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -12, 14)
   foot:SetJustifyH("RIGHT")
@@ -323,6 +336,9 @@ function SS.Create(parent)
     elseif mode == "fade" then speedNote:SetText("How long a fade takes.")
     else speedNote:SetText("Into the dark / out into the light.") end
     ddText()
+    local src = ns.AddonImport and ns.AddonImport.FirstAvailable()
+    fromAddon:SetShown(src ~= nil)
+    if src then fromAddon:SetText("Import from " .. src.name) end
     if perCharacter() then foot:SetText(GREY .. "Characters have their own Styles: picking one sets it for this character.|r")
     else foot:SetText(GREY .. "Picking a Style uses it for every character.|r") end
   end
