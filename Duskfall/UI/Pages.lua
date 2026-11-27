@@ -639,7 +639,8 @@ W.AddTab("settings", L["TAB_SETTINGS"], function(page)
   -- (Locales/enUS.lua), and the question says so. Away from English, "Game language" keeps its
   -- English name too, so a player who cannot read the language finds the way back.
   local FLAG = UI.ART .. "Flags\\flag-"
-  local LANG_FLAG = { enUS = "en", zhCN = "cn", zhTW = "tw", deDE = "de", frFR = "fr", esES = "es", koKR = "ko" }
+  local LANG_FLAG = { enUS = "en", zhCN = "cn", zhTW = "tw", deDE = "de", frFR = "fr", esES = "es", koKR = "ko",
+                      jaJP = "ja", ukUA = "ua" }
   local function langText(code)
     local f = LANG_FLAG[code]
     return (f and ("|T" .. FLAG .. f .. ":14:20:0:0:32:32|t ") or "") .. ns.LANG_NAMES[code]   --noloc

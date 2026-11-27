@@ -13,9 +13,11 @@
 local ADDON, ns = ...
 
 local db = type(DuskfallDB) == "table" and DuskfallDB or nil
-ns.LANGS = { "enUS", "zhCN", "zhTW", "deDE", "frFR", "esES", "ruRU", "koKR" }
+-- No Russian (Kim, 1.3.0: Ukrainian instead). WoW has no Ukrainian or Japanese client: those two are
+-- picked in Settings only, and always take the font swap below.
+ns.LANGS = { "enUS", "zhCN", "zhTW", "deDE", "frFR", "esES", "koKR", "jaJP", "ukUA" }
 ns.LANG_NAMES = { enUS = "English", zhCN = "简体中文", zhTW = "繁體中文", deDE = "Deutsch", frFR = "Français",
-                  esES = "Español", ruRU = "Русский", koKR = "한국어" }
+                  esES = "Español", koKR = "한국어", jaJP = "日本語", ukUA = "Українська" }
 -- The languages with a file in Locales (and the TOC): add a code here when its file ships
 ns.LANG_READY = { enUS = true, zhCN = true, zhTW = true, deDE = true, frFR = true }
 ns.locale = (db and type(db.lang) == "string" and db.lang ~= "") and db.lang or GetLocale()
@@ -26,7 +28,7 @@ local PSEUDO = db and db.pseudo
 -- A language picked on a client of another script (Settings, or /dusk lang): its fonts lack the
 -- letters, so every font object gets one that has them (the whole game UI). Files verified on an enUS Forever client (S6).
 local TEST_FONTS = { zhCN = "Fonts\\ARKai_T.ttf", zhTW = "Fonts\\bKAI00M.TTF", koKR = "Fonts\\2002.TTF",
-                     ruRU = "Fonts\\FRIZQT___CYR.TTF" }
+                     jaJP = "Fonts\\ARKai_T.ttf", ukUA = "Fonts\\FRIZQT___CYR.TTF" }   -- kana, і ї є: probe 2026-11-27
 ns.LANG_FONT = TEST_FONTS   -- Settings warns that a pick with an entry here changes the game's font
 local swap = ns.locale ~= GetLocale() and TEST_FONTS[ns.locale]
 if swap and GetFonts then
@@ -824,6 +826,9 @@ L["PN_TOAST"] = "Check out what's new in Duskfall!"
 L["PN_TOAST_TIP"] = "Click to read what's new. Right-click to close."
 
 -- Patch notes (one key per note, newest version first) -----------------------------------------
+L["PN_130_01"] = "Buttons and the Place, Time and Inside bars have the window's gold-to-blue edge."
+L["PN_130_02"] = "Your places: the settings in effect where you are come first, above a thin line."
+L["PN_130_03"] = "Undercity counts as indoors (the game calls it outdoors, which is why you can ride there)."
 L["PN_120_02"] = "Duskfall speaks Chinese (Simplified and Traditional), German and French. More languages are on the way."
 L["PN_120_01"] = "About ends with a line of solidarity: LGBTQIA+ Pride, Trans Rights, Slava Ukraini and Free Palestine."
 L["PN_120_03"] = "Patch note dates are written as numbers (2026-11-27), the same in every language."

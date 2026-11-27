@@ -92,8 +92,8 @@ UI.Tooltip = tooltip
 -- and the hover shows the whole text (BNB's button fit). b:SetGlyph(name) shows an icon
 -- (Assets/Buttons/glyph-<name>, white, tinted like the text) instead of a label.
 local BUTTON_LOOK = {
-  normal = { bottom = { 0.09, 0.06, 0.03, 0.92 }, top = { 0.26, 0.19, 0.1, 0.92 }, border = { 1, 0.82, 0, 0.55 },
-             text = { 1, 0.82, 0 }, shadow = true },
+  normal = { bottom = { 0.09, 0.06, 0.03, 0.92 }, top = { 0.26, 0.19, 0.1, 0.92 }, border = { 1, 0.82, 0, 0.75 },
+             text = { 1, 0.82, 0 }, shadow = true, sweep = true },   -- edge gold to blue, as the window (Kim, 1.3.0)
   main   = { bottom = { 0.5, 0.33, 0.05, 1 }, top = { 0.95, 0.75, 0.26, 1 }, border = { 1, 0.92, 0.55, 0.95 },
              text = { 0.14, 0.08, 0 }, shadow = false },
   danger = { bottom = { 0.1, 0.03, 0.02, 0.92 }, top = { 0.27, 0.09, 0.06, 0.92 }, border = { 0.95, 0.35, 0.22, 0.6 },
@@ -133,7 +133,7 @@ function UI.Button(parent, text, w, onClick, h)
   -- Drawn on the button itself (textures, not child frames), so the text is always on top
   local boxes, hots = {}, {}
   for k, L in pairs(BUTTON_LOOK) do
-    boxes[k] = UI.RoundBox(b, { radius = 7, bottom = L.bottom, top = L.top, border = L.border })
+    boxes[k] = UI.RoundBox(b, { radius = 7, bottom = L.bottom, top = L.top, border = L.border, sweep = L.sweep })
     boxes[k]:SetShown(false)
   end
   for k, L in pairs(BUTTON_HOT) do
@@ -518,7 +518,8 @@ function UI.Slider(parent, width, o)
   local cur = snap(o.get and o.get() or o.value)
   local light = UI.LightSlider(h, 10, { labelW = 0, valueW = 0, min = o.min, max = o.max, step = step,
     mid = o.default or o.min, lineH = 14, steppers = true,
-    from = { 0.32, 0.25, 0.12 }, to = { 1, 0.85, 0.45 },
+    -- Duskfall blue (less) to gold (more), as the window (Kim, 1.3.0); the channel sliders keep theirs
+    from = UI.RING_BLUE, to = { 1, 0.85, 0.45 }, stepColors = { UI.RING_BLUE, UI.RING_GOLD },
     get = function() return cur end,
     set = function(v)
       local n = snap(v)
@@ -713,7 +714,7 @@ function UI.IconButton(parent, size, symbol, o)
   local btn = CreateFrame("Button", nil, parent)
   btn:SetSize(size, size)
   UI.RoundBox(btn, { radius = 7, bottom = { 0.09, 0.06, 0.03, 0.92 }, top = { 0.26, 0.19, 0.1, 0.92 },
-    border = { 1, 0.82, 0, 0.55 } })
+    border = { 1, 0.82, 0, 0.75 }, sweep = true })
   local hover = UI.RoundBox(btn, { radius = 7, layer = "ARTWORK", unlit = true, bottom = { 1, 1, 1, 0.03 },
     top = { 1, 1, 1, 0.14 } })
   hover:SetShown(false)
@@ -1005,7 +1006,7 @@ function UI.BackButton(parent, size, o)
   b:SetSize(size, size)
   local R = math.min(12, math.floor(size / 2))
   UI.RoundBox(b, { radius = R, bottom = { 0.09, 0.06, 0.03, 0.92 }, top = { 0.26, 0.19, 0.1, 0.92 },
-    border = { 1, 0.82, 0, 0.55 } })
+    border = { 1, 0.82, 0, 0.75 }, sweep = true })
   local hover = UI.RoundBox(b, { radius = R, layer = "ARTWORK", unlit = true, bottom = { 1, 1, 1, 0.03 }, top = { 1, 1, 1, 0.14 } })
   hover:SetShown(false)
   local arrow = b:CreateTexture(nil, "OVERLAY")
@@ -1057,7 +1058,7 @@ function UI.Segmented(parent, width, o)
   local f = CreateFrame("Frame", nil, parent)
   f:SetSize(width, H)
   UI.RoundBox(f, { radius = 7, sub = 2, bottom = { 0, 0, 0, 0.6 }, top = { 0.14, 0.11, 0.07, 0.6 },
-    border = { 1, 0.82, 0, 0.35 } })
+    border = { 1, 0.82, 0, 0.6 }, sweep = true })   -- gold to blue, as the window (Kim, 1.3.0)
   local buttons, items = {}, {}
   local enabled = true
 
@@ -1332,13 +1333,17 @@ function UI.LightSlider(parent, width, o)
       local has = C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo(atlas)
       local t = b:CreateTexture(nil, "ARTWORK")
       t:SetPoint("CENTER")
+      -- o.stepColors = { left, right }: the arrows greyed, then tinted (blue < and gold >)
+      local tint = o.stepColors and o.stepColors[dir < 0 and 1 or 2]
       if has then
         t:SetAtlas(atlas, true)
+        if tint then t:SetDesaturated(true) t:SetVertexColor(tint[1], tint[2], tint[3]) end
       else
         t:Hide()
         local fs = b:CreateFontString(nil, "OVERLAY", "GameFontNormal")
         fs:SetPoint("CENTER")
         fs:SetText(dir < 0 and "<" or ">")
+        if tint then fs:SetTextColor(tint[1], tint[2], tint[3]) end
       end
       local hl = b:CreateTexture(nil, "HIGHLIGHT")
       hl:SetAllPoints(t)

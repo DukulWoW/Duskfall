@@ -59,6 +59,11 @@ function S.Period(hour)
   return "dusk"
 end
 
+-- Places the game calls outdoors though they are underground: they count as indoors (Kim, 1.3.0).
+-- Undercity (map 1458) is flagged outdoors, which is why you can mount there (probe: IsIndoors()
+-- false, IsOutdoors() true in the Trade Quarter). The Ruins of Lordaeron above are Tirisfal's.
+local UNDERGROUND = { [1458] = true }
+
 function S.Snapshot()
   local env = {}
   local iname, itype, _, _, _, _, _, instID = GetInstanceInfo()
@@ -71,7 +76,7 @@ function S.Snapshot()
   env.zoneName = mapName(env.zone) or GetRealZoneText()
   local sub = GetSubZoneText()
   if sub and sub ~= "" then env.sub = sub end
-  env.indoors = IsIndoors() and true or false
+  env.indoors = (IsIndoors() or UNDERGROUND[best or 0] or UNDERGROUND[env.zone or 0]) and true or false
   env.resting = IsResting() and true or false
   env.combat = ns.inCombat and true or false
   env.mounted = IsMounted() and true or false

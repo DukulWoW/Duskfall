@@ -654,8 +654,38 @@ function SP.Create(parent, hooks)
   end
 
   local view = CreateScrollBoxListLinearView()
-  view:SetElementExtent(LIST_ROW_H)
+  -- The divider between the settings in effect here and the rest is a short row of its own
+  local DIVIDER_H = 12
+  if view.SetElementExtentCalculator then
+    view:SetElementExtentCalculator(function(_, e) return e.divider and DIVIDER_H or LIST_ROW_H end)
+  else
+    view:SetElementExtent(LIST_ROW_H)
+  end
   view:SetElementInitializer("Button", function(r, e)
+    if not r.div then
+      -- Blue at both ends, gold in the middle (as the line on About)
+      r.div = CreateFrame("Frame", nil, r)
+      r.div:SetHeight(1)
+      r.div:SetPoint("LEFT", r, "LEFT", 10, 0)
+      r.div:SetPoint("RIGHT", r, "RIGHT", -10, 0)
+      local B = { UI.RING_BLUE[1], UI.RING_BLUE[2], UI.RING_BLUE[3], 0.7 }
+      local G = { UI.RING_GOLD[1], UI.RING_GOLD[2], UI.RING_GOLD[3], 0.7 }
+      local l = r.div:CreateTexture(nil, "ARTWORK")
+      l:SetPoint("TOPLEFT")
+      l:SetPoint("BOTTOMRIGHT", r.div, "BOTTOM")
+      UI.Gradient(l, "HORIZONTAL", B, G)
+      local rr = r.div:CreateTexture(nil, "ARTWORK")
+      rr:SetPoint("TOPLEFT", r.div, "TOP")
+      rr:SetPoint("BOTTOMRIGHT")
+      UI.Gradient(rr, "HORIZONTAL", G, B)
+    end
+    r.div:SetShown(e.divider == true)
+    r:EnableMouse(not e.divider)
+    if r.name then
+      for _, part in ipairs({ r.name, r.vals, r.tag, r.sel }) do part:SetShown(not e.divider) end
+      if e.divider then r.dot:Hide() end
+    end
+    if e.divider then r.data = nil return end
     if not r.name then
       r:RegisterForClicks("LeftButtonUp", "RightButtonUp")
       r.sel = r:CreateTexture(nil, "BACKGROUND", nil, 2)
@@ -748,7 +778,9 @@ function SP.Create(parent, hooks)
         rows[#rows + 1] = { look = look, shape = shapeOf(look), live = live[look] or false, label = label }
       end
     end
+    -- The settings in effect here first (Kim, 1.3.0), then a divider, then the rest
     table.sort(rows, function(a, b)
+      if a.live ~= b.live then return a.live end
       if a.label ~= b.label then return a.label < b.label end
       return tostring(a.look.id) < tostring(b.look.id)
     end)
@@ -769,6 +801,10 @@ function SP.Create(parent, hooks)
       table.sort(places, function(a, b) return a.sort < b.sort end)
       for _, e in ipairs(places) do rows[#rows + 1] = e end
     end
+    -- (the places found by a search count as the rest too)
+    local nLive = 0
+    for _, e in ipairs(rows) do if e.live then nLive = nLive + 1 end end
+    if nLive > 0 and nLive < #rows then table.insert(rows, nLive + 1, { divider = true }) end
     local ok = pcall(box.SetDataProvider, box, CreateDataProvider(rows), ScrollBoxConstants and ScrollBoxConstants.RetainScrollPosition)
     if not ok then box:SetDataProvider(CreateDataProvider(rows)) end
     empty:SetShown(#rows == 0)
