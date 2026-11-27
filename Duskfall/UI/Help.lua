@@ -118,7 +118,7 @@ local function build()
 
   local title = UI.Label(f, "How Duskfall works", "GameFontNormalHuge")
   title:SetPoint("TOPLEFT", f, "TOPLEFT", 22, -16)
-  local close = UI.Button(f, "Close", 90, function() f:Hide() end)
+  local close = UI.Button(f, "Close", 90, function() f:FadeHide() end)
   close:SetPoint("TOPRIGHT", f, "TOPRIGHT", -20, -16)
 
   -- Topics
@@ -163,21 +163,22 @@ local function build()
 
   -- Closing the window or picking a tab closes help too
   win:HookScript("OnHide", function() f:Hide() end)
+  UI.Fader(f)   -- ESC: the window's OnKeyDown closes it (Help first, then the page)
   f:Hide()
   frame = f
   show(current)
 end
 
-function H.Shown() return frame ~= nil and frame:IsShown() end
+function H.Shown() return frame ~= nil and frame:IsOpen() end
 function H.Open(key)
   if not W.frame then return end
   if not frame then build() end
   frame:Show()
   show(KEYS[key] or current)
 end
-function H.Hide() if frame then frame:Hide() end end
+function H.Hide() if frame then frame:FadeHide() end end
 function H.Toggle()
   if not W.frame then return end
   if not frame then build() end
-  frame:SetShown(not frame:IsShown())
+  if frame:IsOpen() then frame:FadeHide() else frame:Show() end
 end

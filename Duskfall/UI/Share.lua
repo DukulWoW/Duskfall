@@ -217,18 +217,19 @@ function Share.ImportDialog(onDone)
     local go = UI.Button(f, "Import", 110, function()
       local ok, text, st = Share.Import(eb:GetText())
       if not ok then msg:SetText(text) return end
-      f:Hide()
+      f:FadeHide()
       ns.Print(text)
       if f.onDone then ns.Safe(f.onDone, "import") end
       if st then useStyle(st) end
     end)
     go:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -16, 14)
-    local cancel = UI.Button(f, "Cancel", 110, function() f:Hide() end)
+    local cancel = UI.Button(f, "Cancel", 110, function() f:FadeHide() end)
     cancel:SetPoint("RIGHT", go, "LEFT", -8, 0)
     eb:SetScript("OnEnterPressed", function() go:Click() end)
-    eb:SetScript("OnEscapePressed", function() f:Hide() end)
+    eb:SetScript("OnEscapePressed", function() eb:ClearFocus() f:FadeHide() end)
     f.eb, f.msg = eb, msg
     tinsert(UISpecialFrames, "DuskfallImportDialog")
+    UI.Fader(f, { esc = true })
     dialog = f
   end
   dialog.onDone = onDone

@@ -482,7 +482,7 @@ function SP.Create(parent, hooks)
     miniTitle:SetWordWrap(false)
     local back = UI.Button(m, "Back", 76, function()
       keepSel = true
-      m:Hide()
+      m:FadeHide()
       ns.OpenWindow("places", true)
     end, 22)
     back:SetPoint("TOPRIGHT", m, "TOPRIGHT", -12, -12)
@@ -498,12 +498,13 @@ function SP.Create(parent, hooks)
     miniHint:SetPoint("BOTTOMLEFT", m, "BOTTOMLEFT", 14, 12)
     tinsert(UISpecialFrames, "DuskfallMiniPanel")
     if ns.CursorLight then ns.CursorLight.Attach(m) end
+    UI.Fader(m, { esc = true })
     m:Hide()
     mini = m
   end
   local miniBtn = UI.Button(actions, "Mini panel", 104, function()
     if not mini then buildMini() end
-    if ns.Window.frame then ns.Window.frame:Hide() end
+    if ns.Window.frame then ns.Window.frame:FadeHide() end
     mini:Show()
     refreshMini()
   end)

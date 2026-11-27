@@ -200,7 +200,7 @@ local function build()
   -- Close: our link-button look with a gold X (Assets/bt-close-*), in the place of the template's
   -- red one (hidden, still the anchor); ESC closes the window as before
   local old = f.CloseButton or _G.DuskfallWindowCloseButton
-  local close = UI.IconButton(f, TB, "close", { tip = "Close", onClick = function() f:Hide() end })
+  local close = UI.IconButton(f, TB, "close", { tip = "Close", onClick = function() f:FadeHide() end })
   if old then
     close:SetPoint("CENTER", old, "CENTER", -2, 0)
     old:SetAlpha(0)
@@ -263,6 +263,7 @@ local function build()
     local helpOpen = ns.Help and ns.Help.Shown()
     if helpOpen then ns.Help.Hide() end
     if helpOpen or (t and t.page.Back and t.page.Back()) then
+      self.escHandled = true   -- not a close (UI.Fader's ESC)
       pcall(self.SetPropagateKeyboardInput, self, false)
       C_Timer.After(0, function()
         if not InCombatLockdown() then pcall(self.SetPropagateKeyboardInput, self, true) end
@@ -339,6 +340,7 @@ local function build()
   for _, t in ipairs(tabs) do if t.id == want then known = true end end
   if not known then want = tabs[1].id end
   W.Select(want)
+  UI.Fader(f, { esc = true })   -- after every SetScript above (it hooks OnShow / OnKeyDown)
   -- A new frame starts shown: hide it, or the first toggle below hides it again (two clicks to open)
   f:Hide()
 end
@@ -357,11 +359,11 @@ function ns.OpenWindow(tabID, keepOpen)
   if not frame then build() end
   if tabID then
     -- Same tab already showing: the command closes the window again (a toggle)
-    if not keepOpen and frame:IsShown() and frame.selected == tabID then frame:Hide() return end
+    if not keepOpen and frame:IsOpen() and frame.selected == tabID then frame:FadeHide() return end
     W.Select(tabID)
     frame:Show()
-  elseif frame:IsShown() then
-    frame:Hide()
+  elseif frame:IsOpen() then
+    frame:FadeHide()
   else
     frame:Show()
   end

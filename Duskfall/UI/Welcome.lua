@@ -57,12 +57,12 @@ local function build()
   body:SetTextColor(0.9, 0.88, 0.84)
 
   local open = UI.Button(f, "Open Duskfall", 140, function()
-    f:Hide()
+    f:FadeHide()
     if ns.OpenWindow then ns.OpenWindow("places", true) end
   end, 26)
   open:SetKind("main")
   open:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -16, 14)
-  local later = UI.Button(f, "Later", 90, function() f:Hide() end, 26)
+  local later = UI.Button(f, "Later", 90, function() f:FadeHide() end, 26)
   later:SetPoint("RIGHT", open, "LEFT", -8, 0)
 
   -- The About tab's link buttons (sites and bug reports), bottom left (Kim)
@@ -81,6 +81,7 @@ local function build()
 
   tinsert(UISpecialFrames, "DuskfallWelcome")
   if ns.CursorLight then ns.CursorLight.Attach(f) end
+  UI.Fader(f, { esc = true })
   f:Hide()
   frame = f
 end

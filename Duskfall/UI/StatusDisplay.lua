@@ -13,7 +13,7 @@ local SD = {}
 ns.StatusDisplay = SD
 
 local W, H = 280, 46
-local FADE = 0.6
+local FADE = 0.6       -- the slow fade out after a change (the windows use UI.FADE_OUT)
 local frame
 local hideAt          -- GetTime() at which "change" mode starts fading out
 local unlockedUntil   -- GetTime() until which it is shown and draggable
@@ -76,6 +76,7 @@ local function build()
   f.hint:SetPoint("TOP", f, "BOTTOM", 0, -2)
   f.hint:Hide()
   place(f)
+  UI.Fader(f, { alpha = 1 })
   f:Hide()
 
   local acc = 0
@@ -94,12 +95,11 @@ local function build()
     if (mode() == "change" or testing) and not unlocked and hideAt then
       if ns.Transition.IsRunning() then
         hideAt = math.max(hideAt, now + 1)
-      elseif now >= hideAt + FADE then
+      elseif now >= hideAt then
+        -- UI.Fader runs the fade every frame (here it stepped with the 0.2 s tick: it stuttered)
         hideAt = nil
         testing = nil
-        self:Hide()
-      elseif now >= hideAt then
-        self:SetAlpha(1 - (now - hideAt) / FADE)
+        self:FadeHide(FADE)
       end
     end
   end)
@@ -115,13 +115,11 @@ function SD.Refresh(pop)
   frame.hint:SetShown(unlocked and true or false)
   if unlocked or m == "always" then
     hideAt = nil
-    frame:SetAlpha(1)
     fill()
     frame:Show()
   elseif m == "change" then
     if pop then
       hideAt = GetTime() + (tonumber(ns.cfg.statusSeconds) or 4)
-      frame:SetAlpha(1)
       fill()
       frame:Show()
     end
@@ -139,7 +137,6 @@ function SD.Test()
   if mode() == "always" then SD.Refresh() return end
   testing = true
   hideAt = GetTime() + (tonumber(ns.cfg.statusSeconds) or 4)
-  frame:SetAlpha(1)
   fill()
   frame:Show()
 end

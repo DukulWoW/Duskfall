@@ -1481,3 +1481,79 @@ StaticPopupDialogs["DUSKFALL_CONFIRM"] = {
 function UI.Confirm(text, onAccept)
   StaticPopup_Show("DUSKFALL_CONFIRM", text, nil, onAccept)
 end
+
+-- Gentle fade in / out for our windows (Kim, 2026-11-27: "all windows fade gently, but not too long").
+-- UI.Fader(f, o): f fades in on every show (from its alpha at attach time, or o.alpha) and gets
+--   f:FadeHide([seconds])  fade out, then the real Hide (OnHide fires at the end)
+--   f:IsOpen()             shown and not fading out (use this for toggles)
+--   f:Show()               during a fade-out it turns back and fades in from where it is
+-- Hide() itself is left alone (secure code calls it through UISpecialFrames: wrapping it would carry
+-- our taint into the game menu), so ESC in combat still closes at once. Out of combat, o.esc = true
+-- catches ESC on the frame and fades it instead; a second ESC while it fades closes it at once and
+-- passes on (the game menu opens as usual).
+UI.FADE_IN, UI.FADE_OUT = 0.3, 0.3   -- Kim, 2026-11-27
+local function smooth(t) return t * t * (3 - 2 * t) end
+function UI.Fader(f, o)
+  o = o or {}
+  local target = o.alpha or f:GetAlpha()
+  local from, to, dur, t0, closing = 0, target, 1, 0, false
+  local driver = CreateFrame("Frame", nil, f)
+  driver:Hide()
+  local function run(a, b, seconds)
+    from, to, dur, t0 = a, b, math.max(0.01, seconds), GetTime()
+    f:SetAlpha(a)
+    driver:Show()
+  end
+  driver:SetScript("OnUpdate", function(self)
+    local p = math.min(1, (GetTime() - t0) / dur)
+    f:SetAlpha(from + (to - from) * smooth(p))
+    if p < 1 then return end
+    self:Hide()
+    if closing then
+      closing = false
+      f:Hide()
+      f:SetAlpha(target)
+    end
+  end)
+  f:HookScript("OnShow", function()
+    closing = false
+    run(0, target, o.fadeIn or UI.FADE_IN)
+  end)
+  f:HookScript("OnHide", function()
+    closing = false
+    driver:Hide()
+    f:SetAlpha(target)
+  end)
+  local show = f.Show
+  function f:Show()
+    if closing then
+      closing = false
+      run(self:GetAlpha(), target, (o.fadeIn or UI.FADE_IN) * (1 - self:GetAlpha() / math.max(target, 0.01)))
+    end
+    show(self)
+  end
+  function f:FadeHide(seconds)
+    if not self:IsShown() or closing then return end
+    if not self:IsVisible() then self:Hide() return end   -- its parent is hidden: nothing to see
+    closing = true
+    local a = self:GetAlpha()
+    run(a, 0, (seconds or o.fadeOut or UI.FADE_OUT) * a / math.max(target, 0.01))
+  end
+  function f:IsOpen() return self:IsShown() and not closing end
+  function f:IsClosing() return closing end
+  if o.esc then
+    f:EnableKeyboard(true)
+    pcall(f.SetPropagateKeyboardInput, f, true)
+    f:HookScript("OnKeyDown", function(self, key)
+      if key ~= "ESCAPE" or InCombatLockdown() then return end
+      if self.escHandled then self.escHandled = nil return end   -- a page used this ESC (Window.lua)
+      if closing then self:Hide() return end
+      self:FadeHide()
+      pcall(self.SetPropagateKeyboardInput, self, false)
+      C_Timer.After(0, function()
+        if not InCombatLockdown() then pcall(self.SetPropagateKeyboardInput, self, true) end
+      end)
+    end)
+  end
+  return f
+end
