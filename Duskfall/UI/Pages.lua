@@ -11,6 +11,7 @@ ns.LINKS = {
   { key = "github", name = "GitHub", url = "https://github.com/DukulWoW/Duskfall" },   --noloc
   { key = "curseforge", name = "CurseForge", url = "https://www.curseforge.com/wow/addons/duskfall" },   --noloc
   { key = "wago", name = "Wago", url = "https://addons.wago.io/addons/duskfall" },   --noloc
+  { key = "discord", name = "Discord", url = "https://discord.gg/eDsQQkEPvU" },   --noloc
   { key = "bugs", name = L["LINK_BUGS"], url = "https://github.com/DukulWoW/Duskfall/issues/new/choose", sub = L["LINK_BUGS_SUB"] },
 }
 

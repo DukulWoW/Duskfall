@@ -772,6 +772,7 @@ L["PN_131_01"] = "Mise en page plus soignée : les rangées de boutons sont cent
 L["PN_131_02"] = "« Maintenir pour éclaircir » commence à 0 %, donc 50 % (la valeur par défaut) se trouve au milieu du curseur."
 L["PN_131_03"] = "Les curseurs ont des extrémités arrondies."
 L["PN_131_04"] = "La lueur derrière les grands interrupteurs (Paramètres, HDR) suit maintenant la forme de l’interrupteur au lieu d’un halo rond."
+L["PN_131_05"] = "Un bouton Discord sur la page « À propos » : venez dire bonjour, poser vos questions ou partager vos idées."
 L["PN_130_04"] = "Duskfall parle aussi espagnol, coréen, japonais et ukrainien. Le japonais et l’ukrainien (le jeu n’a pas de client dans ces langues) se choisissent dans les Paramètres."
 L["PN_130_06"] = "Clarté : le contraste monte avec la lumière, pour qu’une image plus claire reste nette au lieu de grise. Un curseur par style (onglet Styles) ; les nouveaux styles commencent à la moitié."
 L["PN_130_07"] = "Curseur de lumière : sous l’affichage d’état, un curseur rend l’endroit où vous êtes plus clair ou plus sombre tout de suite et l’enregistre pour cet endroit (Paramètres > Affichage)."

@@ -857,6 +857,7 @@ L["PN_131_01"] = "Tidier layout: button rows sit centred, or line up with the bo
 L["PN_131_02"] = "Hold to brighten starts at 0%, so 50% (the default) sits in the middle of its slider."
 L["PN_131_03"] = "Sliders have rounded ends."
 L["PN_131_04"] = "The glow behind the big on / off switches (Settings, HDR) now follows the switch's shape instead of a round halo."
+L["PN_131_05"] = "A Discord button on the About page: come and say hello, ask questions or share ideas."
 L["PN_130_04"] = "Duskfall speaks Spanish, Korean, Japanese and Ukrainian too. Japanese and Ukrainian (the game has no client for them) are picked in Settings."
 L["PN_130_06"] = "Clarity: Contrast rises with the light, so a brighter screen stays crisp instead of grey. One slider per Style (Styles tab); new Styles start at half."
 L["PN_130_07"] = "Light slider: under the status display, one slider makes where you are lighter or darker at once and saves it for this place (Settings > Display)."

@@ -749,7 +749,7 @@ L["CF_UNKNOWN_CHAT"] = "Außer Duskfall verändert noch etwas ständig %s, vermu
 
 -- Welcome --------------------------------------------------------------------------------------
 L["WL_TITLE"] = "Willkommen bei Duskfall"
-L["WL_BODY"] = "Duskfall passt Gamma, Helligkeit, Kontrast und Bloom an deinen Aufenthaltsort an: eine dunkle Höhle, eine Stadt bei Nacht, einen Dungeon.\n\nNichts ändert sich, bis du es möchtest. Öffne Duskfall an deinem aktuellen Standort, verschiebe einen Regler und dieser Ort behält die neue Ansicht.\n\nSpäter öffnest du Duskfall über die Tag-/Nacht-Anzeige der Minikarte oder über |cffffd100/dusk|r."
+L["WL_BODY"] = "Duskfall passt Gamma, Helligkeit, Kontrast und Bloom an deinen Aufenthaltsort an: eine dunkle Höhle, eine Stadt bei Nacht, einen Dungeon.\n\nNichts ändert sich, bis du es möchtest. Öffne Duskfall an deinem aktuellen Standort, verschiebe einen Regler, und dieser Ort behält die neue Ansicht.\n\nSpäter öffnest du Duskfall über die Tag-/Nacht-Anzeige der Minikarte oder über |cffffd100/dusk|r."
 L["WL_POINT"] = "Hier klicken, um Duskfall zu öffnen"
 L["WL_POINT_SUB"] = "Das kleine Duskfall-Symbol darauf leuchtet, solange eine Einstellung wirkt. Klicke für mehr."
 L["WL_POINT_HERE"] = "Hier ist sie auf deiner Minikarte"
@@ -772,6 +772,7 @@ L["PN_131_01"] = "Aufgeräumteres Layout: Schaltflächenreihen sitzen mittig ode
 L["PN_131_02"] = "„Gedrückt halten, um das Bild aufzuhellen“ beginnt bei 0 %, sodass 50 % (der Standard) in der Mitte des Reglers liegen."
 L["PN_131_03"] = "Regler haben abgerundete Enden."
 L["PN_131_04"] = "Das Leuchten hinter den großen Ein/Aus-Schaltern (Einstellungen, HDR) folgt jetzt der Form des Schalters statt eines runden Lichthofs."
+L["PN_131_05"] = "Ein Discord-Knopf auf der Seite „Info“: Sag Hallo, stell Fragen oder teile deine Ideen."
 L["PN_130_04"] = "Duskfall spricht jetzt auch Spanisch, Koreanisch, Japanisch und Ukrainisch. Japanisch und Ukrainisch (dafür gibt es keinen Spielclient) wählst du in den Einstellungen."
 L["PN_130_06"] = "Klarheit: Der Kontrast steigt mit dem Licht, damit ein helleres Bild klar bleibt statt grau. Ein Regler pro Stil (Reiter Stile); neue Stile beginnen bei der Hälfte."
 L["PN_130_07"] = "Lichtregler: Unter der Statusanzeige macht ein Regler deinen Ort sofort heller oder dunkler und speichert das für diesen Ort (Einstellungen > Anzeige)."

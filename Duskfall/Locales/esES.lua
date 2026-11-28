@@ -772,6 +772,7 @@ L["PN_131_01"] = "Diseño más ordenado: las filas de botones quedan centradas o
 L["PN_131_02"] = "«Mantener pulsado para aumentar el brillo» empieza en 0 %, así que el 50 % (el valor predeterminado) queda en el centro del control."
 L["PN_131_03"] = "Los controles deslizantes tienen los extremos redondeados."
 L["PN_131_04"] = "El brillo detrás de los interruptores grandes (Ajustes, HDR) ahora sigue la forma del interruptor en lugar de un halo redondo."
+L["PN_131_05"] = "Un botón de Discord en la página «Acerca de»: ven a saludar, hacer preguntas o compartir ideas."
 L["PN_130_04"] = "Duskfall también está disponible en español, coreano, japonés y ucraniano. El japonés y el ucraniano (el juego no tiene cliente en esos idiomas) se eligen en los Ajustes."
 L["PN_130_06"] = "Claridad: el contraste sube con la luz, para que una pantalla más clara siga nítida en lugar de gris. Un control por estilo (pestaña Estilos); los estilos nuevos empiezan en la mitad."
 L["PN_130_07"] = "Control de luz: bajo el indicador de estado, un control aclara u oscurece al instante el lugar donde estás y lo guarda para este lugar (Ajustes > Pantalla)."
