@@ -9,7 +9,7 @@ local ADDON, ns = ...
 local L = ns.L
 
 ns.PATCH_NOTES = {
-  { version = "1.3.0", date = nil, notes = {
+  { version = "1.3.0", date = "2026-11-28", notes = {
     { "new", L["PN_130_04"] },
     { "new", L["PN_130_06"] },
     { "new", L["PN_130_07"] },
