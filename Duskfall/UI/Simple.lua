@@ -177,6 +177,13 @@ local function removeLook(look)
 end
 SP.NewLook, SP.RemoveLook = newLook, removeLook
 
+-- Shift-left-click on a launcher (UI/Broker.lua): the mini panel for where you stand. Builds the
+-- window's Places tab first if needed (the panel lives there), without showing the window.
+function ns.OpenMiniHere()
+  if not ns.Window.Prepare("places") then ns.Print(L["SL_NOT_READY"]) return end
+  if SP.OpenMiniHere then SP.OpenMiniHere() end
+end
+
 -- Does the Look set every one of its values where the player is now?
 local function wins(look, env)
   if S.LookWhere(look, env) == nil or S.LookWhen(look, env) == nil then return false, false end
@@ -261,8 +268,29 @@ function SP.Create(parent, hooks)
     end)
   end
 
+  -- Mini panel Reset (Kim, 1.3.0): what each setting was before the mini panel changed it, one
+  -- record per setting touched since the panel opened (the sliders may follow you somewhere else).
+  -- nil while the panel is closed.
+  local miniBefore
+  local onMiniChange   -- set by the mini panel: its Reset button lights up
+  local function remember()
+    if not miniBefore then return end
+    for _, r in ipairs(miniBefore) do
+      if sameShape(r.sh, sel) then return end
+    end
+    local look = current()
+    local idx
+    if look then
+      for i, l in ipairs(R.ActiveStyle().looks) do if l == look then idx = i break end end
+    end
+    miniBefore[#miniBefore + 1] = { sh = { key = sel.key, time = sel.time, io = sel.io }, look = look, idx = idx,
+                                    values = look and UI.DeepCopy(look.values or {}) or nil }
+    if onMiniChange then onMiniChange() end
+  end
+
   local function setValue(k, v)
     v = tonumber(C.Format(k, v)) or 0
+    remember()
     local look = current()
     if math.abs(v) < 1e-6 then
       if not look then return end
@@ -491,6 +519,7 @@ function SP.Create(parent, hooks)
   -- Mini panel (Kim): the window steps aside for a small panel with only the sliders, so the
   -- whole screen shows the change. Back (or closing it) brings the window back.
   local mini, miniSliders, miniTitle, miniHint = nil, {}, nil, nil
+  local miniFollows = false   -- opened for where you stand (a launcher): it follows you as you move
   local keepSel = false
   local function refreshMini()
     if not (mini and mini:IsShown()) then return end
@@ -549,9 +578,41 @@ function SP.Create(parent, hooks)
     end
     local cmp = compareButton(m, 96)
     cmp:SetPoint("BOTTOMRIGHT", m, "BOTTOMRIGHT", -12, 10)
+    -- Reset (Kim, 1.3.0): back to the values from when the panel opened, no question asked. An
+    -- icon, as the sliders' Reset, so the hint keeps its room.
+    local undo = UI.Button(m, "", 28, function()
+      if not miniBefore or #miniBefore == 0 then return end
+      local looks = R.ActiveStyle().looks
+      for i = #miniBefore, 1, -1 do
+        local r = miniBefore[i]
+        local now = findLook(r.sh)
+        if not r.look then
+          -- There was nothing: the setting the panel made goes again
+          if now then removeLook(now) end
+        else
+          if now and now ~= r.look then removeLook(now) end
+          r.look.values = UI.DeepCopy(r.values)
+          local there = false
+          for _, l in ipairs(looks) do if l == r.look then there = true break end end
+          -- Taken out when every slider went to 0: back in its old place
+          if not there then table.insert(looks, math.min(r.idx or (#looks + 1), #looks + 1), r.look) end
+        end
+      end
+      miniBefore = {}
+      stopPreview()
+      evaluate()
+      refresh(true)
+      if onMiniChange then onMiniChange() end
+    end)
+    undo:SetGlyph("reset")
+    undo:SetPoint("RIGHT", cmp, "LEFT", -8, 0)
+    UI.Tooltip(undo, L["BTN_RESET"], L["SP_MINI_RESET_TIP"])
+    onMiniChange = function() undo:SetEnabled(miniBefore ~= nil and #miniBefore > 0) end
+    onMiniChange()
+    m:HookScript("OnHide", function() miniBefore, miniFollows = nil, false end)
     miniHint = UI.Label(m, "")
     miniHint:SetPoint("BOTTOMLEFT", m, "BOTTOMLEFT", 14, 12)
-    miniHint:SetPoint("RIGHT", cmp, "LEFT", -8, 0)
+    miniHint:SetPoint("RIGHT", undo, "LEFT", -8, 0)
     miniHint:SetWordWrap(false)
     tinsert(UISpecialFrames, "DuskfallMiniPanel")
     if ns.CursorLight then ns.CursorLight.Attach(m) end
@@ -559,15 +620,40 @@ function SP.Create(parent, hooks)
     m:Hide()
     mini = m
   end
-  local miniBtn = UI.Button(actions, L["SP_MINI"], 104, function()
+  -- here = true: for where you stand, following you (shift-left-click on a launcher, Kim 1.3.0);
+  -- else the setting the page shows (the Mini panel button)
+  local function openMini(here)
     if not mini then buildMini() end
+    if here then
+      local env = D.state.env or S.Snapshot()
+      stopPreview()
+      sel, picked = defaultShape(env), false
+      lastPlace = placeID(env)
+    end
     if ns.Window.frame then ns.Window.frame:FadeHide() end
+    miniBefore = {}
+    if onMiniChange then onMiniChange() end
     mini:Show()
+    miniFollows = here and true or false
     refreshMini()
-  end)
+  end
+  SP.OpenMiniHere = function() openMini(true) end
+  local miniBtn = UI.Button(actions, L["SP_MINI"], 104, function() openMini(false) end)
   miniBtn:SetPoint("LEFT", reset, "RIGHT", 8, 0)
   UI.Tooltip(miniBtn, L["SP_MINI"], L["SP_MINI_TIP"])
-  ns.Listen("EVALUATED", function() refreshMini() end)
+  ns.Listen("EVALUATED", function(why)
+    -- Opened for where you stand: walk somewhere else and it shows that place
+    if miniFollows and mini and mini:IsShown() and why ~= "edit" then
+      local env = D.state.env or S.Snapshot()
+      local id = placeID(env)
+      if id ~= lastPlace then
+        lastPlace = id
+        stopPreview()
+        sel = defaultShape(env)
+      end
+    end
+    refreshMini()
+  end)
 
   local pasteBtn
   local copyBtn = UI.Button(actions, L["BTN_COPY"], 76, function()

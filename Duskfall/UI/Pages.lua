@@ -346,11 +346,26 @@ local function buildBaseline(p)
       end })
     sl:SetPoint("BOTTOMLEFT", card, "BOTTOMLEFT", 12, 10)
     cards[i] = { big = big, slider = sl, key = k }
+    if k == "gamma" then
+      -- Black-lift tint (1.3.0, Kim): for screens where Gamma does nothing (UI/BlackLift.lua)
+      local lift = UI.Switch(card, { label = L["BL_LIFT"], tip = L["BL_LIFT_TIP"],
+        get = function() return ns.cfg.blackLift == true end,
+        set = function(v)
+          ns.cfg.blackLift = v
+          if ns.BlackLift then ns.BlackLift.Update() end
+        end })
+      lift:SetPoint("TOPLEFT", def, "BOTTOMLEFT", 0, -12)
+      local _, size = lift.Text:GetFont()
+      UI.FitText(lift.Text, cardW - 32 - 42, size)
+      lift:SetLabel(lift.Text:GetText())
+      cards[i].lift = lift
+    end
   end
 
   local function refreshCards()
     for _, c in ipairs(cards) do
       c.slider:Refresh()
+      if c.lift then c.lift:Refresh() end
       local v = ns.db.baseline and ns.db.baseline[c.key]
       c.big:SetText(v and C.Format(c.key, v) or "-")
     end
@@ -467,7 +482,7 @@ local function buildDisplay(p)
   local DD_W = HALF - 32
 
   local _, mm = card(p, 12, -50, HALF, 262, L["DS_MINIMAP"], nil, controls)
-  mm(UI.Check(p, { label = L["DS_MOON"],
+  local indicator = mm(UI.Check(p, { label = L["DS_MOON"],
     tip = L["DS_MOON_TIP"],
     get = function() return ns.cfg.moon ~= false end,
     set = function(v)
@@ -475,6 +490,9 @@ local function buildDisplay(p)
       ns.Moon.Apply()
       if v and not ns.Moon.Found() then ns.Print(L["DS_NO_MOON"]) end
     end }), 26, 4)
+  -- "?" to the Help page about the indicator and its glow (Kim, 1.3.0)
+  local indicatorHelp = UI.HelpIcon(p, "indicator", L["HELP_INDICATOR"], L["DS_MOON_HELP_TIP"])
+  indicatorHelp:SetPoint("LEFT", indicator, "RIGHT", 6, 0)
   mm(UI.Check(p, { label = L["DS_GLOW"],
     tip = L["DS_GLOW_TIP"],
     get = function() return ns.cfg.ringGlow ~= false end,
@@ -489,7 +507,7 @@ local function buildDisplay(p)
     set = function(v) ns.cfg.minimapButton = v ns.UpdateMinimapButton() end }), UI.DROPDOWN_H, 10)
   mm(UI.Dropdown(p, DD_W, { label = L["DS_BROKER"],
     tip = L["DS_BROKER_TIP"],
-    items = { { "look", L["DS_BR_LOOK"] }, { "values", L["DS_BR_VALUES"] }, { "both", L["DS_BR_BOTH"] }, { "none", L["DS_BR_NONE"] } },
+    items = { { "look", L["DS_BR_LOOK"] }, { "values", L["DS_BR_VALUES"] }, { "both", L["DS_BR_BOTH"] }, { "light", L["DS_BR_LIGHT"] }, { "none", L["DS_BR_NONE"] } },
     get = function() return ns.cfg.brokerText end,
     set = function(v) ns.cfg.brokerText = v ns.UpdateBroker() end }), UI.DROPDOWN_H, 8)
 

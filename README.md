@@ -28,7 +28,8 @@ For WoW Forever, in English, Chinese, German and French. Download on [CurseForge
   Revert undoes what you changed.
 - **Styles: how changes feel.** Instant, Smooth, or Like your eyes: slowly into the dark with a
   short dip, quickly out into the light with a short glare, as real eyes adjust, gliding in fine
-  steps. One slider sets the speed, and Try it shows you. A Style is a named set of Looks with its own feel; every
+  steps. One slider sets the speed, and Try it shows you. Clarity raises Contrast with the light, so a
+  brighter screen stays crisp instead of grey. A Style is a named set of Looks with its own feel; every
   character uses one, and all of them can share one.
 - **Time of day.** Dawn, day, dusk and night follow the server clock, the one the sky uses. Drag
   the edges of the day bar to change when each part starts, or use your computer's clock. A new
@@ -37,12 +38,17 @@ For WoW Forever, in English, Chinese, German and French. Download on [CurseForge
   Import takes it back in.
 - **Your settings stay yours.** Your own values are the baseline every setting changes from.
   Logging out or switching Duskfall off puts them back. Moving one of the game's sliders
-  yourself is kept while you stay where you are.
-- **Out of the way.** The minimap's day and night moon opens Duskfall, and glows softly while a
-  setting is in effect. A minimap button shows up when another addon hides the moon. Duskfall is
-  also in the addon compartment and on broker bars, there is a key binding to switch it on and
-  off, and an optional floating display shows what is in effect when it changes. The game's
-  colorblind filter is close at hand on Settings > Display.
+  yourself is kept while you stay where you are. If the game's Gamma does nothing on your screen,
+  Duskfall can also draw it as a soft tint over the world.
+- **Out of the way.** The minimap's Day/Night indicator (the sun or the moon) opens Duskfall, and
+  glows softly while a setting is in effect; shift-left-click it for the mini panel of where you
+  stand. A minimap button shows up when another addon hides the indicator. Duskfall is also in the
+  addon compartment and on broker bars, there is a key binding to switch it on and off, and an
+  optional floating display shows what is in effect when it changes. The game's colorblind filter
+  is close at hand on Settings > Display.
+- **Lighter or darker, quickly.** A Light slider under the status display, or the mouse wheel over
+  Duskfall on a broker bar, makes where you stand lighter or darker at once and keeps it for that
+  place.
 - **Compare and brighten.** Hold Compare (or its key) to see your own settings for a moment, or
   hold the Hold to brighten key to peer into a dark corner.
 - **A head start.** The Dark Places Style adds a little more light in the darkest zones and at
@@ -57,8 +63,9 @@ For WoW Forever, in English, Chinese, German and French. Download on [CurseForge
 - **Help built in.** A short welcome on your first login, a help button in the window that
   explains everything in a few plain topics, with links to the pages, and the patch notes.
 - **In your language.** Duskfall follows your game's language, or pick one in Settings:
-  Simplified and Traditional Chinese, German and French, with English for everything else.
-  Slash commands are the same in every language.
+  Simplified and Traditional Chinese, German, French, Spanish, Korean, Japanese and Ukrainian,
+  with English for everything else (Japanese and Ukrainian are picked in Settings). Slash commands
+  are the same in every language.
 
 ## Commands
 

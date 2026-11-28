@@ -16,11 +16,13 @@ local function LINK(target, text) return "|cff5c80ff|Hdusk:" .. target .. "|h" .
 local ART = "Interface\\AddOns\\Duskfall\\Assets\\"
 local function PIC(file, size) return "|T" .. ART .. file .. ":" .. (size or 16) .. "|t" end
 -- Topic keys for ns.Help.Open (the "?" icons next to features)
-local KEYS = { start = 1, wins = 2, time = 3, feel = 4, own = 5, modes = 6, sharing = 7, starter = 8, others = 9,
-               compare = 10, hdr = 11, sounds = 12, commands = 13 }
+local KEYS = { start = 1, indicator = 2, wins = 3, time = 4, feel = 5, own = 6, modes = 7, sharing = 8, starter = 9,
+               others = 10, compare = 11, hdr = 12, sounds = 13, commands = 14 }
+local PITCH, ROW_H = 32, 28   -- topic rows (14 topics fit the window: pages never scroll)
 
 -- The topics in KEYS order, from Locales/enUS.lua: HELP_<KEY> (the title) and HELP_<KEY>_1, _2, ...
 -- (the paragraphs). In the text, [[target|text]] is a link and {pic:file} a picture (Assets/file).
+-- Link targets: settings:<page>, tab:<id>, calibrate, notes, help:<topic key>.
 local function expand(s)
   s = s:gsub("%[%[([^|%]]+)|([^%]]+)%]%]", function(target, text) return LINK(target, text) end)
   return (s:gsub("{pic:([^}]+)}", function(file) return PIC(file) end))
@@ -37,17 +39,72 @@ do
       paras[#paras + 1] = expand(L[K .. "_" .. n])
       n = n + 1
     end
-    TOPICS[i] = { L[K], paras }
+    TOPICS[i] = { L[K], paras, key = key }
   end
 end
 
 local frame, buttons, body, heading = nil, {}, nil, nil
 local current = 1
+local demos = {}   -- topic key -> live sample frame (above the text)
+
+-- The Day/Night indicator topic's live sample (Kim, 1.3.0): the game's own indicator art as it is
+-- now (sun by day, moon by night; from the client, not copied), Duskfall's badge on its rim at the
+-- hour, as on the minimap, and the glow ring breathing behind it.
+local SAMPLE = 1.7
+local function indicatorDemo(parent)
+  local d = CreateFrame("Frame", nil, parent)
+  d:SetSize(120, 76)
+  local disc = d:CreateTexture(nil, "ARTWORK")
+  local ring = d:CreateTexture(nil, "ARTWORK", nil, 1)
+  local badge = d:CreateTexture(nil, "OVERLAY")
+  badge:SetTexture(ART .. "icon")
+  badge:SetSize(15 * SAMPLE, 15 * SAMPLE)
+  local glow = UI.GlowRing(d, badge, 36 * SAMPLE)
+  function d.Refresh()
+    local art = ns.Moon and ns.Moon.Art and ns.Moon.Art() or {}
+    local env = ns.Situations.Snapshot()
+    local atlas = art.disc
+    if not atlas then
+      atlas = (env.period == "night") and "UI-HUD-Minimap-NightCycle" or "UI-HUD-Minimap-DayCycle"   --noloc
+    end
+    local dw = (art.discW and art.discW > 4 and art.discW or 30) * SAMPLE
+    disc:SetSize(dw, dw)
+    disc:ClearAllPoints()
+    disc:SetPoint("CENTER", d, "LEFT", 14 + dw / 2, 0)
+    if not pcall(disc.SetAtlas, disc, atlas) then disc:SetTexture(nil) end
+    local rw = (art.ringW and art.ringW > 4 and art.ringW or dw / SAMPLE + 6) * SAMPLE
+    ring:SetSize(rw, rw)
+    ring:ClearAllPoints()
+    ring:SetPoint("CENTER", disc, "CENTER")
+    if not pcall(ring.SetAtlas, ring, art.ring or "UI-HUD-Minimap-Frame-Cycle") then ring:SetTexture(nil) end   --noloc
+    local a = ((env.hour % 12) + env.min / 60) / 12 * 2 * math.pi
+    local r = dw / 2 + SAMPLE
+    badge:ClearAllPoints()
+    badge:SetPoint("CENTER", disc, "CENTER", r * math.sin(a), r * math.cos(a))
+  end
+  d:SetScript("OnShow", function() ns.Safe(d.Refresh, "help sample") glow.Set(true) end)
+  d:SetScript("OnHide", function() glow.Set(false) end)
+  d:Hide()
+  return d
+end
+local DEMO = { indicator = indicatorDemo }
 
 local function show(i)
   current = i
   heading:SetText(TOPICS[i][1])
   body:SetText(table.concat(TOPICS[i][2], "\n\n"))
+  -- A live sample above the text, for the topics that have one
+  local key = TOPICS[i].key
+  for k, d in pairs(demos) do d:SetShown(k == key) end
+  -- On the indicator page, the welcome's arrow points at the real one too (Kim, 1.3.0)
+  if ns.Welcome and ns.Welcome.Point then ns.Safe(ns.Welcome.Point, "help arrow", key == "indicator") end
+  body:ClearAllPoints()
+  if demos[key] then
+    body:SetPoint("TOPLEFT", demos[key], "BOTTOMLEFT", 0, -8)
+  else
+    body:SetPoint("TOPLEFT", heading, "BOTTOMLEFT", 0, -14)
+  end
+  body:SetPoint("RIGHT", body:GetParent(), "RIGHT", -20, 0)
   for n, b in ipairs(buttons) do
     b.pick:SetShown(n == i)
     -- Dark on the gold, without the drop shadow (it smeared the letters, Kim)
@@ -71,13 +128,13 @@ local function build()
   -- Topics
   local list = CreateFrame("Frame", nil, f)
   list:SetPoint("TOPLEFT", f, "TOPLEFT", 20, -56)
-  list:SetSize(200, #TOPICS * 34 + 12)
+  list:SetSize(200, #TOPICS * PITCH + 10)
   UI.RoundBox(list, { radius = 10, bottom = { 0, 0, 0, 0.45 }, top = { 0.14, 0.11, 0.07, 0.4 },
     border = { 1, 0.82, 0, 0.25 } })
   for i, t in ipairs(TOPICS) do
     local b = CreateFrame("Button", nil, list)
-    b:SetSize(184, 30)
-    b:SetPoint("TOPLEFT", list, "TOPLEFT", 8, -6 - (i - 1) * 34)
+    b:SetSize(184, ROW_H)
+    b:SetPoint("TOPLEFT", list, "TOPLEFT", 8, -6 - (i - 1) * PITCH)
     local inner = CreateFrame("Frame", nil, b)
     inner:SetAllPoints()
     b.pick = UI.RoundBox(inner, { radius = 8, bottom = { 0.5, 0.33, 0.05, 0.95 }, top = { 0.93, 0.72, 0.24, 0.95 } })
@@ -124,6 +181,9 @@ local function build()
     elseif target == "calibrate" then
       if ns.OpenSettingsPage then ns.OpenSettingsPage("baseline") end
       if ns.Calibrate then ns.Calibrate.Open() end
+    elseif target:match("^help:") then
+      local i = KEYS[target:match("^help:(.+)$")]
+      if i then show(i) end
     elseif target == "notes" then
       W.CloseOverlays(true)
       if ns.PatchNotes then ns.PatchNotes.Open() end
@@ -142,8 +202,17 @@ local function build()
   body:SetJustifyV("TOP")
   body:SetSpacing(4)
   body:SetTextColor(0.9, 0.88, 0.84)
+  for key, make in pairs(DEMO) do
+    local d = make(page)
+    d:SetPoint("TOPLEFT", heading, "BOTTOMLEFT", 0, -8)
+    demos[key] = d
+  end
 
   frame = f
+  f:HookScript("OnHide", function()
+    if ns.Welcome and ns.Welcome.Point then ns.Safe(ns.Welcome.Point, "help arrow", false) end
+  end)
+  f:HookScript("OnShow", function() show(current) end)
   show(current)
 end
 

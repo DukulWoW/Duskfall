@@ -5,7 +5,8 @@
 -- bloomUserMult = Graphics "Bloom Intensity" (slider 0-1, step 0.2; A14c). ffxGlow and bloomEnable
 -- also exist on Forever but do nothing visible (A14b), so they are left alone.
 -- Public: C.list, C.byKey, C.Read(key), C.ReadAll(), C.Clamp(key, v), C.Same(key, a, b),
---         C.SameAll(a, b), C.Write(key, v, fine), C.WriteAll(values), C.IsOurs(cvar, value), C.Format(key, v)
+--         C.SameAll(a, b), C.Write(key, v, fine), C.WriteAll(values), C.IsOurs(cvar, value), C.Format(key, v),
+--         C.OnGamma (hook, set by UI/BlackLift.lua)
 -- fine = a transition step: written with `fine` decimals and no eps skip. The game keeps fractions
 -- (Brightness 48.5, Gamma 1.1234 read back, Kim 2026-11-26), and whole steps showed in fades.
 local ADDON, ns = ...
@@ -89,7 +90,15 @@ function C.ReadAll()
   return out
 end
 
+local write
+-- C.OnGamma(value): called after every Gamma write (UI/BlackLift.lua draws the change as a tint)
 function C.Write(key, v, fine)
+  local ok = write(key, v, fine)
+  if key == "gamma" and C.OnGamma and written.gamma then ns.Safe(C.OnGamma, "gamma tint", written.gamma) end
+  return ok
+end
+
+write = function(key, v, fine)
   v = C.Clamp(key, v)
   if v == nil then return false end
   local ch = C.byKey[key]

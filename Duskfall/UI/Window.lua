@@ -442,6 +442,20 @@ function W.SetAdvanced(on)
 end
 
 -- tabID: open on that tab (closes it if it is already showing, unless keepOpen)
+-- Builds the window and one tab's page without showing either (Kim, 1.3.0: shift-left-click on a
+-- launcher opens the mini panel, which lives in the Places tab). false = Duskfall not ready yet.
+function W.Prepare(id)
+  if not ns.db or not ns.Detect.state.started then return false end
+  if not frame then build() end
+  for _, t in ipairs(tabs) do
+    if t.id == id and t.page and not t.page.built then
+      t.page.built = true
+      ns.Safe(t.builder, "tab " .. t.id, t.page)
+    end
+  end
+  return true
+end
+
 function ns.OpenWindow(tabID, keepOpen)
   if not ns.db or not ns.Detect.state.started then ns.Print(L["SL_NOT_READY"]) return end
   if not frame then build() end

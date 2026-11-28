@@ -1,8 +1,12 @@
 -- Duskfall UI/Broker.lua (B-05): the LibDataBroker object (a data source: broker bars show its
 -- text, LibDBIcon only the icon), the minimap button (LibDBIcon) and the addon compartment.
 -- Clicks, the same everywhere (as planned for the moon icon, C-06):
---   left: the window on Places   right: Duskfall on / off   shift-right: Settings
--- Broker text (Settings > Display): the Look in effect, the values, both, or nothing.
+--   left: the window on Places   shift-left: the mini panel for where you stand (1.3.0)
+--   right: Duskfall on / off     shift-right: Settings
+-- Broker text (Settings > Display): the Look in effect, the values, both, nothing, or the Light
+-- slider's value for here (1.3.0, Kim): then the mouse wheel over it moves that slider, 5% a notch.
+-- Bars that pass the wheel on call dataobj.OnMouseWheel (XIV_Databar_Continued); for the others the
+-- bar's button gets a wheel script while our tooltip shows on it, only when it has none of its own.
 -- Public: ns.ActiveLooks(), ns.StateText(), ns.HereText(), ns.ValuesText(), ns.LauncherClick(button),
 --         ns.FillTooltip(tooltip), ns.UpdateMinimapButton(), ns.UpdateBroker()
 -- Globals for the TOC: Duskfall_OnAddonCompartmentClick / Enter / Leave
@@ -68,6 +72,8 @@ function ns.LauncherClick(button)
     else
       Duskfall_ToggleEnabled()
     end
+  elseif IsShiftKeyDown() then
+    if ns.OpenMiniHere then ns.OpenMiniHere() end
   else
     if ns.OpenWindow then ns.OpenWindow("places") end
   end
@@ -91,8 +97,51 @@ function ns.FillTooltip(tt)
   tt:AddLine(ns.ValuesText(), 1, 1, 1)
   tt:AddLine(" ")
   tt:AddLine(L["BR_LEFT"], 1, 1, 1)
+  tt:AddLine(L["BR_SHIFT_LEFT"], 1, 1, 1)
   tt:AddLine(L["BR_RIGHT"], 1, 1, 1)
   tt:AddLine(L["BR_SHIFT_RIGHT"], 1, 1, 1)
+end
+
+-- Light from the broker ------------------------------------------------------------------------
+local WHEEL_STEP = 0.05
+local function lightMode() return ns.cfg and ns.cfg.brokerText == "light" end
+local function lightReady()
+  return lightMode() and ns.cfg.enabled and D.state.started and D.state.comparing ~= "before"
+    and ns.StatusDisplay and ns.StatusDisplay.LightSet ~= nil
+end
+
+local function wheel(_, delta)
+  if not lightReady() or not delta or delta == 0 then return end
+  local SD = ns.StatusDisplay
+  local x = SD.LightGet() + (delta > 0 and WHEEL_STEP or -WHEEL_STEP)
+  x = math.floor(x / WHEEL_STEP + 0.5) * WHEEL_STEP
+  x = math.max(-1, math.min(1, x))
+  SD.LightSet(x)
+  ns.UpdateBroker()
+end
+
+-- Bars that don't pass the wheel on: the button our tooltip is on gets a wheel script of its own
+-- (only if it has none), which works only while our tooltip shows there (a bar may reuse the button).
+local tipOwner
+local hookedTips = {}
+local function hookOwner(tt)
+  if not lightMode() or not tt or not tt.GetOwner then return end
+  local owner = tt:GetOwner()
+  tipOwner = owner
+  if not hookedTips[tt] then
+    hookedTips[tt] = true
+    tt:HookScript("OnHide", function() tipOwner = nil end)
+  end
+  if not owner or owner.duskfallWheel or not owner.EnableMouseWheel or not owner.GetScript then return end
+  if owner.IsForbidden and owner:IsForbidden() then return end
+  if owner.IsProtected and owner:IsProtected() then return end
+  if DBIcon and owner == DBIcon:GetMinimapButton(NAME) then return end   -- the minimap's own wheel
+  if owner:GetScript("OnMouseWheel") then return end
+  owner.duskfallWheel = true
+  pcall(owner.EnableMouseWheel, owner, true)
+  pcall(owner.SetScript, owner, "OnMouseWheel", function(self, delta)
+    if tipOwner == self then ns.Safe(wheel, "broker wheel", self, delta) end
+  end)
 end
 
 local obj
@@ -105,8 +154,11 @@ if LDB then
     OnClick = function(_, button) ns.Safe(ns.LauncherClick, "broker click", button) end,
     OnTooltipShow = function(tt)
       ns.Safe(ns.FillTooltip, "broker tooltip", tt)
+      if lightReady() then tt:AddLine(L["BR_WHEEL"], 1, 1, 1) end
       tt:AddLine(L["BR_DRAG"], 0.6, 0.6, 0.6)
+      ns.Safe(hookOwner, "broker wheel hook", tt)
     end,
+    OnMouseWheel = function(frame, delta) ns.Safe(wheel, "broker wheel", frame, delta) end,
   })
 end
 
@@ -116,7 +168,13 @@ function ns.UpdateBroker()
   local text = ""
   if mode == "look" then text = ns.StateText()
   elseif mode == "values" then text = ns.ValuesText()
-  elseif mode == "both" then text = ns.StateText() .. "  " .. ns.ValuesText() end
+  elseif mode == "both" then text = ns.StateText() .. "  " .. ns.ValuesText()
+  elseif mode == "light" then
+    if not ns.cfg.enabled then text = L["WIN_OFF"]
+    elseif ns.StatusDisplay and ns.StatusDisplay.LightGet then
+      text = ns.StatusDisplay.LightText(ns.StatusDisplay.LightGet())
+    end
+  end
   obj.text = text
 end
 
@@ -151,7 +209,7 @@ ns.Listen("ONOFF", function() ns.UpdateBroker() end)
 
 -- Values move during a transition: keep "values" broker text current (only in that mode).
 C_Timer.NewTicker(0.5, function()
-  if ns.cfg and ns.cfg.brokerText ~= "look" and ns.cfg.brokerText ~= "none" and ns.Transition.IsRunning() then
+  if ns.cfg and (ns.cfg.brokerText == "values" or ns.cfg.brokerText == "both") and ns.Transition.IsRunning() then
     ns.UpdateBroker()
   end
 end)

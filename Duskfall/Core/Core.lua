@@ -25,7 +25,7 @@ ns.DEFAULTS = {
   minimap = { hide = true },    -- LibDBIcon's table (position, hide); hide follows minimapButton
   minimapButton = "auto",       -- "auto" (only when the minimap moon can't be used), "always", "never"
   moon = true,                  -- the minimap's day / night moon opens Duskfall (C-06)
-  brokerText = "look",          -- broker bars: "look", "values", "both", "none"
+  brokerText = "look",          -- broker bars: "look", "values", "both", "light" (1.3.0), "none"
   statusDisplay = "change",     -- floating display: "off", "change", "always"
   statusSeconds = 4,            -- "change": seconds it stays after the change is done
   statusStay = "seconds",       -- "seconds" (statusSeconds after the change) or "change" (as long as it runs)
@@ -41,6 +41,7 @@ ns.DEFAULTS = {
   soundActiveName = "Duskfall: Setting starts",   --noloc
   soundChannel = "SFX",         -- PlaySoundFile channel
   peekLift = 0.5,               -- Hold to brighten: 0 - 1 (Core/Detect.lua LIFT at 1)
+  blackLift = false,            -- 1.3.0: the Gamma change also drawn as a tint over the world (UI/BlackLift.lua)
 }
 
 -- Output ---------------------------------------------------------------------------------------

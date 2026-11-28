@@ -1,4 +1,5 @@
--- Duskfall UI/Moon.lua (C-06): the day / night moon on the minimap opens Duskfall.
+-- Duskfall UI/Moon.lua (C-06): the minimap's Day/Night indicator (the sun / moon; Blizzard's old
+-- name for it, Kim 1.3.0; "moon" in the code) opens Duskfall.
 -- It is not GameTimeFrame but an anonymous child of MinimapCluster.MinimapContainer (made in
 -- Blizzard_Minimap/Camelot/Diel.lua), found by its .Background atlas "UI-HUD-Minimap-NightCycle"
 -- (A12, fstack). Clicking it does nothing by default, so it takes the minimap button's clicks
@@ -11,7 +12,7 @@
 -- login, again after other addons have set up, on every loading screen, when the moon is shown
 -- or hidden, and when the Duskfall window opens.
 -- Public: ns.Moon.Apply(), ns.Moon.Found(), ns.Moon.Searched(), ns.Moon.Usable(), ns.Moon.Check(),
---         ns.Moon.AddRing(host, anchor, size), ns.Moon.UpdateRings()
+--         ns.Moon.AddRing(host, anchor, size), ns.Moon.UpdateRings(), ns.Moon.Disc(), ns.Moon.Art()
 local ADDON, ns = ...
 local UI = ns.UI
 local M = {}
@@ -59,6 +60,30 @@ function M.Usable()
 end
 
 function M.Found() return moon ~= nil end
+
+-- The disc the arrow on the welcome points at (UI/Welcome.lua)
+function M.Disc() return moon and (moon.Background or moon) or nil end
+
+-- What the indicator looks like now, for Help's live sample (UI/Help.lua): { disc = atlas, ring =
+-- atlas, discW, ringW } as far as known (nil fields: not found).
+function M.Art()
+  local out = {}
+  if not moon then return out end
+  local bg = moon.Background
+  if bg and bg.GetAtlas then
+    local ok, a = pcall(bg.GetAtlas, bg)
+    if ok then out.disc, out.discW = a, bg:GetWidth() end
+  end
+  for _, r in ipairs({ moon:GetRegions() }) do
+    if r ~= bg and r.GetAtlas then
+      local ok, a = pcall(r.GetAtlas, r)
+      if ok and type(a) == "string" and a:lower() == "ui-hud-minimap-frame-cycle" then
+        out.ring, out.ringW = a, r:GetWidth()
+      end
+    end
+  end
+  return out
+end
 function M.Searched() return searched end
 
 -- Tells the minimap button (auto mode) whether the moon can stand in for it.

@@ -4,6 +4,8 @@
 --          types first, then every instance visited) and Zones with their subzones. The number is
 --          how many Looks of the active Style use the place (green = one of them is in effect now),
 --          grey = no Looks (off). A blue bar marks where you are. Right-click: Forget place.
+--          Pinned on top (1.3.0): a Here group with the places you are in (green dot = a Look for it
+--          is in effect), then a divider. A double chevron on the Here line opens / closes all.
 --   right: the selected place, its Looks (on/off, Delete, "active" / "matches" tags) and the
 --          quick-add buttons. Clicking a Look (or adding one) opens the Look editor over the tab.
 -- Opening the window selects the place of the Look in effect now, and that Look (Kim).
@@ -240,9 +242,53 @@ W.AddTab("places", L["TAB_PLACES"], function(tab)
     set = function(v) activeOnly = v refreshAll() end })
   active:SetPoint("LEFT", search, "RIGHT", 10, 0)
 
+  -- Open / close every zone (1.3.0, Kim): a double chevron at the end of the Here line. Down = it
+  -- opens all (and the groups), up = it closes every zone.
+  local canOpen = true       -- set by buildRows: something in the list is closed
+  local zonesWithSubs = {}   -- set by buildRows
+  local allBtn = CreateFrame("Button", nil, left)
+  allBtn:SetSize(20, ROW_H)
+  allBtn:SetPoint("TOPRIGHT", left, "TOPRIGHT", -16, -36)
+  allBtn.tex = {}
+  for i, dy in ipairs({ 3, -3 }) do
+    local t = allBtn:CreateTexture(nil, "ARTWORK")
+    t:SetSize(13, 13)
+    t:SetPoint("CENTER", allBtn, "CENTER", 0, dy)
+    t:SetTexture(UI.ART .. "Buttons\\chevron")
+    t:SetVertexColor(1, 0.82, 0)
+    allBtn.tex[i] = t
+  end
+  local function allLook(over)
+    local turn = canOpen and -math.pi / 2 or math.pi / 2
+    for _, t in ipairs(allBtn.tex) do
+      t:SetRotation(turn)
+      if over then t:SetVertexColor(1, 0.94, 0.62) else t:SetVertexColor(1, 0.82, 0) end
+    end
+  end
+  allBtn:SetScript("OnEnter", function(self)
+    allLook(true)
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    GameTooltip:AddLine(canOpen and L["PL_OPEN_ALL"] or L["PL_CLOSE_ALL"], 1, 1, 1)
+    GameTooltip:Show()
+  end)
+  allBtn:SetScript("OnLeave", function()
+    allLook(false)
+    GameTooltip:Hide()
+  end)
+  allBtn:SetScript("OnClick", function(self)
+    if canOpen then
+      collapsed = {}
+      for _, z in ipairs(zonesWithSubs) do expanded[z] = true end
+    else
+      expanded = {}
+    end
+    refreshAll()
+    if self:IsMouseOver() then self:GetScript("OnEnter")(self) end
+  end)
+
   local here = CreateFrame("Button", nil, left)
   here:SetPoint("TOPLEFT", left, "TOPLEFT", 8, -36)
-  here:SetPoint("RIGHT", left, "RIGHT", -4, 0)
+  here:SetPoint("RIGHT", allBtn, "LEFT", -2, 0)
   here:SetHeight(ROW_H)
   local hereHL = here:CreateTexture(nil, "HIGHLIGHT")
   hereHL:SetAllPoints()
@@ -294,8 +340,41 @@ W.AddTab("places", L["TAB_PLACES"], function(tab)
   end
 
   local view = CreateScrollBoxListLinearView()
-  view:SetElementExtent(ROW_H)
+  -- The divider under the pinned Here group is a short row of its own (as in simple mode)
+  local DIVIDER_H = 12
+  if view.SetElementExtentCalculator then
+    view:SetElementExtentCalculator(function(_, e) return e.row == "divider" and DIVIDER_H or ROW_H end)
+  else
+    view:SetElementExtent(ROW_H)
+  end
   view:SetElementInitializer("Button", function(row, e)
+    if not row.div then
+      -- Blue at both ends, gold in the middle (as on About and in simple mode)
+      row.div = CreateFrame("Frame", nil, row)
+      row.div:SetHeight(1)
+      row.div:SetPoint("LEFT", row, "LEFT", 10, 0)
+      row.div:SetPoint("RIGHT", row, "RIGHT", -10, 0)
+      local B = { UI.RING_BLUE[1], UI.RING_BLUE[2], UI.RING_BLUE[3], 0.7 }
+      local G = { UI.RING_GOLD[1], UI.RING_GOLD[2], UI.RING_GOLD[3], 0.7 }
+      local l = row.div:CreateTexture(nil, "ARTWORK")
+      l:SetPoint("TOPLEFT")
+      l:SetPoint("BOTTOMRIGHT", row.div, "BOTTOM")
+      UI.Gradient(l, "HORIZONTAL", B, G)
+      local rr = row.div:CreateTexture(nil, "ARTWORK")
+      rr:SetPoint("TOPLEFT", row.div, "TOP")
+      rr:SetPoint("BOTTOMRIGHT")
+      UI.Gradient(rr, "HORIZONTAL", G, B)
+    end
+    local isDiv = e.row == "divider"
+    row.div:SetShown(isDiv)
+    row:EnableMouse(not isDiv)
+    if row.name then
+      for _, part in ipairs({ row.name, row.count, row.arrow, row.sel, row.bar, row.dot }) do part:SetShown(not isDiv) end
+    end
+    if isDiv then
+      row.data = nil
+      return
+    end
     if not row.name then
       row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
       row.sel = row:CreateTexture(nil, "BACKGROUND", nil, 2)
@@ -308,6 +387,10 @@ W.AddTab("places", L["TAB_PLACES"], function(tab)
       row.bar:SetSize(3, ROW_H - 4)
       row.bar:SetColorTexture(0.62, 0.71, 1, 1)
       row.bar:SetPoint("LEFT", row, "LEFT", 1, 0)
+      -- The green dot of simple mode: in the Here group, a setting for this place is in effect
+      row.dot = row:CreateTexture(nil, "ARTWORK")
+      row.dot:SetSize(9, 9)
+      UI.Gradient(row.dot, "VERTICAL", { 0.05, 0.55, 0.1 }, { 0.55, 1, 0.5 }, UI.ART .. "Shapes\\dot")
       row.arrow = CreateFrame("Button", nil, row)
       row.arrow:SetSize(14, 14)
       -- Our own gold disclosure chevron (Assets/chevron): right = closed, down = open (Kim)
@@ -356,6 +439,9 @@ W.AddTab("places", L["TAB_PLACES"], function(tab)
     row.name:ClearAllPoints()
     row.name:SetPoint("LEFT", row, "LEFT", x + 18, 0)
     row.name:SetPoint("RIGHT", row.count, "LEFT", -4, 0)
+    row.dot:ClearAllPoints()
+    row.dot:SetPoint("LEFT", row, "LEFT", x + 3, 0)
+    row.dot:SetShown(e.pinned and e.live or false)
     if e.row == "group" then
       row.name:SetFontObject("GameFontNormal")
       row.name:SetText(e.name)
@@ -372,7 +458,7 @@ W.AddTab("places", L["TAB_PLACES"], function(tab)
         row.count:SetText("")
       end
       row.sel:SetShown(e.key == selKey)
-      row.bar:SetShown(e.here)
+      row.bar:SetShown(e.here and not e.pinned)   -- in the Here group everything is here
     end
     row:SetScript("OnClick", function(self, button)
       if e.row == "group" then
@@ -414,6 +500,32 @@ W.AddTab("places", L["TAB_PLACES"], function(tab)
     end
     local rows = {}
 
+    -- Here, pinned at the top (1.3.0, Kim): the instance (and its type), or the zone and the part
+    -- of it you are in. Search and Active leave it alone.
+    local pinned = {}
+    local function pin(key, name, depth, fixed)
+      local e = entry(key, name, depth)
+      e.pinned, e.here, e.fixed = true, true, fixed
+      e.live = live[key] or false
+      pinned[#pinned + 1] = e
+    end
+    if env and env.instance then
+      local ik = S.PlaceKey("instance", env)
+      local p = ns.db.places[ik]
+      pin(ik, (p and p.name) or env.instanceName or ik, 1)
+      local tk = env.itype and ("itype:" .. env.itype)
+      if tk and ITYPE_NAME[tk] then pin(tk, ITYPE_NAME[tk], 1, true) end
+    elseif env then
+      local zk, sk = S.PlaceKey("zone", env), S.PlaceKey("sub", env)
+      if zk then pin(zk, zoneName(zk), 1) end
+      if sk then pin(sk, placeName(sk), zk and 2 or 1) end
+    end
+    if #pinned > 0 then
+      rows[#rows + 1] = { row = "group", key = "g:here", name = L["PL_HERE"], depth = 0, open = not collapsed["g:here"] }
+      if not collapsed["g:here"] then for _, e in ipairs(pinned) do rows[#rows + 1] = e end end
+      rows[#rows + 1] = { row = "divider", key = "g:div" }
+    end
+
     -- Instances
     local inst = {}
     for _, it in ipairs(ITYPES) do
@@ -451,7 +563,10 @@ W.AddTab("places", L["TAB_PLACES"], function(tab)
     for _, z in pairs(zones) do zlist[#zlist + 1] = z end
     table.sort(zlist, function(a, b) return a.name < b.name end)
     local zrows = {}
+    zonesWithSubs = {}
+    local anyClosed = collapsed["g:inst"] or collapsed["g:zones"] or collapsed["g:here"] or false
     for _, z in ipairs(zlist) do
+      if #z.subs > 0 then zonesWithSubs[#zonesWithSubs + 1] = z.key end
       local zoneHit = passes(z.key, z.name)
       table.sort(z.subs, function(a, b) return a.name < b.name end)
       local subs = {}
@@ -464,6 +579,7 @@ W.AddTab("places", L["TAB_PLACES"], function(tab)
         if #subs > 0 then
           local open = expanded[z.key] or (q ~= "" and not zoneHit)
           e.open = open and true or false
+          if not open then anyClosed = true end
           zrows[#zrows + 1] = e
           if open then
             for _, s in ipairs(subs) do zrows[#zrows + 1] = entry(s.key, s.name, 2) end
@@ -483,6 +599,8 @@ W.AddTab("places", L["TAB_PLACES"], function(tab)
       rows[#rows + 1] = { row = "group", key = "g:zones", name = L["PL_ZONES"], depth = 0, open = not collapsed["g:zones"] }
       if not collapsed["g:zones"] then for _, e in ipairs(zrows) do rows[#rows + 1] = e end end
     end
+    canOpen = anyClosed and true or false
+    allLook(allBtn:IsMouseOver())
     return rows
   end
 

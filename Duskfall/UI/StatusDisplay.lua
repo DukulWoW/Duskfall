@@ -11,7 +11,8 @@
 -- Style's Clarity). It saves the same setting simple mode makes, for this place (settings.quickLightFor:
 -- "place", "io" with indoors / outdoors, "iotime" with the time of day too). While the mouse is on the
 -- display it does not fade.
--- Public: ns.StatusDisplay.Refresh(), .Unlock(seconds), .ResetPosition(), .Test(), .Place(f)
+-- Public: ns.StatusDisplay.Refresh(), .Unlock(seconds), .ResetPosition(), .Test(), .Place(f),
+--         .LightGet(), .LightSet(x), .LightText(x) (-1..1)
 local ADDON, ns = ...
 local L = ns.L
 local UI, D = ns.UI, ns.Detect
@@ -87,6 +88,16 @@ local function lightSet(x)
   D.ClearHolds()
   D.state.target = nil
   D.Evaluate("edit")
+end
+
+-- Shared with the broker (UI/Broker.lua: its text and mouse wheel)
+SD.LightGet, SD.LightSet = lightGet, lightSet
+
+-- "+20%", "-35%", "0%"
+function SD.LightText(v)
+  local p = math.floor(math.abs(v) * 100 + 0.5)
+  if p == 0 then return "0%" end   --noloc
+  return (v > 0 and "+" or "-") .. p .. "%"   --noloc
 end
 
 local function lightWanted()
@@ -182,10 +193,7 @@ local function build()
   f.light = UI.LightSlider(f, W - 16, { label = L["QL_LIGHT"], labelW = 52, valueW = 64, min = -1, max = 1,
     step = 0.05, mid = 0, lineH = 12, from = { 0.08, 0.08, 0.12 }, to = { 1, 0.93, 0.66 },
     tip = L["QL_TIP"],
-    fmt = function(v)
-      local p = math.floor(math.abs(v) * 100 + 0.5)
-      return (v > 0 and "+" or "-") .. p .. "%"   --noloc
-    end,
+    fmt = function(v) return SD.LightText(v) end,
     get = lightGet,
     set = function(v) ns.Safe(lightSet, "light slider", v) end })
   f.light:SetPoint("TOPLEFT", f, "TOPLEFT", 8, -(H - 4))

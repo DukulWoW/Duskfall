@@ -9,7 +9,7 @@
 ## Notes-esMX: Ajusta el gamma, el brillo, el contraste y el resplandor según dónde estés, con transiciones suaves.
 ## Notes-koKR: 현재 위치에 맞춰 감마, 밝기, 대비, 빛 번짐을 설정하고 부드럽게 전환합니다.
 ## Author: Dukul
-## Version: 1.2.0
+## Version: 1.3.0
 ## IconTexture: Interface\AddOns\Duskfall\Assets\icon
 ## SavedVariables: DuskfallDB
 ## LoadSavedVariablesFirst: 1
@@ -55,6 +55,7 @@ UI\Styles.lua
 UI\HDR.lua
 UI\Broker.lua
 UI\StatusDisplay.lua
+UI\BlackLift.lua
 UI\Moon.lua
 UI\Pages.lua
 UI\Help.lua

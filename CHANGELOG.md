@@ -1,14 +1,24 @@
-# Duskfall v1.2.0
+# Duskfall v1.3.0
 
 ## WoW Forever
 
-Duskfall speaks your language: Chinese (Simplified and Traditional), German and French, with more on the way.
+Four more languages, quicker ways to make where you stand lighter or darker, and the minimap's Day/Night indicator explained.
 
 ### New
-- **Translations:** every window, tooltip, chat message, the help and the patch notes in Simplified Chinese, Traditional Chinese, German and French. Duskfall follows the language of your game, or pick one in Settings (the menu next to Refresh). Slash commands stay as they are, so `/dusk` works the same everywhere.
-- **About** ends with a line of solidarity: LGBTQIA+ Pride, Trans Rights, Slava Ukraini and Free Palestine.
+- **More languages:** Spanish, Korean, Japanese and Ukrainian. Japanese and Ukrainian (the game has no client for them) are picked in Settings.
+- **Clarity:** Contrast rises with the light, so a brighter screen stays crisp instead of grey. One slider per Style (Styles tab); new Styles start at half.
+- **Light slider:** under the status display, one slider makes where you are lighter or darker at once and saves it for this place (Settings > Display).
+- **Light on broker bars:** a broker bar can show the Light slider's value for where you are, and the mouse wheel over it makes here lighter or darker (Settings > Display > Broker text).
+- **Mini panel in one click:** shift-left-click the Day/Night indicator (or the minimap button, a broker bar, the addon compartment) for the mini panel of where you stand. A Reset button on the panel puts the sliders back to where they were when you opened it.
+- **Day/Night indicator:** the minimap's sun and moon has its proper name everywhere. The welcome points at it with an arrow, and Help has a page about it and its glow.
+- **Gamma does nothing on your screen?** A new switch on Settings > Baseline also draws the Gamma change as a soft tint over the world.
+- **Advanced Places:** where you are is pinned at the top of the list (a green dot where a setting is in effect), and a button on the Here line opens or closes every zone.
 
 ### Changes
-- Patch note dates are written as numbers (2026-11-27), the same in every language.
-- The About tab shows the solidarity line where the status line was; the status line stays on every other tab.
-- Reset next to the sliders and Play next to the sounds are small icons, which leaves the sliders more room; long labels shrink to fit their buttons.
+- Buttons and the Place, Time and Inside bars have the window's gold-to-blue edge.
+- Your places: the settings in effect where you are come first, above a thin line.
+- Plain sliders run from Duskfall blue to gold, with a blue < and a gold >.
+
+### Fixes
+- Undercity counts as indoors (the game calls it outdoors, which is why you can ride there).
+- Opening Duskfall for the first time in combat no longer shows a blocked-action error.
