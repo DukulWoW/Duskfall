@@ -62,7 +62,17 @@ end
 -- Places the game calls outdoors though they are underground: they count as indoors (Kim, 1.3.0).
 -- Undercity (map 1458) is flagged outdoors, which is why you can mount there (probe: IsIndoors()
 -- false, IsOutdoors() true in the Trade Quarter). The Ruins of Lordaeron above are Tirisfal's.
-local UNDERGROUND = { [1458] = true }
+-- Ironforge (map 1455) too: under the mountain, but the game says outdoors (Kim, 2026-11-28).
+local UNDERGROUND = { [1458] = true, [1455] = true }
+
+-- A subzone named like its zone is no part of it: the game gives unnamed spots the city's own name
+-- (Ironforge, 2026-11-28: GetSubZoneText() "Ironforge" in the Commons, "Vault of Ironforge" in the
+-- bank). Such a spot counts as the zone alone. Core.lua's v4 migration moves old settings for it.
+local function sameName(a, b)
+  if not a or not b then return false end
+  return a:lower():gsub("^%s+", ""):gsub("%s+$", "") == b:lower():gsub("^%s+", ""):gsub("%s+$", "")
+end
+S.SameName = sameName
 
 function S.Snapshot()
   local env = {}
@@ -75,7 +85,7 @@ function S.Snapshot()
   env.zone = best and zoneOf(best) or nil
   env.zoneName = mapName(env.zone) or GetRealZoneText()
   local sub = GetSubZoneText()
-  if sub and sub ~= "" then env.sub = sub end
+  if sub and sub ~= "" and not sameName(sub, env.zoneName) and not sameName(sub, GetZoneText()) then env.sub = sub end
   env.indoors = (IsIndoors() or UNDERGROUND[best or 0] or UNDERGROUND[env.zone or 0]) and true or false
   env.resting = IsResting() and true or false
   env.combat = ns.inCombat and true or false

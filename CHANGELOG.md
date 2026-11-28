@@ -22,3 +22,4 @@ Four more languages, quicker ways to make where you stand lighter or darker, and
 ### Fixes
 - Undercity counts as indoors (the game calls it outdoors, which is why you can ride there).
 - Opening Duskfall for the first time in combat no longer shows a blocked-action error.
+- Ironforge counts as indoors too, and the spots the game names after the city itself count as Ironforge: it no longer shows twice in the Place row.

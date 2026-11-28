@@ -11,7 +11,7 @@ ns.name = ADDON
 local getMeta = C_AddOns and C_AddOns.GetAddOnMetadata
 ns.VERSION = (getMeta and getMeta(ADDON, "Version")) or "?"
 
-local DB_VERSION = 3
+local DB_VERSION = 4
 
 ns.DEFAULTS = {
   enabled = true,     -- automatic adjusting on
@@ -209,6 +209,48 @@ end
 -- so every table that already exists counts as welcomed (a fresh table skips migrations).
 MIGRATIONS[3] = function(db)
   db.welcomed = true
+end
+
+-- v4 (1.3.0, 2026-11-28): a subzone named like its zone ("Ironforge" in Ironforge) is no longer a
+-- place of its own (Core/Situations.lua). Its place goes, and every Look naming it names the zone
+-- instead (a "~" turned-off mark is kept; the zone is not added twice).
+MIGRATIONS[4] = function(db)
+  local function zoneName(id)
+    local p = db.places and db.places["zone:" .. id]
+    if p and p.name then return p.name end
+    local ok, info = pcall(C_Map.GetMapInfo, tonumber(id))
+    return ok and info and info.name or nil
+  end
+  local function same(a, b)
+    return a and b and a:lower() == b:lower()
+  end
+  local moved = {}   -- "sub:<id>:<name>" -> "zone:<id>"
+  for key, p in pairs(db.places or {}) do
+    local id, name = key:match("^sub:(%d+):(.+)$")
+    if id and same(name, zoneName(id)) then
+      moved[key] = "zone:" .. id
+      db.places[key] = nil
+      db.places["zone:" .. id] = db.places["zone:" .. id] or { first = p.first, name = zoneName(id) }
+    end
+  end
+  -- Looks may name such a subzone without a place record (an import): check them by name too
+  for _, st in ipairs(db.styles or {}) do
+    for _, look in ipairs(st.looks or {}) do
+      if type(look.where) == "table" then
+        local out, seen = {}, {}
+        for _, s in ipairs(look.where) do
+          local off, key = s:match("^(~?)(.+)$")
+          local id, name = key:match("^sub:(%d+):(.+)$")
+          if moved[key] or (id and same(name, zoneName(id))) then key = moved[key] or ("zone:" .. id) end
+          if not seen[key] then
+            seen[key] = true
+            out[#out + 1] = off .. key
+          end
+        end
+        look.where = out
+      end
+    end
+  end
 end
 
 local function newStyle(name)

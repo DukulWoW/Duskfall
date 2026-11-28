@@ -780,6 +780,7 @@ L["PN_130_01"] = "Los botones y las barras de Lugar, Hora y Entorno tienen el bo
 L["PN_130_02"] = "Tus lugares: los ajustes activos donde estás aparecen primero, encima de una línea fina."
 L["PN_130_03"] = "Entrañas cuenta como interior (el juego la considera exterior, por eso puedes ir en montura allí)."
 L["PN_130_14"] = "Abrir Duskfall por primera vez en combate ya no muestra un error de acción bloqueada."
+L["PN_130_15"] = "Forjaz también cuenta como interior, y los sitios que el juego llama como la propia ciudad cuentan como Forjaz: ya no aparece dos veces en la fila Lugar."
 L["PN_130_05"] = "Los controles deslizantes sencillos van del azul de Duskfall al dorado, con un < azul y un > dorado."
 L["PN_120_02"] = "Duskfall está disponible en chino simplificado y tradicional, alemán y francés. Pronto habrá más idiomas."
 L["PN_120_01"] = "Acerca de termina con un mensaje de solidaridad: Orgullo LGBTQIA+, derechos trans, Slava Ukraini y Palestina libre."

@@ -24,6 +24,7 @@ ns.PATCH_NOTES = {
     { "change", L["PN_130_05"] },
     { "fix", L["PN_130_03"] },
     { "fix", L["PN_130_14"] },
+    { "fix", L["PN_130_15"] },
   } },
   { version = "1.2.0", date = "2026-11-27", notes = {
     { "new", L["PN_120_02"] },

@@ -780,6 +780,7 @@ L["PN_130_01"] = "Les boutons et les barres Endroit, Moment et Environnement ont
 L["PN_130_02"] = "Vos endroits : les réglages actifs là où vous êtes apparaissent en premier, au-dessus d’un trait fin."
 L["PN_130_03"] = "Fossoyeuse compte comme intérieur (le jeu la considère comme extérieure, c’est pourquoi on peut y monter)."
 L["PN_130_14"] = "Ouvrir Duskfall pour la première fois en combat n’affiche plus d’erreur d’action bloquée."
+L["PN_130_15"] = "Forgefer compte aussi comme intérieur, et les endroits que le jeu nomme comme la ville elle-même comptent comme Forgefer : elle n’apparaît plus deux fois dans la ligne Endroit."
 L["PN_130_05"] = "Les curseurs simples vont du bleu de Duskfall à l’or, avec un < bleu et un > doré."
 L["PN_120_02"] = "Duskfall est disponible en chinois simplifié et traditionnel, en allemand et en français. D’autres langues arriveront bientôt."
 L["PN_120_01"] = "L’onglet À propos se termine par un message de solidarité : fierté LGBTQIA+, droits des personnes trans, Slava Ukraini et Palestine libre."

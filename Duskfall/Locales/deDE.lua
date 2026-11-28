@@ -780,6 +780,7 @@ L["PN_130_01"] = "Schaltflächen und die Leisten Ort, Tageszeit und Umgebung hab
 L["PN_130_02"] = "Deine Orte: Die Einstellungen, die an deinem Ort wirken, stehen oben, über einer dünnen Linie."
 L["PN_130_03"] = "Unterstadt zählt als drinnen (das Spiel nennt es draußen, deshalb kann man dort reiten)."
 L["PN_130_14"] = "Wird Duskfall zum ersten Mal im Kampf geöffnet, erscheint kein Fehler über eine blockierte Aktion mehr."
+L["PN_130_15"] = "Eisenschmiede zählt ebenfalls als drinnen, und Stellen, die das Spiel nach der Stadt selbst benennt, zählen als Eisenschmiede: Es erscheint in der Zeile „Ort“ nicht mehr doppelt."
 L["PN_130_05"] = "Einfache Regler verlaufen jetzt von Duskfall-Blau zu Gold, mit einem blauen < und einem goldenen >."
 L["PN_120_02"] = "Duskfall spricht jetzt vereinfachtes und traditionelles Chinesisch, Deutsch und Französisch. Weitere Sprachen folgen."
 L["PN_120_01"] = "Der Info-Reiter endet mit einem Zeichen der Solidarität: LGBTQIA+ Pride, Rechte für trans Menschen, Slawa Ukrajini und Freiheit für Palästina."

@@ -865,6 +865,7 @@ L["PN_130_01"] = "Buttons and the Place, Time and Inside bars have the window's 
 L["PN_130_02"] = "Your places: the settings in effect where you are come first, above a thin line."
 L["PN_130_03"] = "Undercity counts as indoors (the game calls it outdoors, which is why you can ride there)."
 L["PN_130_14"] = "Opening Duskfall for the first time in combat no longer shows a blocked-action error."
+L["PN_130_15"] = "Ironforge counts as indoors too, and the spots the game names after the city itself count as Ironforge: it no longer shows twice in the Place row."
 L["PN_130_05"] = "Plain sliders run from Duskfall blue to gold, with a blue < and a gold >."
 L["PN_120_02"] = "Duskfall speaks Chinese (Simplified and Traditional), German and French. More languages are on the way."
 L["PN_120_01"] = "About ends with a line of solidarity: LGBTQIA+ Pride, Trans Rights, Slava Ukraini and Free Palestine."
