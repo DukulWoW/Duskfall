@@ -151,6 +151,11 @@ local function build()
   -- Rounded with a gold edge, as the mini panel (Kim)
   UI.RoundBox(f, { radius = 10, bottom = { 0.02, 0.02, 0.01, 0.72 }, top = { 0.14, 0.11, 0.07, 0.72 },
     border = { 1, 0.82, 0, 0.85 }, sweep = true })   -- gold to blue, as the window frame (Kim)
+  -- Winter (UI/Winter.lua): a little heap on the top edge, on the right (Kim)
+  if ns.Winter then
+    ns.Winter.Piece(f, "heap", function(t, seat) t:SetPoint("TOPRIGHT", f, "TOPRIGHT", -10, seat - 1) end,
+      { scale = 0.3 })
+  end
   local icon = f:CreateTexture(nil, "ARTWORK")
   icon:SetSize(34, 34)
   icon:SetPoint("TOPLEFT", f, "TOPLEFT", 6, -6)

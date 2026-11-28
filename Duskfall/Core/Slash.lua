@@ -368,6 +368,18 @@ local function pseudoCmd(args)
   ReloadUI()
 end
 
+-- Testing the winter snow out of season (UI/Winter.lua; not in help)
+local function winterCmd(args)
+  local want = args[2] and args[2]:lower()
+  if want ~= "on" and want ~= "off" and want ~= "auto" then
+    ns.Print("/dusk winter on | off | auto")   --noloc
+    return
+  end
+  ns.db.debugWinter = want ~= "auto" and want or nil
+  if ns.Winter then ns.Winter.Refresh() end
+  ns.Print("Winter season: " .. want)   --noloc
+end
+
 local function handler(msg)
   local args = words(msg)
   local cmd = args[1] and args[1]:lower() or ""
@@ -403,6 +415,7 @@ local function handler(msg)
     if ns.Moon then ns.Moon.Report() end
   elseif cmd == "lang" then langCmd(args)       -- testing translations (not in help)
   elseif cmd == "pseudo" then pseudoCmd(args)   -- testing: strings that skip ns.L, overflow
+  elseif cmd == "winter" then winterCmd(args)   -- testing: the snow out of season
   elseif cmd == "debug" then
     ns.cfg.debug = not ns.cfg.debug
     ns.Print(L["SL_DEBUG"], ns.cfg.debug and L["SL_ON"] or L["SL_OFF"])

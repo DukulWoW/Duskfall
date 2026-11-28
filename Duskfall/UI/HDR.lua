@@ -99,12 +99,18 @@ W.AddTab("hdr", "HDR", function(page)
       end
     end
     y = y - (UI.SLIDER_H + 22)
+    return sl, useCvar and controls[#controls] or nil
   end
   local nits = function(v) return L["HDR_NITS"]:format(v) end
-  row("HDRPeakBrightness", "useHDRPeakBrightness", L["HDR_PEAK"], L["HDR_PEAK_TIP"], nits)
-  row("HDRBrightness", "useHDRBrightness", L["HDR_PAPER"], L["HDR_PAPER_TIP"], nits)
-  row("HDRFactor", nil, L["DS_STRENGTH"], L["HDR_FACTOR_TIP"],
+  local s1, u1 = row("HDRPeakBrightness", "useHDRPeakBrightness", L["HDR_PEAK"], L["HDR_PEAK_TIP"], nits)
+  local s2, u2 = row("HDRBrightness", "useHDRBrightness", L["HDR_PAPER"], L["HDR_PAPER_TIP"], nits)
+  local s3 = row("HDRFactor", nil, L["DS_STRENGTH"], L["HDR_FACTOR_TIP"],
     function(v) return string.format("%.1f", v) end)
+  -- Kim (1.3.1): "Use it" lines up with the HDR switch's label above (24 from the right edge)
+  local useW = math.max(u1:GetWidth(), u2:GetWidth())
+  local w = FULL_W - 16 - 24 - useW - 24
+  -- (each "Use it" hangs off its own slider's right edge, so it moves with the width)
+  for _, sl in ipairs({ s1, s2, s3 }) do sl:SetWidth(w) end
 
   local reset = UI.Button(page, L["HDR_RESET"], 160, function()
     for k, v in pairs(DEFAULTS) do if k ~= "HDROutput" then set(k, v) end end

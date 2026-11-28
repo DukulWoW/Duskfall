@@ -767,6 +767,16 @@ W.AddTab("places", L["TAB_PLACES"], function(tab)
   addNight:SetPoint("LEFT", addIn, "RIGHT", 8, 0)
   UI.Tooltip(addNight, L["PL_ADD_NIGHT"], L["PL_ADD_NIGHT_TIP"])
 
+  -- The three share the width of the Looks list above (it stops 16 px short of the right: scrollbar)
+  local function sizeAdd()
+    local w = (detail:GetWidth() or 0) - 16
+    if w <= 0 then return end
+    local each = math.floor((w - 2 * 8) / 3)
+    for _, b in ipairs({ addAny, addIn, addNight }) do b:SetWidth(each) end
+  end
+  detail:HookScript("OnSizeChanged", sizeAdd)
+  sizeAdd()
+
   local clickTip = UI.Label(detail, L["PL_CLICK_TIP"])
   clickTip:SetPoint("LEFT", listHead, "RIGHT", 10, 0)
   clickTip:SetTextColor(0.65, 0.65, 0.65)

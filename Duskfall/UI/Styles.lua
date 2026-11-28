@@ -175,9 +175,9 @@ W.AddTab("styles", L["TAB_STYLES"], function(tab)
     sel = st
     refresh(true)
   end)
-  newBtn:SetPoint("BOTTOMLEFT", left, "BOTTOMLEFT", 8, 10)
+  newBtn:SetPoint("BOTTOMLEFT", left, "BOTTOMLEFT", 8, 10)   -- 76 + 6 + 80 + 6 + 76 = the list's 244
   UI.Tooltip(newBtn, L["SS_NEW_STYLE"], L["ST_NEW_TIP"])
-  local dupBtn = UI.Button(left, L["LE_DUPLICATE"], 84, function()
+  local dupBtn = UI.Button(left, L["LE_DUPLICATE"], 80, function()
     if not sel then return end
     local c = copyStyle(sel)
     local at = #styles() + 1

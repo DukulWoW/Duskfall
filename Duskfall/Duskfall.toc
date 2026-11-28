@@ -44,6 +44,7 @@ Core\AddonImport.lua
 Core\Slash.lua
 UI\Widgets.lua
 UI\CursorLight.lua
+UI\Winter.lua
 UI\Window.lua
 UI\DayBar.lua
 UI\LookEditor.lua

@@ -620,6 +620,7 @@ L["BL_GAME_DEFAULTS_Q"] = "Rétablir les valeurs par défaut du jeu comme réfé
 L["BL_TIP"] = "Déplacez un curseur pour voir le changement à l’écran. Faites un clic droit dessus pour rétablir la valeur par défaut du jeu."
 L["BL_LIFT"] = "Le gamma ne change rien sur mon écran"
 L["BL_LIFT_TIP"] = "Certains écrans et modes fenêtrés ignorent le gamma du jeu. Activez ceci et Duskfall dessine aussi le changement de gamma comme une teinte douce sur le monde (jamais sur l’interface) : plus clair éclaircit les zones sombres, plus sombre les assombrit."
+L["WI_TIP"] = "Neige d’hiver sur les fenêtres de Duskfall (du 1er décembre au 31 janvier)"
 L["BL_CALIBRATE"] = "Étalonner"
 L["BL_CALIBRATE_TIP"] = "Des carrés gris pour régler votre référence : niveau de noir, niveau de blanc et dégradés de gris réguliers."
 L["BL_HELP_TIP"] = "Votre apparence habituelle, à partir de laquelle varient tous les réglages des Lieux."
@@ -767,6 +768,10 @@ L["PN_TOAST"] = "Découvrez les nouveautés de Duskfall !"
 L["PN_TOAST_TIP"] = "Cliquez pour lire les nouveautés. Clic droit pour fermer."
 
 -- Patch notes (one key per note, newest version first) -----------------------------------------
+L["PN_131_01"] = "Mise en page plus soignée : les rangées de boutons sont centrées ou alignées sur les cadres au-dessus, dans Lieux, Styles, Paramètres et HDR."
+L["PN_131_02"] = "« Maintenir pour éclaircir » commence à 0 %, donc 50 % (la valeur par défaut) se trouve au milieu du curseur."
+L["PN_131_03"] = "Les curseurs ont des extrémités arrondies."
+L["PN_131_04"] = "La lueur derrière les grands interrupteurs (Paramètres, HDR) suit maintenant la forme de l’interrupteur au lieu d’un halo rond."
 L["PN_130_04"] = "Duskfall parle aussi espagnol, coréen, japonais et ukrainien. Le japonais et l’ukrainien (le jeu n’a pas de client dans ces langues) se choisissent dans les Paramètres."
 L["PN_130_06"] = "Clarté : le contraste monte avec la lumière, pour qu’une image plus claire reste nette au lieu de grise. Un curseur par style (onglet Styles) ; les nouveaux styles commencent à la moitié."
 L["PN_130_07"] = "Curseur de lumière : sous l’affichage d’état, un curseur rend l’endroit où vous êtes plus clair ou plus sombre tout de suite et l’enregistre pour cet endroit (Paramètres > Affichage)."

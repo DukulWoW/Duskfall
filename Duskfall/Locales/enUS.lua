@@ -705,6 +705,7 @@ L["BL_GAME_DEFAULTS_Q"] = "Set your baseline to the game's defaults (Gamma 1.00,
 L["BL_TIP"] = "Drag a slider and the screen follows. Right-click a slider for the game default."
 L["BL_LIFT"] = "Gamma does nothing on my screen"
 L["BL_LIFT_TIP"] = "Some screens and window modes ignore the game's Gamma. Switch this on and Duskfall also draws the Gamma change as a soft tint over the world (never over the interface): lighter lifts the dark parts, darker shades them."
+L["WI_TIP"] = "Winter snow on Duskfall's windows (1 December to 31 January)"
 L["BL_CALIBRATE"] = "Calibrate"
 L["BL_CALIBRATE_TIP"] = "Grey squares to set your baseline by: black level, white level and even grey steps."
 L["BL_HELP_TIP"] = "Your own look, which every setting in Places changes from."
@@ -852,6 +853,10 @@ L["PN_TOAST"] = "Check out what's new in Duskfall!"
 L["PN_TOAST_TIP"] = "Click to read what's new. Right-click to close."
 
 -- Patch notes (one key per note, newest version first) -----------------------------------------
+L["PN_131_01"] = "Tidier layout: button rows sit centred, or line up with the boxes above them, on Places, Styles, Settings and HDR."
+L["PN_131_02"] = "Hold to brighten starts at 0%, so 50% (the default) sits in the middle of its slider."
+L["PN_131_03"] = "Sliders have rounded ends."
+L["PN_131_04"] = "The glow behind the big on / off switches (Settings, HDR) now follows the switch's shape instead of a round halo."
 L["PN_130_04"] = "Duskfall speaks Spanish, Korean, Japanese and Ukrainian too. Japanese and Ukrainian (the game has no client for them) are picked in Settings."
 L["PN_130_06"] = "Clarity: Contrast rises with the light, so a brighter screen stays crisp instead of grey. One slider per Style (Styles tab); new Styles start at half."
 L["PN_130_07"] = "Light slider: under the status display, one slider makes where you are lighter or darker at once and saves it for this place (Settings > Display)."

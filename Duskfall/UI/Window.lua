@@ -258,11 +258,13 @@ local function build()
     local top = f:GetFrameLevel()
     for _, child in ipairs({ f:GetChildren() }) do
       if child ~= badge and child ~= f.advCheck and child ~= f.helpBtn and child ~= f.closeBtn
+        and child ~= f.snowLayer
         and child:GetFrameLevel() > top then
         top = child:GetFrameLevel()
       end
     end
     badge:SetFrameLevel(top + 5)
+    if f.snowLayer then f.snowLayer:SetFrameLevel(top + 4) end   -- winter: over the border, under the badge
     if f.advCheck then raise(f.advCheck, top + 5) end
     if f.helpBtn then f.helpBtn:SetFrameLevel(top + 5) end
     if f.closeBtn then f.closeBtn:SetFrameLevel(top + 5) end
@@ -271,6 +273,22 @@ local function build()
   local icon = badge:CreateTexture(nil, "ARTWORK")
   icon:SetAllPoints()
   icon:SetTexture(UI.ART .. "icon")
+  -- Winter (UI/Winter.lua): the snowman ledge resting on the title bar's bottom line (about 22 px
+  -- down), mirrored so the tail runs off to the right, its square end tucked behind the badge's
+  -- ring (Kim: the cut corner under it left a gap). On its own frame, kept one level under the
+  -- badge and over the border (liftBadge)
+  if ns.Winter then
+    local snowLayer = CreateFrame("Frame", nil, f)
+    snowLayer:SetAllPoints(f)
+    snowLayer:EnableMouse(false)
+    f.snowLayer = snowLayer
+    ns.Winter.Piece(snowLayer, "snowman", function(t, seat) t:SetPoint("TOPLEFT", f, "TOPLEFT", 24, seat - 20) end,
+      { scale = 0.4, mirror = true })
+    -- and a heap in the bottom-left corner, on every tab (the snowflake switch has the right; Kim),
+    -- mirrored so its straight side leans on the left border, resting on the bottom border
+    ns.Winter.Piece(badge, "corner", function(t, seat) t:SetPoint("TOPLEFT", f, "BOTTOMLEFT", 10, seat + 5) end,
+      { scale = 0.55, mirror = true })
+  end
   -- Advanced mode, left of the close button (Kim): Places shows the full list and Look editor
   -- Simple | Advanced as a small picker (Kim: two views of the same page)
   local TB = 16   -- the title bar controls (picker, help, close) share one height (Kim)

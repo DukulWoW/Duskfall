@@ -620,6 +620,7 @@ L["BL_GAME_DEFAULTS_Q"] = "Deine Ausgangswerte auf die Spielstandardwerte setzen
 L["BL_TIP"] = "Verschiebe einen Regler, um das Bild anzupassen. Rechtsklick auf einen Regler: Spielstandardwert."
 L["BL_LIFT"] = "Gamma ändert auf meinem Bildschirm nichts"
 L["BL_LIFT_TIP"] = "Manche Bildschirme und Fenstermodi ignorieren das Gamma des Spiels. Ist dies eingeschaltet, zeichnet Duskfall die Gamma-Änderung zusätzlich als sanfte Tönung über die Spielwelt (nie über die Oberfläche): Heller hebt die dunklen Bereiche an, dunkler schattiert sie."
+L["WI_TIP"] = "Winterschnee auf den Fenstern von Duskfall (1. Dezember bis 31. Januar)"
 L["BL_CALIBRATE"] = "Kalibrieren"
 L["BL_CALIBRATE_TIP"] = "Graue Quadrate zum Einstellen deiner Ausgangswerte: Schwarzwert, Weißwert und gleichmäßige Graustufen."
 L["BL_HELP_TIP"] = "Deine eigenen Bildwerte, von denen alle Einstellungen unter „Orte“ ausgehen."
@@ -767,6 +768,10 @@ L["PN_TOAST"] = "Entdecke, was es in Duskfall Neues gibt!"
 L["PN_TOAST_TIP"] = "Klicken, um die Neuerungen zu lesen. Rechtsklick zum Schließen."
 
 -- Patch notes (one key per note, newest version first) -----------------------------------------
+L["PN_131_01"] = "Aufgeräumteres Layout: Schaltflächenreihen sitzen mittig oder bündig mit den Kästen darüber, in Orte, Stile, Einstellungen und HDR."
+L["PN_131_02"] = "„Gedrückt halten, um das Bild aufzuhellen“ beginnt bei 0 %, sodass 50 % (der Standard) in der Mitte des Reglers liegen."
+L["PN_131_03"] = "Regler haben abgerundete Enden."
+L["PN_131_04"] = "Das Leuchten hinter den großen Ein/Aus-Schaltern (Einstellungen, HDR) folgt jetzt der Form des Schalters statt eines runden Lichthofs."
 L["PN_130_04"] = "Duskfall spricht jetzt auch Spanisch, Koreanisch, Japanisch und Ukrainisch. Japanisch und Ukrainisch (dafür gibt es keinen Spielclient) wählst du in den Einstellungen."
 L["PN_130_06"] = "Klarheit: Der Kontrast steigt mit dem Licht, damit ein helleres Bild klar bleibt statt grau. Ein Regler pro Stil (Reiter Stile); neue Stile beginnen bei der Hälfte."
 L["PN_130_07"] = "Lichtregler: Unter der Statusanzeige macht ein Regler deinen Ort sofort heller oder dunkler und speichert das für diesen Ort (Einstellungen > Anzeige)."

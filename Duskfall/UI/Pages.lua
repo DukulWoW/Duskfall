@@ -155,7 +155,7 @@ local function buildGeneral(p)
     onChange = function(v) ns.cfg.adaptGap = v end })
   gap:SetPoint("TOPLEFT", door, "TOPLEFT", HALF_SL + 24, 0)
   controls[#controls + 1] = gap
-  timing(UI.Slider(p, SL_W, { label = L["BIND_PEEK"], min = 0.1, max = 1, step = 0.05, default = 0.5,
+  timing(UI.Slider(p, SL_W, { label = L["BIND_PEEK"], min = 0, max = 1, step = 0.05, default = 0.5,
     fmt = function(v) return L["PCT_FMT"]:format(math.floor(v * 100 + 0.5)) end,
     tip = L["GEN_PEEK_TIP"],
     get = function() return ns.cfg.peekLift end,
@@ -406,6 +406,10 @@ local function buildBaseline(p)
   UI.Tooltip(calib, L["BL_CALIBRATE"], L["BL_CALIBRATE_TIP"])
   local help = UI.HelpIcon(p, "own", L["SET_BASELINE"], L["BL_HELP_TIP"])
   help:SetPoint("LEFT", calib, "RIGHT", 10, 0)
+  -- The row centred in its box (Kim, 1.3.1)
+  local row = save:GetWidth() + 8 + reset:GetWidth() + 8 + calib:GetWidth() + 10 + help:GetWidth()
+  save:ClearAllPoints()
+  save:SetPoint("LEFT", actions, "LEFT", math.max(10, math.floor((FULL_W - row) / 2 + 0.5)), 0)
   return refreshCards
 end
 
@@ -582,7 +586,8 @@ local function buildDisplay(p)
   controls[#controls + 1] = qlFor
   local move = UI.Button(p, L["DS_MOVE"], 120, function() ns.StatusDisplay.Unlock(20) end)
   UI.Tooltip(move, L["DS_MOVE"], L["DS_MOVE_TIP"])
-  sd(move, 22, 8)
+  -- Centred in the card (Kim, 1.3.1): Move 120 + Reset position 120 + Test 90, 8 apart
+  sd(move, 22, 8, math.floor((FULL_W - (120 + 8 + 120 + 8 + 90)) / 2 + 0.5) - 16)
   local reset = UI.Button(p, L["DS_RESET_POS"], 120, function() ns.StatusDisplay.ResetPosition() end)
   reset:SetPoint("LEFT", move, "RIGHT", 8, 0)
   local test = UI.Button(p, L["DS_TEST"], 90, function() ns.StatusDisplay.Test() end)
@@ -829,6 +834,12 @@ W.AddTab("settings", L["TAB_SETTINGS"], function(page)
     quick:Refresh()
     for _, t in ipairs(tiles) do ns.Safe(t.Refresh, "settings tile") end
   end
+  -- Winter (UI/Winter.lua): the snowflake switch in the bottom right corner, only in season
+  if ns.Winter then
+    local flake = ns.Winter.Switch(overview)
+    flake:SetPoint("BOTTOMRIGHT", W.frame, "BOTTOMRIGHT", -10, 10)   -- 10 px from the window's corner (Kim)
+    flake:SetFrameLevel(W.frame:GetFrameLevel() + 21)   -- over the border and the status strip, under overlays (+40)
+  end
   overview:SetScript("OnShow", refreshTiles)
   ns.Listen("ONOFF", function() if overview:IsVisible() then refreshTiles() end end)
   refreshTiles()
@@ -843,9 +854,20 @@ end, "right")
 -- links, and the commands folded away behind a button.
 W.AddTab("about", L["TAB_ABOUT"], function(page)
   UI.Glow(page, nil, 0.8)
+  -- Winter (UI/Winter.lua): snow falling behind the content; the column goes above it
+  local snow
+  if ns.Winter then
+    snow = CreateFrame("Frame", nil, page)
+    snow:SetAllPoints()
+    snow:EnableMouse(false)
+  end
   local col = CreateFrame("Frame", nil, page)
   col:SetPoint("TOP", page, "TOP", 0, -18)
   col:SetSize(560, 440)
+  if snow then
+    col:SetFrameLevel(snow:GetFrameLevel() + 2)
+    ns.Winter.AddFalling(snow)
+  end
 
   -- The name block (Kim, 2026-11-27): bigger, one line each: Duskfall / Version / by / Dukul
   local logo = col:CreateTexture(nil, "ARTWORK")

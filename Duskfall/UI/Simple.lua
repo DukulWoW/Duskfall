@@ -558,7 +558,12 @@ function SP.Create(parent, hooks)
     local icon = badge:CreateTexture(nil, "ARTWORK")
     icon:SetAllPoints()
     icon:SetTexture(UI.ART .. "icon")
-    miniTitle = UI.Label(m, "", "GameFontNormalLarge")
+    -- Winter (UI/Winter.lua): the small snowman on the top edge next to the badge
+    if ns.Winter then
+      ns.Winter.Piece(badge, "scarf", function(t, seat) t:SetPoint("TOPLEFT", m, "TOPLEFT", 34, seat) end,
+        { scale = 0.4 })
+    end
+    miniTitle =UI.Label(m, "", "GameFontNormalLarge")
     miniTitle:SetPoint("TOPLEFT", m, "TOPLEFT", 46, -16)
     miniTitle:SetPoint("RIGHT", m, "RIGHT", -96, 0)
     miniTitle:SetWordWrap(false)
@@ -668,7 +673,19 @@ function SP.Create(parent, hooks)
   pasteBtn:SetKind("main")
   pasteBtn:SetPoint("LEFT", copyBtn, "RIGHT", 8, 0)
   UI.Tooltip(pasteBtn, L["PASTE_VALUES"], L["SP_PASTE_TIP"])
-  compareButton(actions, 40, true):SetPoint("LEFT", pasteBtn, "RIGHT", 8, 0)
+  local cmpBtn = compareButton(actions, 40, true)
+  cmpBtn:SetPoint("LEFT", pasteBtn, "RIGHT", 8, 0)
+  -- The row centred in its box: the same room on both sides (Kim, 1.3.1)
+  local function centreRow()
+    local row = 4 * 8
+    for _, b in ipairs({ reset, miniBtn, copyBtn, pasteBtn, cmpBtn }) do row = row + (b:GetWidth() or 0) end
+    local w = actions:GetWidth() or 0
+    if w <= 0 then return end
+    reset:ClearAllPoints()
+    reset:SetPoint("LEFT", actions, "LEFT", math.max(6, math.floor((w - row) / 2 + 0.5)), 0)
+  end
+  actions:SetScript("OnSizeChanged", centreRow)
+  centreRow()
 
   local hint = UI.Label(left, "")
   hint:SetPoint("BOTTOMLEFT", actions, "TOPLEFT", 4, 6)

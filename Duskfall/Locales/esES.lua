@@ -620,6 +620,7 @@ L["BL_GAME_DEFAULTS_Q"] = "¿Asignar a tus valores de referencia los valores pre
 L["BL_TIP"] = "Arrastra un control deslizante para ajustar la pantalla. Haz clic derecho en él para recuperar el valor predeterminado del juego."
 L["BL_LIFT"] = "El gamma no cambia nada en mi pantalla"
 L["BL_LIFT_TIP"] = "Algunas pantallas y modos de ventana ignoran el gamma del juego. Actívalo y Duskfall también dibuja el cambio de gamma como un tinte suave sobre el mundo (nunca sobre la interfaz): más claro aclara las partes oscuras, más oscuro las sombrea."
+L["WI_TIP"] = "Nieve invernal en las ventanas de Duskfall (del 1 de diciembre al 31 de enero)"
 L["BL_CALIBRATE"] = "Calibrar"
 L["BL_CALIBRATE_TIP"] = "Cuadros grises para establecer tus valores de referencia: nivel de negro, nivel de blanco y pasos de gris uniformes."
 L["BL_HELP_TIP"] = "Tu aspecto habitual, del que parten todos los ajustes de Lugares."
@@ -767,6 +768,10 @@ L["PN_TOAST"] = "¡Descubre las novedades de Duskfall!"
 L["PN_TOAST_TIP"] = "Haz clic para leer las novedades. Clic derecho para cerrar."
 
 -- Patch notes (one key per note, newest version first) -----------------------------------------
+L["PN_131_01"] = "Diseño más ordenado: las filas de botones quedan centradas o alineadas con los recuadros de encima en Lugares, Estilos, Ajustes y HDR."
+L["PN_131_02"] = "«Mantener pulsado para aumentar el brillo» empieza en 0 %, así que el 50 % (el valor predeterminado) queda en el centro del control."
+L["PN_131_03"] = "Los controles deslizantes tienen los extremos redondeados."
+L["PN_131_04"] = "El brillo detrás de los interruptores grandes (Ajustes, HDR) ahora sigue la forma del interruptor en lugar de un halo redondo."
 L["PN_130_04"] = "Duskfall también está disponible en español, coreano, japonés y ucraniano. El japonés y el ucraniano (el juego no tiene cliente en esos idiomas) se eligen en los Ajustes."
 L["PN_130_06"] = "Claridad: el contraste sube con la luz, para que una pantalla más clara siga nítida en lugar de gris. Un control por estilo (pestaña Estilos); los estilos nuevos empiezan en la mitad."
 L["PN_130_07"] = "Control de luz: bajo el indicador de estado, un control aclara u oscurece al instante el lugar donde estás y lo guarda para este lugar (Ajustes > Pantalla)."

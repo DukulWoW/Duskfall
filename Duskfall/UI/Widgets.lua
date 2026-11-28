@@ -251,13 +251,23 @@ function UI.GlowRing(host, anchor, size, o)
   glow:SetPoint("CENTER", anchor, "CENTER")
   glow:SetBlendMode("ADD")
   glow:Hide()
-  local ok = pcall(glow.SetTexture, glow, GLOW_FILE) and glow:GetTexture()
-  if not ok then ok = pcall(glow.SetTexture, glow, GLOW_PATH) and glow:GetTexture() end
-  if not ok then
-    glow:SetTexture(UI.ART .. "Shapes\\dot")
-    glow:SetVertexColor(1, 0.8, 0.35)
-  end
   local turn, breath = o.turn or GLOW_TURN, o.breath or GLOW_BREATH
+  if o.pill then
+    -- The big switch's glow (Kim, 2026-11-28: the round halo did not fit the pill): a soft gold pill
+    -- (Assets/Shapes/glow-pill, own, PIL) made for a 54 x 28 switch with 30 px of glow round it;
+    -- o.pill = { width, height } of the whole glow. No turning.
+    glow:SetTexture(UI.ART .. "Shapes\\glow-pill")
+    glow:SetSize(o.pill[1], o.pill[2])
+    glow:SetVertexColor(1, 0.78, 0.36)
+    turn = 0
+  else
+    local ok = pcall(glow.SetTexture, glow, GLOW_FILE) and glow:GetTexture()
+    if not ok then ok = pcall(glow.SetTexture, glow, GLOW_PATH) and glow:GetTexture() end
+    if not ok then
+      glow:SetTexture(UI.ART .. "Shapes\\dot")
+      glow:SetVertexColor(1, 0.8, 0.35)
+    end
+  end
   local anim = CreateFrame("Frame", nil, host)
   local clock, level, want = 0, 0, 0
   anim:SetScript("OnUpdate", function(self, dt)
@@ -270,7 +280,7 @@ function UI.GlowRing(host, anchor, size, o)
       return
     end
     glow:SetAlpha(level * (0.65 + 0.35 * math.sin(clock * breath)))
-    pcall(glow.SetRotation, glow, clock * turn)
+    if turn ~= 0 then pcall(glow.SetRotation, glow, clock * turn) end
   end)
   anim:Hide()
   local r = {}
@@ -375,7 +385,7 @@ function UI.Switch(parent, o)
   else
     text:SetPoint("LEFT", track, "RIGHT", 8, 0)
   end
-  local glow = big and UI.GlowRing(b, track, W * 2.2, { breath = 1.2 }) or nil
+  local glow = big and UI.GlowRing(b, track, W * 2.2, { breath = 1.2, pill = { W + 60, H + 60 } }) or nil
 
   local checked, pos, enabled = false, 0, true
   local function place()
@@ -1249,26 +1259,56 @@ function UI.LightSlider(parent, width, o)
   -- The thumb's centre travels from half its width to the other end minus that: the track too
   INSET = 11
 
+  -- Rounded ends (Kim, 2026-11-28): half circles (Shapes/dot cut in half) in the end colours, just
+  -- outside the straight part, so the track keeps its length and the well stays 2 px around it
+  local DOT = UI.ART .. "Shapes\\dot"
+  local function cap(rel, side, w, hgt, layer, sub, y0, y1)
+    local t = sl:CreateTexture(nil, layer, nil, sub)
+    t:SetTexture(DOT)
+    t:SetSize(w, hgt)
+    if side == "LEFT" then
+      t:SetPoint("TOPRIGHT", rel, "TOPLEFT", 0, 0)
+      t:SetTexCoord(0, 0.5, y0 or 0, y1 or 1)
+    else
+      t:SetPoint("TOPLEFT", rel, "TOPRIGHT", 0, 0)
+      t:SetTexCoord(0.5, 1, y0 or 0, y1 or 1)
+    end
+    return t
+  end
   local well = sl:CreateTexture(nil, "BACKGROUND")
-  well:SetPoint("LEFT", sl, "LEFT", INSET - 2, 0)
-  well:SetPoint("RIGHT", sl, "RIGHT", -INSET + 2, 0)
+  well:SetPoint("LEFT", sl, "LEFT", INSET, 0)
+  well:SetPoint("RIGHT", sl, "RIGHT", -INSET, 0)
   well:SetHeight(12)
   well:SetColorTexture(0, 0, 0, 0.85)
+  for _, side in ipairs({ "LEFT", "RIGHT" }) do
+    cap(well, side, 6, 12, "BACKGROUND", 0):SetVertexColor(0, 0, 0, 0.85)
+  end
   local track = sl:CreateTexture(nil, "ARTWORK")
   track:SetPoint("LEFT", sl, "LEFT", INSET, 0)
   track:SetPoint("RIGHT", sl, "RIGHT", -INSET, 0)
   track:SetHeight(8)
   UI.Gradient(track, "HORIZONTAL", o.from, o.to)
+  local capL, capR = cap(track, "LEFT", 4, 8, "ARTWORK", 0), cap(track, "RIGHT", 4, 8, "ARTWORK", 0)
+  capL:SetVertexColor(o.from[1], o.from[2], o.from[3])
+  capR:SetVertexColor(o.to[1], o.to[2], o.to[3])
   if ns.CursorLight then
     local lit = ns.CursorLight.NewTwin(sl, "ARTWORK", 1, "fill")
     lit:SetAllPoints(track)
     UI.Gradient(lit, "HORIZONTAL", o.from, o.to)
+    ns.CursorLight.Copy(capL, "fill", sl)
+    ns.CursorLight.Copy(capR, "fill", sl)
   end
   local shine = sl:CreateTexture(nil, "ARTWORK", nil, 2)
   shine:SetPoint("TOPLEFT", track, "TOPLEFT", 0, 0)
   shine:SetPoint("TOPRIGHT", track, "TOPRIGHT", 0, 0)
   shine:SetHeight(4)
   UI.Gradient(shine, "VERTICAL", { 1, 1, 1, 0 }, { 1, 1, 1, 0.3 })
+  -- The shine over the caps' top halves too
+  for _, side in ipairs({ "LEFT", "RIGHT" }) do
+    local s = cap(shine, side, 4, 4, "ARTWORK", 2, 0, 0.5)
+    UI.Gradient(s, "VERTICAL", { 1, 1, 1, 0 }, { 1, 1, 1, 0.3 }, DOT)
+    s:SetTexCoord(side == "LEFT" and 0 or 0.5, side == "LEFT" and 0.5 or 1, 0, 0.5)
+  end
   local mark = sl:CreateTexture(nil, "ARTWORK", nil, 5)
   mark:SetColorTexture(1, 0.86, 0.55, 0.4)
   mark:SetSize(2, o.lineH or 16)

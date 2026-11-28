@@ -42,6 +42,7 @@ ns.DEFAULTS = {
   soundChannel = "SFX",         -- PlaySoundFile channel
   peekLift = 0.5,               -- Hold to brighten: 0 - 1 (Core/Detect.lua LIFT at 1)
   blackLift = false,            -- 1.3.0: the Gamma change also drawn as a tint over the world (UI/BlackLift.lua)
+  winter = true,                -- 1.3.1: snow on the windows, 1 Dec - 31 Jan (UI/Winter.lua; the snowflake on Settings)
 }
 
 -- Output ---------------------------------------------------------------------------------------
