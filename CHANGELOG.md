@@ -1,25 +1,14 @@
-# Duskfall v1.3.0
+# Duskfall v1.3.1
 
 ## WoW Forever
 
-Four more languages, quicker ways to make where you stand lighter or darker, and the minimap's Day/Night indicator explained.
+A tidier look, softer details, and a place to come and say hello.
 
 ### New
-- **More languages:** Spanish, Korean, Japanese and Ukrainian. Japanese and Ukrainian (the game has no client for them) are picked in Settings.
-- **Clarity:** Contrast rises with the light, so a brighter screen stays crisp instead of grey. One slider per Style (Styles tab); new Styles start at half.
-- **Light slider:** under the status display, one slider makes where you are lighter or darker at once and saves it for this place (Settings > Display).
-- **Light on broker bars:** a broker bar can show the Light slider's value for where you are, and the mouse wheel over it makes here lighter or darker (Settings > Display > Broker text).
-- **Mini panel in one click:** shift-left-click the Day/Night indicator (or the minimap button, a broker bar, the addon compartment) for the mini panel of where you stand. A Reset button on the panel puts the sliders back to where they were when you opened it.
-- **Day/Night indicator:** the minimap's sun and moon has its proper name everywhere. The welcome points at it with an arrow, and Help has a page about it and its glow.
-- **Gamma does nothing on your screen?** A new switch on Settings > Baseline also draws the Gamma change as a soft tint over the world.
-- **Advanced Places:** where you are is pinned at the top of the list (a green dot where a setting is in effect), and a button on the Here line opens or closes every zone.
+- **Discord:** a Discord button on the About page: come and say hello, ask questions or share ideas.
 
 ### Changes
-- Buttons and the Place, Time and Inside bars have the window's gold-to-blue edge.
-- Your places: the settings in effect where you are come first, above a thin line.
-- Plain sliders run from Duskfall blue to gold, with a blue < and a gold >.
-
-### Fixes
-- Undercity counts as indoors (the game calls it outdoors, which is why you can ride there).
-- Opening Duskfall for the first time in combat no longer shows a blocked-action error.
-- Ironforge counts as indoors too, and the spots the game names after the city itself count as Ironforge: it no longer shows twice in the Place row.
+- Tidier layout: button rows sit centred, or line up with the boxes above them, on Places, Styles, Settings and HDR.
+- Hold to brighten starts at 0%, so 50% (the default) sits in the middle of its slider.
+- Sliders have rounded ends.
+- The glow behind the big on / off switches (Settings, HDR) now follows the switch's shape instead of a round halo.
