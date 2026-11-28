@@ -74,6 +74,15 @@ For WoW Forever, in English, Chinese, German and French. Download on [CurseForge
 `refresh`, `notes`, `save` / `clear` / `looks` for quick settings from chat, `style`, `mode`,
 `fade`, `adapt`, `baseline` and more.
 
+## Get in touch
+
+Feature ideas, bugs or just want to say hi? Open an issue or come by the Discord!
+
+[![GitHub: source and docs](https://img.shields.io/badge/GitHub-Source_and_docs-111111?style=for-the-badge&labelColor=555555&logo=github&logoColor=white)](https://github.com/DukulWoW/Duskfall)
+[![Issues: bugs and ideas](https://img.shields.io/badge/Issues-Bugs_and_ideas-3355CC?style=for-the-badge&labelColor=555555&logo=github&logoColor=white)](https://github.com/DukulWoW/Duskfall/issues/new/choose)
+[![Discord: join the community](https://img.shields.io/badge/Discord-Join_the_community-5865F2?style=for-the-badge&labelColor=555555&logo=discord&logoColor=white)](https://discord.gg/eDsQQkEPvU)
+[![Dukul.net: more addons](https://img.shields.io/badge/Dukul.net-More_addons-B8860B?style=for-the-badge&labelColor=555555)](https://dukul.net)
+
 ---
 
 <sub>Duskfall is a free fan project by Dukul, made for fun and never for money. It is not affiliated with, endorsed by or sponsored by Blizzard Entertainment. World of Warcraft, Warcraft and Blizzard Entertainment are trademarks or registered trademarks of Blizzard Entertainment, Inc. All other trademarks belong to their owners.</sub>
